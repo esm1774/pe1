@@ -1,0 +1,622 @@
+/**
+ * PE Smart School System - Reports Page
+ */
+
+let reportType = 'student';
+
+async function renderReports() {
+    if (currentUser && currentUser.role === 'student') {
+        document.getElementById('mainContent').innerHTML = `
+        <div class="fade-in px-4 md:px-0">
+            <div class="mb-6">
+                <h2 class="text-xl md:text-2xl font-black text-gray-800">📈 تقريري</h2>
+                <p class="text-xs md:text-sm text-gray-500 mt-1">تقرير اللياقة البدنية والنتائج الشخصية</p>
+            </div>
+            <div id="reportContent">${showLoading()}</div>
+            <div id="reportOutput" class="space-y-6"></div>
+        </div>`;
+
+        // Load personal report directly
+        const r = await API.get('report_student', { student_id: currentUser.id });
+        if (r && r.success) {
+            renderStudentReportDirect(r.data);
+        } else {
+            document.getElementById('reportContent').innerHTML = '<p class="text-red-500 text-center py-8">خطأ في تحميل التقرير</p>';
+        }
+        return;
+    }
+
+    if (currentUser && currentUser.role === 'parent') {
+        const mc = document.getElementById('mainContent');
+        mc.innerHTML = `
+        <div class="fade-in max-w-6xl mx-auto">
+            <div class="mb-8">
+                <h2 class="text-3xl font-black text-gray-800">📊 تقارير الأداء البدني</h2>
+                <p class="text-gray-500 mt-2">استعرض التقارير التفصيلية والنمو البدني لأبنائك</p>
+            </div>
+            
+            <div id="parentChildrenCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10 no-print">
+                <!-- Data loaded via API -->
+                ${showLoading()}
+            </div>
+
+            <div id="reportOutput" class="space-y-8"></div>
+        </div>`;
+
+        // Load linked students
+        const r = await API.get('parent_dashboard');
+        const container = document.getElementById('parentChildrenCards');
+
+        if (r && r.success && r.data) {
+            const children = r.data;
+            if (children.length === 0) {
+                container.innerHTML = '<div class="col-span-full py-12 text-center text-gray-400 font-bold bg-white rounded-3xl border-2 border-dashed">لم يتم العثور على أبناء مربوطين بالحساب</div>';
+            } else {
+                container.innerHTML = children.map(s => `
+                    <div onclick="generateParentStudentReport(${s.id})" class="child-report-card bg-white p-6 rounded-3xl border border-gray-100 shadow-sm cursor-pointer transition hover:shadow-xl hover:scale-[1.02] group" data-student-id="${s.id}">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-3xl transition group-hover:bg-green-600 group-hover:text-white">👦</div>
+                            <div class="flex-1">
+                                <h4 class="font-black text-gray-800 group-hover:text-green-700 transition">${esc(s.name)}</h4>
+                                <p class="text-xs text-gray-400 font-bold uppercase">${esc(s.full_class_name)}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Auto-generate for the first child
+                generateParentStudentReport(children[0].id);
+            }
+        } else {
+            container.innerHTML = '<div class="col-span-full py-12 text-center text-red-500 font-bold">فشل في جلب بيانات الأبناء</div>';
+        }
+        return;
+    }
+
+    document.getElementById('mainContent').innerHTML = `
+    <div class="fade-in px-4 md:px-0">
+        <div class="mb-8">
+            <h2 class="text-3xl font-black text-gray-800">📊 مركز التقارير والذكاء الرياضي</h2>
+            <p class="text-gray-500 font-bold mt-2">تحليل البيانات البدنية واستخراج تقارير الأداء المتقدمة</p>
+        </div>
+        
+        <div class="flex overflow-x-auto gap-2 mb-8 no-print scrollbar-hide pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+            <button onclick="reportType='student';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'student' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📄 تقرير الطالب</button>
+            <button onclick="reportType='class';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'class' ? 'bg-green-600 text-white shadow-xl shadow-green-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">🏫 تقرير الفصل</button>
+            <button onclick="reportType='compare';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'compare' ? 'bg-teal-600 text-white shadow-xl shadow-teal-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">⚖️ لوحة المقارنة</button>
+        </div>
+        
+        <div id="reportContent" class="mb-12">${showLoading()}</div>
+    </div>`;
+
+    if (reportType === 'student') renderStudentReport();
+    else if (reportType === 'class') renderClassReport();
+    else renderCompareReport();
+}
+
+function renderStudentReportDirect(data) {
+    document.getElementById('reportContent').innerHTML = `
+    <div class="flex justify-end mb-4 no-print">
+        <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-blue-700 cursor-pointer flex items-center gap-2">
+            <span>🖨️ طباعة التقرير</span>
+        </button>
+    </div>`;
+
+    // Use existing generator logic but inject data directly
+    const reportOutput = document.getElementById('reportOutput');
+    renderStudentReportHTML(data, reportOutput);
+}
+
+async function renderStudentReport() {
+    const cl = await API.get('classes');
+
+    document.getElementById('reportContent').innerHTML = `
+    <div class="fade-in">
+        <div class="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-5 md:p-8 mb-8 md:mb-10 no-print">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 items-end">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">اختيار الفصل</label>
+                    <select id="reportClass" onchange="updateReportStudents()" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl md:rounded-[1.5rem] focus:bg-white focus:border-green-500 focus:outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer text-sm">
+                        <option value="">-- اضغط للاختيار --</option>
+                        ${(cl?.data || []).map(c => `<option value="${c.id}">${esc(c.full_name || c.name)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">اختيار الطالب</label>
+                    <select id="reportStudent" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl md:rounded-[1.5rem] focus:bg-white focus:border-green-500 focus:outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer text-sm">
+                        <option value="">-- اختر الفصل أولاً --</option>
+                    </select>
+                </div>
+                <div class="pt-1">
+                    <button onclick="generateStudentReport()" class="w-full bg-emerald-600 text-white px-6 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-emerald-700 transition shadow-lg shadow-emerald-100 flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
+                        <span class="text-xl">📄</span> عرض التقرير
+                    </button>
+                </div>
+                <div class="pt-1">
+                    <button onclick="window.print()" class="w-full bg-gray-900 text-white px-6 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-black transition shadow-lg shadow-gray-200 flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
+                        <span class="text-xl">🖨️</span> طباعة فورية
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="reportOutput" class="scroll-mt-20">
+            <div class="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-gray-100">
+                <div class="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 grayscale opacity-30">👤</div>
+                <p class="text-gray-400 font-black text-xl">يرجى اختيار الطالب لاستعراض تقريره</p>
+                <p class="text-gray-300 text-sm mt-1">التقارير تتضمن القياسات البدنية، اللياقة، والحضور</p>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function updateReportStudents() {
+    const cid = document.getElementById('reportClass').value;
+    if (!cid) return;
+
+    const r = await API.get('students', { class_id: cid });
+    document.getElementById('reportStudent').innerHTML = `<option value="">اختر</option>` +
+        (r?.data || []).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+}
+
+async function generateStudentReport() {
+    const sid = document.getElementById('reportStudent').value;
+    if (!sid) {
+        showToast('اختر طالب', 'error');
+        return;
+    }
+
+    const r = await API.get('report_student', { student_id: sid });
+    if (!r || !r.success) return;
+
+    renderStudentReportHTML(r.data, document.getElementById('reportOutput'));
+}
+
+async function generateParentStudentReport(sid) {
+    if (!sid) {
+        const select = document.getElementById('parentStudentSelect');
+        if (select) sid = select.value;
+    }
+    if (!sid) return;
+
+    // Highlight selected card if it exists
+    document.querySelectorAll('.child-report-card').forEach(el => {
+        if (el.dataset.studentId == sid) {
+            el.classList.add('ring-4', 'ring-green-500', 'bg-green-50', 'border-green-200');
+            el.classList.remove('border-gray-100');
+        } else {
+            el.classList.remove('ring-4', 'ring-green-500', 'bg-green-50', 'border-green-200');
+            el.classList.add('border-gray-100');
+        }
+    });
+
+    const ro = document.getElementById('reportOutput');
+    if (ro) ro.innerHTML = showLoading();
+
+    const r = await API.get('report_student', { student_id: sid });
+    if (r && r.success) {
+        renderStudentReportHTML(r.data, ro);
+    } else if (ro) {
+        ro.innerHTML = '<p class="text-red-500 text-center py-8">خطأ في تحميل التقرير</p>';
+    }
+}
+
+function renderStudentReportHTML(d, container) {
+    const s = d.student;
+    const m = d.measurement;
+    const h = d.health || [];
+    const att = d.attendance;
+
+    container.innerHTML = `
+    <div class="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 p-6 md:p-12 fade-in relative overflow-hidden">
+        <!-- Decoration Decor -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-green-50 rounded-full -mr-32 -mt-32 opacity-40 animate-pulse"></div>
+        
+        <div class="relative z-10">
+            <div class="print-only text-center mb-10 border-b-2 border-gray-100 pb-6">
+                <h1 class="text-3xl font-black text-gray-900">🏃 PE Smart School System</h1>
+                <p class="text-gray-500 font-bold uppercase tracking-widest mt-2">تقرير اللياقة البدنية الشامل</p>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 mb-10 pb-10 border-b border-gray-50">
+                <div class="flex flex-col md:flex-row items-center gap-6 text-center md:text-right">
+                    <div class="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-[2rem] flex items-center justify-center text-5xl text-white shadow-xl shadow-green-100">👤</div>
+                    <div>
+                        <h3 class="text-2xl md:text-4xl font-black text-gray-800">${esc(s.name)}</h3>
+                        <p class="text-lg md:text-xl text-green-600 font-black mt-1">${esc(s.full_class_name)}</p>
+                        <div class="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
+                            <span class="bg-gray-100 text-gray-500 px-4 py-1.5 rounded-xl text-xs font-black tracking-tighter">🆔 ${esc(s.student_number)}</span>
+                            ${s.age ? `<span class="bg-green-50 text-green-600 px-4 py-1.5 rounded-xl text-xs font-black tracking-tighter">🎂 ${s.age} سنة</span>` : ''}
+                            ${s.blood_type ? `<span class="bg-red-50 text-red-600 px-4 py-1.5 rounded-xl text-xs font-black tracking-tighter">🩸 ${s.blood_type}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-900 text-white p-8 rounded-[2.5rem] text-center shadow-2xl min-w-[180px] transform hover:scale-105 transition-transform">
+                    <p class="text-6xl font-black ${d.percentage >= 70 ? 'text-green-400' : d.percentage >= 50 ? 'text-yellow-400' : 'text-red-400'}">${d.percentage}%</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.2em] mt-3 opacity-60">التقييم العام للأداء</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-12">
+                <!-- Measurements -->
+                <div class="lg:col-span-2">
+                    <h4 class="font-black text-gray-800 mb-8 flex items-center gap-3 text-xl">
+                        <span class="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center text-xl">📏</span> القياسات الجسمية والنمو
+                    </h4>
+                    ${m ? `
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                        <div class="bg-gray-50 border border-gray-100 rounded-3xl p-5 text-center group hover:bg-white hover:shadow-xl transition-all">
+                            <p class="text-[10px] text-gray-400 font-black uppercase mb-2">الطول</p>
+                            <p class="text-2xl font-black text-gray-800 transition group-hover:text-green-600">${m.height_cm} <span class="text-xs text-gray-400">سم</span></p>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-100 rounded-3xl p-5 text-center group hover:bg-white hover:shadow-xl transition-all">
+                            <p class="text-[10px] text-gray-400 font-black uppercase mb-2">الوزن</p>
+                            <p class="text-2xl font-black text-gray-800 transition group-hover:text-emerald-600">${m.weight_kg} <span class="text-xs text-gray-400">كجم</span></p>
+                        </div>
+                        <div class="rounded-3xl p-5 text-center border-2 bmi-${m.bmi_category}-light group hover:shadow-xl transition-all">
+                            <p class="text-[10px] font-black uppercase mb-2 opacity-60 italic">BMI</p>
+                            <p class="text-2xl font-black">${m.bmi}</p>
+                            <p class="text-[10px] font-black mt-1 text-center bg-white/50 py-1 rounded-lg">${BMI_AR[m.bmi_category] || ''}</p>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-100 rounded-3xl p-5 text-center group hover:bg-white hover:shadow-xl transition-all">
+                            <p class="text-[10px] text-gray-400 font-black uppercase mb-2">النبض</p>
+                            <p class="text-2xl font-black text-gray-800 transition group-hover:text-orange-500">${m.resting_heart_rate || '-'} <span class="text-xs text-gray-400">ن/د</span></p>
+                        </div>
+                    </div>
+                    ` : '<div class="p-10 bg-gray-50 rounded-[2rem] text-center text-gray-400 font-black border-2 border-dashed border-gray-100">لا يوجد بيانات قياسات حالية</div>'}
+                </div>
+
+                <!-- Health Status -->
+                <div>
+                    <h4 class="font-black text-gray-800 mb-8 flex items-center gap-3 text-xl">
+                        <span class="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center text-xl">🏥</span> الحالة الصحية
+                    </h4>
+                    ${h.length > 0 ? `
+                    <div class="space-y-4">
+                        ${h.map(c => `
+                        <div class="health-alert-mini rounded-2xl p-4 border border-red-100 bg-red-50/30">
+                            <p class="font-black text-gray-800 text-sm mb-1">${esc(c.condition_name)}</p>
+                            <span class="badge severity-${c.severity} !text-[9px] !px-3 font-black">${SEVERITY_AR[c.severity]}</span>
+                        </div>
+                        `).join('')}
+                    </div>
+                    ` : `
+                    <div class="p-8 bg-green-50 rounded-[2rem] text-center border border-green-100">
+                        <span class="text-4xl block mb-3">✨</span>
+                        <p class="text-green-800 font-black text-sm">الحالة الصحية مستقرة</p>
+                        <p class="text-green-600/60 text-[10px] mt-1 font-bold">لم يتم تسجيل أي عوارض طبية</p>
+                    </div>`}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
+                <!-- Fitness Results -->
+                <div>
+                    <h4 class="font-black text-gray-800 mb-8 flex items-center gap-3 text-xl">
+                        <span class="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center text-xl">💪</span> نتائج اختبارات اللياقة
+                    </h4>
+                    
+                    <!-- Desktop Table -->
+                    <div class="hidden md:block bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-sm">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">الاختبار البدني</th>
+                                    <th class="px-6 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">النتيجة</th>
+                                    <th class="px-6 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">الدرجة</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                ${d.fitness.map(f => `
+                                <tr class="hover:bg-green-50/30 transition-colors">
+                                    <td class="px-6 py-5 font-black text-gray-700 text-sm">${esc(f.test_name)}</td>
+                                    <td class="px-6 py-5 text-center text-gray-600 font-black text-sm">${f.value !== null ? f.value + ' <span class="text-[10px] text-gray-400 font-bold">' + f.unit + '</span>' : '-'}</td>
+                                    <td class="px-6 py-5 text-center">
+                                        <div class="inline-flex items-center justify-center p-2 rounded-xl bg-emerald-50 text-emerald-700 font-black text-sm min-w-[50px]">
+                                            ${f.score !== null ? f.score + '/' + f.max_score : '-'}
+                                        </div>
+                                    </td>
+                                </tr>
+                                `).join('')}
+                                <tr class="bg-emerald-600 text-white shadow-xl">
+                                    <td class="px-6 py-6 font-black rounded-r-2xl" colspan="2">إجمالي نقاط اللياقة البدنية</td>
+                                    <td class="px-6 py-6 text-center text-2xl font-black rounded-l-2xl">${d.totalScore}/${d.totalMax}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Cards -->
+                    <div class="md:hidden space-y-3">
+                        ${d.fitness.map(f => `
+                        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex justify-between items-center group active:scale-95 transition-all">
+                            <div>
+                                <h5 class="font-black text-gray-800 text-sm group-hover:text-green-600 transition-colors">${esc(f.test_name)}</h5>
+                                <p class="text-xs text-gray-400 font-bold mt-1">${f.value !== null ? f.value + ' ' + f.unit : 'لم يؤدَ'}</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-green-600 font-black border border-green-50">
+                                ${f.score !== null ? f.score : '-'}
+                            </div>
+                        </div>`).join('')}
+                        <div class="bg-green-600 rounded-3xl p-6 text-white text-center shadow-lg shadow-green-100">
+                            <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-1">المجموع الكلي</p>
+                            <h4 class="text-3xl font-black">${d.totalScore} <span class="text-sm opacity-60">/ ${d.totalMax}</span></h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance -->
+                <div class="flex flex-col">
+                    <h4 class="font-black text-gray-800 mb-8 flex items-center gap-3 text-xl">
+                        <span class="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center text-xl">📋</span> إحصائيات الحضور والغياب
+                    </h4>
+                    <div class="bg-white border-2 border-gray-50 rounded-[2.5rem] p-8 md:p-10 flex-1 flex flex-col justify-center shadow-inner">
+                        <div class="grid grid-cols-3 gap-4 md:gap-8">
+                            <div class="text-center group">
+                                <div class="w-16 h-16 md:w-20 md:h-20 bg-green-50 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mx-auto mb-3 transition group-hover:scale-110 group-hover:bg-green-500 group-hover:text-white shadow-sm">
+                                    <span class="text-2xl md:text-3xl font-black">${att.present}</span>
+                                </div>
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">حضور</p>
+                            </div>
+                            <div class="text-center group">
+                                <div class="w-16 h-16 md:w-20 md:h-20 bg-red-50 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mx-auto mb-3 transition group-hover:scale-110 group-hover:bg-red-500 group-hover:text-white shadow-sm">
+                                    <span class="text-2xl md:text-3xl font-black">${att.absent}</span>
+                                </div>
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">غياب</p>
+                            </div>
+                            <div class="text-center group">
+                                <div class="w-16 h-16 md:w-20 md:h-20 bg-yellow-50 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mx-auto mb-3 transition group-hover:scale-110 group-hover:bg-yellow-500 group-hover:text-white shadow-sm">
+                                    <span class="text-2xl md:text-3xl font-black">${att.late}</span>
+                                </div>
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">تأخر</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-12">
+                            <div class="flex justify-between text-xs font-black text-gray-400 uppercase mb-3 px-1">
+                                <span>نسبة الانتظام الميداني</span>
+                                <span class="text-green-600">${att.present + att.absent + att.late > 0 ? Math.round(att.present / (att.present + att.absent + att.late) * 100) : 100}%</span>
+                            </div>
+                            <div class="h-5 bg-gray-100 rounded-full overflow-hidden flex shadow-inner p-1">
+                                <div class="bg-gradient-to-r from-green-400 to-green-600 h-full rounded-full shadow-lg transition-all duration-1000" style="width:${att.present + att.absent + att.late > 0 ? (att.present / (att.present + att.absent + att.late) * 100) : 100}%"></div>
+                                <div class="bg-yellow-400 h-full rounded-full shadow-lg" style="width:${att.present + att.absent + att.late > 0 ? (att.late / (att.present + att.absent + att.late) * 100) : 0}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-[10px] text-gray-400 mt-12 pt-8 border-t border-gray-50 italic font-black uppercase tracking-[0.2em] opacity-50">
+                PE Smart School System • ${new Date().toLocaleDateString('ar-SA')} • تقرير أداء ذكي
+            </div>
+        </div>
+    </div>`;
+}
+
+async function renderClassReport() {
+    const cl = await API.get('classes');
+
+    document.getElementById('reportContent').innerHTML = `
+    <div class="fade-in">
+        <div class="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-5 md:p-8 mb-8 md:mb-10 no-print">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-end">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">اختيار الفصل المستهدف</label>
+                    <select id="classReportSelect" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl md:rounded-[1.5rem] focus:bg-white focus:border-green-500 focus:outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer text-sm">
+                        <option value="">-- اضغط للاختيار --</option>
+                        ${(cl?.data || []).map(c => `<option value="${c.id}">${esc(c.full_name || c.name)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="pt-1">
+                    <button onclick="generateClassReport()" class="w-full bg-green-600 text-white px-6 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-green-700 transition shadow-lg shadow-green-100 flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
+                        <span class="text-xl">🏫</span> عرض تقرير الفصل
+                    </button>
+                </div>
+                <div class="pt-1">
+                    <button onclick="window.print()" class="w-full bg-gray-900 text-white px-6 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-black transition shadow-lg shadow-gray-200 flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
+                        <span class="text-xl">🖨️</span> طباعة القائمة
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="reportOutput">
+            <div class="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-gray-100">
+                <div class="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 grayscale opacity-30">🏆</div>
+                <p class="text-gray-400 font-black text-xl">يرجى اختيار الفصل لتحليل النتائج الجماعية</p>
+                <p class="text-gray-300 text-sm mt-1">يستعرض هذا التقرير ترتيب الطلاب ومعدل أداء الفصل</p>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function generateClassReport() {
+    const cid = document.getElementById('classReportSelect').value;
+    if (!cid) {
+        showToast('اختر فصل', 'error');
+        return;
+    }
+
+    const r = await API.get('report_class', { class_id: cid });
+    if (!r || !r.success) return;
+
+    const d = r.data;
+
+    document.getElementById('reportOutput').innerHTML = `
+    <div class="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 p-6 md:p-12 fade-in">
+        <div class="print-only text-center mb-6 border-b pb-4">
+            <h1 class="text-2xl font-black">🏃 PE Smart School System</h1>
+            <p class="text-gray-400 font-bold uppercase tracking-widest text-[10px] mt-1">تقرير تحليل أداء الفصل الدراسي</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-10 pb-8 border-b border-gray-50">
+            <div class="text-center md:text-right">
+                <h3 class="text-2xl md:text-3xl font-black text-gray-800">${esc(d.class.full_name)}</h3>
+                <p class="text-green-600 font-black flex items-center justify-center md:justify-start gap-2 mt-1">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    ${d.totalStudents} طالباً مسجلاً
+                </p>
+            </div>
+            <div class="bg-gray-900 text-white p-6 rounded-[2rem] text-center min-w-[160px] shadow-xl">
+                <p class="text-4xl font-black text-green-400">${d.classAverage}%</p>
+                <p class="text-[10px] font-black uppercase tracking-widest mt-2 opacity-60">متوسط أداء الفصل</p>
+            </div>
+        </div>
+
+        <!-- Desktop View -->
+        <div class="hidden md:block overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm bg-gray-50/30">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-100/50">
+                        <th class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">الترتيب</th>
+                        <th class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">اسم الطالب</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">النقاط</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">النسبة</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">BMI</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الصحة</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">حضور</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                    ${d.students.map((s, i) => `
+                    <tr class="hover:bg-green-50/50 transition-colors ${i < 3 ? 'bg-green-50/20' : ''}">
+                        <td class="px-5 py-4">
+                            <span class="w-8 h-8 rounded-lg ${i === 0 ? 'bg-yellow-400 text-white' : i === 1 ? 'bg-gray-300 text-white' : i === 2 ? 'bg-orange-400 text-white' : 'bg-gray-100 text-gray-400'} flex items-center justify-center font-black text-xs">
+                                ${i + 1}
+                            </span>
+                        </td>
+                        <td class="px-5 py-4">
+                            <div class="font-black text-gray-800 text-sm whitespace-nowrap">${esc(s.name)}</div>
+                        </td>
+                        <td class="px-5 py-4 text-center font-bold text-gray-600 text-sm">${s.total_score}/${s.total_max || 0}</td>
+                        <td class="px-5 py-4 text-center">
+                            <span class="px-3 py-1 rounded-lg font-black text-xs ${s.percentage >= 70 ? 'bg-green-100 text-green-700' : s.percentage >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">${s.percentage}%</span>
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            ${s.latest_bmi ? `<span class="badge bmi-${s.bmi_category || 'normal'} !text-[10px] font-black">${s.latest_bmi}</span>` : '<span class="text-gray-300">-</span>'}
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            ${s.health_alerts > 0 ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 rounded-md text-[10px] font-black border border-red-100">⚠️ ${s.health_alerts}</span>` : '<span class="text-green-500 text-xs text-center">--</span>'}
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            <div class="flex items-center justify-center gap-1.5 font-bold text-xs ring-1 ring-gray-100 rounded-full py-1">
+                                <span class="text-green-600">P:${s.present_count}</span>
+                                <span class="text-gray-200">|</span>
+                                <span class="text-red-600">A:${s.absent_count}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile View Cards -->
+        <div class="md:hidden space-y-4">
+            ${d.students.map((s, i) => `
+            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden group ${i < 3 ? 'ring-2 ring-green-100 border-green-200' : ''}">
+                ${i < 3 ? `<div class="absolute top-2 left-2 text-2xl">${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</div>` : ''}
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-xl ${i < 3 ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400'} flex items-center justify-center font-black flex-shrink-0">
+                        ${i + 1}
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-black text-gray-800 text-base mb-1 group-hover:text-green-600 transition-colors">${esc(s.name)}</h4>
+                        <div class="flex items-center gap-3">
+                             <span class="text-[10px] font-black text-green-600 uppercase">الأداء: ${s.percentage}%</span>
+                             <span class="text-[10px] font-bold text-gray-300">|</span>
+                             <span class="text-[10px] font-black text-gray-400 uppercase">النقاط: ${s.total_score}/${s.total_max}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">BMI</p>
+                        <span class="text-[10px] font-black text-gray-700">${s.latest_bmi || '-'}</span>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">صحة</p>
+                        <span class="text-[10px] font-black ${s.health_alerts > 0 ? 'text-red-500' : 'text-green-500'}">${s.health_alerts > 0 ? '⚠️ تنبيه' : '✅'}</span>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">حضور</p>
+                        <span class="text-[10px] font-black text-gray-700">${s.present_count} / ${s.present_count + s.absent_count}</span>
+                    </div>
+                </div>
+            </div>
+            `).join('')}
+        </div>
+
+        <div class="text-center text-[10px] text-gray-400 mt-12 opacity-50 font-black uppercase tracking-widest">
+            نظام التحليل البدني والرياضي لعام ${new Date().getFullYear()}
+        </div>
+    </div>`;
+}
+
+async function renderCompareReport() {
+    const r = await API.get('report_compare');
+    if (!r || !r.success) return;
+
+    const classes = r.data;
+
+    document.getElementById('reportContent').innerHTML = `
+    <div class="fade-in px-4 md:px-0">
+        <div class="flex justify-center md:justify-end mb-8 no-print px-1">
+            <button onclick="window.print()" class="w-full md:w-auto bg-gray-900 text-white px-10 py-4 rounded-[1.5rem] font-black hover:bg-black transition shadow-xl flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
+                <span class="text-2xl">🖨️</span> طباعة لوحة المقارنة
+            </button>
+        </div>
+        
+        <div class="bg-white rounded-[2rem] md:rounded-[3.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 p-6 md:p-12 relative overflow-hidden">
+            <!-- Decorative Elements -->
+            <div class="absolute top-0 right-0 w-80 h-80 bg-emerald-50 rounded-full -mr-40 -mt-40 opacity-40"></div>
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-green-50 rounded-full -ml-32 -mb-32 opacity-30"></div>
+            
+            <div class="relative z-10">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
+                    <div class="text-center md:text-right">
+                        <h3 class="text-3xl md:text-4xl font-black text-gray-800">⚖️ تحليل مقارنة الفصول</h3>
+                        <p class="text-gray-400 font-bold mt-2 text-sm md:text-base tracking-tight">مؤشرات الأداء البدني لجميع الفصول التعليمية المشتركة</p>
+                    </div>
+                    <div class="bg-green-600 px-8 py-4 rounded-[2rem] border border-green-500 shadow-xl shadow-green-100 flex flex-col items-center md:items-end self-center md:self-auto min-w-[140px]">
+                        <span class="text-[10px] text-green-100 font-black uppercase tracking-widest block mb-1">إجمالي الفصول</span>
+                        <span class="text-4xl font-black text-white">${classes.length}</span>
+                    </div>
+                </div>
+
+                <div class="space-y-4 md:space-y-6">
+                    ${classes.map((c, i) => `
+                    <div class="group bg-gray-50/50 hover:bg-white hover:shadow-2xl transition-all duration-500 p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-transparent hover:border-green-100">
+                        <div class="flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
+                            <!-- Rank Icon -->
+                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-[1.5rem] md:rounded-[2rem] ${i < 3 ? 'bg-gradient-to-br from-green-500 to-emerald-700 text-white shadow-xl shadow-green-100' : 'bg-white text-gray-400 border border-gray-100'} font-black flex items-center justify-center text-xl md:text-2xl flex-shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-6">
+                                ${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1)}
+                            </div>
+                            
+                            <div class="flex-1 w-full">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-2">
+                                    <div>
+                                        <h5 class="font-black text-gray-800 text-lg md:text-2xl group-hover:text-green-600 transition-colors">${esc(c.class_name)}</h5>
+                                        <p class="text-[10px] md:text-xs text-gray-400 font-black uppercase tracking-widest mt-0.5">${c.students_count} طالباً مسجلاً في هذا الفصل</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-2xl md:text-4xl font-black text-gray-900">${c.percentage}<span class="text-sm md:text-xl text-green-600 ml-1">%</span></span>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-gray-200/50 rounded-full h-5 md:h-6 p-1 overflow-hidden shadow-inner ring-4 ring-white/80">
+                                    <div class="h-full rounded-full transition-all duration-1000 ease-out ${i === 0 ? 'bg-gradient-to-l from-yellow-400 to-yellow-600' : i === 1 ? 'bg-gradient-to-l from-gray-300 to-gray-500' : i === 2 ? 'bg-gradient-to-l from-orange-400 to-orange-600' : 'bg-gradient-to-l from-green-500 to-emerald-600'}" 
+                                         style="width:${c.bar_width}%">
+                                        <div class="w-full h-full bg-white/20 animate-pulse"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center text-[10px] text-gray-400 mt-12 mb-8 opacity-50 font-black uppercase tracking-[0.3em]">
+            PE Smart School Intelligence Report System
+        </div>
+    </div>`;
+}

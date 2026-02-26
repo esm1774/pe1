@@ -1,0 +1,122 @@
+<?php
+/**
+ * PE Smart School System - Attendance API
+ * (Multi-Teacher Support)
+ */
+
+function getAttendance() {
+    requireLogin();
+    $classId = (int)getParam('class_id');
+    $date    = getParam('date', date('Y-m-d'));
+
+    if (!$classId) jsonError('يجب تحديد الفصل');
+    if (!canAccessClass($classId)) jsonError('لا تملك صلاحية الوصول لهذا الفصل', 403);
+
+    $db = getDB();
+
+    $queries = [
+        "SELECT s.id as student_id, s.name, s.student_number, a.status, a.id as attendance_id,
+               (SELECT COUNT(*) FROM student_health sh WHERE sh.student_id = s.id AND sh.is_active = 1) as health_alerts,
+               (SELECT GROUP_CONCAT(CONCAT(sh.condition_name, ' (', sh.severity, ')') SEPARATOR ', ')
+                FROM student_health sh WHERE sh.student_id = s.id AND sh.is_active = 1) as health_summary
+        FROM students s
+        LEFT JOIN attendance a ON a.student_id = s.id AND a.attendance_date = ?
+        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name",
+
+        "SELECT s.id as student_id, s.name, s.student_number, a.status, a.id as attendance_id,
+               0 as health_alerts, NULL as health_summary
+        FROM students s
+        LEFT JOIN attendance a ON a.student_id = s.id AND a.attendance_date = ?
+        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name"
+    ];
+
+    foreach ($queries as $sql) {
+        try {
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$date, $classId]);
+            jsonSuccess($stmt->fetchAll());
+            return;
+        } catch (PDOException $e) {
+            continue;
+        }
+    }
+    jsonError('خطأ في جلب بيانات الحضور');
+}
+
+function saveAttendance() {
+    requireRole(['admin', 'teacher']);
+    $data    = getPostData();
+    $date    = sanitize($data['date'] ?? date('Y-m-d'));
+    $classId = (int)($data['class_id'] ?? 0);
+    $records = $data['records'] ?? [];
+
+    if (empty($records)) jsonError('لا توجد بيانات للحفظ');
+
+    // Validate class ownership if class_id provided
+    if ($classId && !canAccessClass($classId)) {
+        jsonError('لا تملك صلاحية تسجيل حضور هذا الفصل', 403);
+    }
+
+    $db   = getDB();
+    $stmt = $db->prepare("INSERT INTO attendance (student_id, attendance_date, status, recorded_by)
+        VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status = VALUES(status), recorded_by = VALUES(recorded_by), updated_at = NOW()");
+
+    $db->beginTransaction();
+    try {
+        foreach ($records as $record) {
+            $studentId = (int)$record['student_id'];
+            $status = sanitize($record['status']);
+            $stmt->execute([$studentId, $date, $status, $_SESSION['user_id']]);
+
+            // Trigger Notifications for Absent/Late
+            if ($status === 'absent' || $status === 'late') {
+                $statusAr = ($status === 'absent') ? 'غائب' : 'متأخر';
+                
+                // Get student name
+                $sStmt = $db->prepare("SELECT name FROM students WHERE id = ?");
+                $sStmt->execute([$studentId]);
+                $studentName = $sStmt->fetchColumn();
+
+                $title = "إشعار حضور: " . $studentName;
+                $msg = "نفيدكم بأن الطالب ({$studentName}) تم رصده كـ ({$statusAr}) في حصة التربية البدنية بتاريخ {$date}.";
+                notifyStudentParents($studentId, 'attendance', $title, $msg);
+            }
+        }
+        $db->commit();
+        logActivity('save_attendance', 'attendance', null, "Date: $date, Records: " . count($records));
+        jsonSuccess(null, 'تم حفظ الحضور بنجاح');
+    } catch (Exception $e) {
+        $db->rollBack();
+        throw $e;
+    }
+}
+
+function getAbsenceReport() {
+    requireLogin();
+    $db = getDB();
+    $teacherClassIds = getTeacherClassIds();
+
+    if ($teacherClassIds === null) {
+        // Admin: all students
+        $stmt = $db->query("
+            SELECT s.id, s.name, CONCAT(g.name, ' - ', c.name) as class_name, COUNT(a.id) as absent_count
+            FROM students s JOIN attendance a ON a.student_id = s.id AND a.status = 'absent'
+            JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
+            WHERE s.active = 1 GROUP BY s.id ORDER BY absent_count DESC LIMIT 20
+        ");
+    } elseif (empty($teacherClassIds)) {
+        jsonSuccess([]);
+        return;
+    } else {
+        $ph   = implode(',', array_fill(0, count($teacherClassIds), '?'));
+        $stmt = $db->prepare("
+            SELECT s.id, s.name, CONCAT(g.name, ' - ', c.name) as class_name, COUNT(a.id) as absent_count
+            FROM students s JOIN attendance a ON a.student_id = s.id AND a.status = 'absent'
+            JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
+            WHERE s.active = 1 AND s.class_id IN ($ph)
+            GROUP BY s.id ORDER BY absent_count DESC LIMIT 20
+        ");
+        $stmt->execute($teacherClassIds);
+    }
+    jsonSuccess($stmt->fetchAll());
+}
