@@ -12,6 +12,9 @@ header('X-Content-Type-Options: nosniff');
 
 $action = getParam('action', $_POST['action'] ?? '');
 
+// Resolve current tenant (school) context
+Tenant::resolve();
+
 // Ensure tournament tables exist
 ensureTournamentTables();
 
@@ -108,17 +111,12 @@ function ensureTournamentTables() {
     try {
         $db = getDB();
         
-        // Check if tournaments table exists
-        $tournamentsExist = $db->query("SHOW TABLES LIKE 'tournaments'")->fetch();
-
-        if (!$tournamentsExist) {
-            // ─── جداول جديدة كلياً ─────────────────────────────────
-        
-        // Create tables ONE BY ONE (PDO doesn't support multiple statements)
+        // ─── الجداول الرئيسية ──────────────────────────────────────────
         
         // 1. tournaments
         $db->exec("CREATE TABLE IF NOT EXISTS `tournaments` (
             `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id` INT UNSIGNED DEFAULT NULL,
             `name` VARCHAR(150) NOT NULL,
             `description` TEXT DEFAULT NULL,
             `type` ENUM('single_elimination', 'double_elimination', 'round_robin_single', 'round_robin_double', 'mixed') NOT NULL,
@@ -137,6 +135,7 @@ function ensureTournamentTables() {
             `created_by` INT UNSIGNED DEFAULT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX `idx_t_school` (`school_id`),
             INDEX `idx_t_status` (`status`),
             INDEX `idx_t_type` (`type`),
             INDEX `idx_t_mode` (`team_mode`)
@@ -146,6 +145,7 @@ function ensureTournamentTables() {
         $db->exec("CREATE TABLE IF NOT EXISTS `tournament_teams` (
             `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `tournament_id` INT UNSIGNED NOT NULL,
+            `school_id` INT UNSIGNED DEFAULT NULL,
             `class_id` INT UNSIGNED DEFAULT NULL,
             `team_name` VARCHAR(100) NOT NULL,
             `team_color` VARCHAR(20) DEFAULT '#10b981',
@@ -156,6 +156,7 @@ function ensureTournamentTables() {
             `group_name` VARCHAR(10) DEFAULT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX `idx_tt_tournament` (`tournament_id`),
+            INDEX `idx_tt_school` (`school_id`),
             INDEX `idx_tt_class` (`class_id`),
             INDEX `idx_tt_group` (`group_name`),
             CONSTRAINT `fk_tt_tournament` FOREIGN KEY (`tournament_id`) 
@@ -193,6 +194,7 @@ function ensureTournamentTables() {
         $db->exec("CREATE TABLE IF NOT EXISTS `matches` (
             `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `tournament_id` INT UNSIGNED NOT NULL,
+            `school_id` INT UNSIGNED DEFAULT NULL,
             `round_number` INT UNSIGNED NOT NULL DEFAULT 1,
             `match_number` INT UNSIGNED NOT NULL,
             `bracket_type` ENUM('main', 'losers', 'final', 'third_place') NOT NULL DEFAULT 'main',
@@ -215,24 +217,17 @@ function ensureTournamentTables() {
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX `idx_m_tournament` (`tournament_id`),
+            INDEX `idx_m_school` (`school_id`),
             INDEX `idx_m_round` (`round_number`),
             INDEX `idx_m_bracket` (`bracket_type`),
-            INDEX `idx_m_status` (`status`),
-            INDEX `idx_m_group` (`group_name`),
-            CONSTRAINT `fk_m_tournament` FOREIGN KEY (`tournament_id`) 
-                REFERENCES `tournaments`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT `fk_m_team1` FOREIGN KEY (`team1_id`) 
-                REFERENCES `tournament_teams`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-            CONSTRAINT `fk_m_team2` FOREIGN KEY (`team2_id`) 
-                REFERENCES `tournament_teams`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-            CONSTRAINT `fk_m_winner` FOREIGN KEY (`winner_team_id`) 
-                REFERENCES `tournament_teams`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
+            INDEX `idx_m_status` (`status`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // 6. standings
         $db->exec("CREATE TABLE IF NOT EXISTS `standings` (
             `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `tournament_id` INT UNSIGNED NOT NULL,
+            `school_id` INT UNSIGNED DEFAULT NULL,
             `team_id` INT UNSIGNED NOT NULL,
             `played` INT UNSIGNED DEFAULT 0,
             `wins` INT UNSIGNED DEFAULT 0,
@@ -246,12 +241,7 @@ function ensureTournamentTables() {
             `group_name` VARCHAR(10) DEFAULT NULL,
             `last_updated` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY `uk_s_tournament_team` (`tournament_id`, `team_id`),
-            INDEX `idx_s_points` (`points` DESC, `goal_difference` DESC),
-            INDEX `idx_s_group` (`group_name`),
-            CONSTRAINT `fk_s_tournament` FOREIGN KEY (`tournament_id`) 
-                REFERENCES `tournaments`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT `fk_s_team` FOREIGN KEY (`team_id`) 
-                REFERENCES `tournament_teams`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+            INDEX `idx_s_school` (`school_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // 7. match_events
@@ -266,71 +256,14 @@ function ensureTournamentTables() {
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX `idx_me_match` (`match_id`),
             CONSTRAINT `fk_me_match` FOREIGN KEY (`match_id`) 
-                REFERENCES `matches`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT `fk_me_team` FOREIGN KEY (`team_id`) 
-                REFERENCES `tournament_teams`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-            // 8. tournament_player_stats — إحصائيات اللاعبين (جديد v2.0)
-            $db->exec("CREATE TABLE IF NOT EXISTS `tournament_player_stats` (
-                `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `tournament_id`  INT UNSIGNED NOT NULL,
-                `student_id`     INT UNSIGNED NOT NULL,
-                `team_id`        INT UNSIGNED NOT NULL,
-                `goals`          INT UNSIGNED DEFAULT 0,
-                `own_goals`      INT UNSIGNED DEFAULT 0,
-                `assists`        INT UNSIGNED DEFAULT 0,
-                `yellow_cards`   INT UNSIGNED DEFAULT 0,
-                `red_cards`      INT UNSIGNED DEFAULT 0,
-                `man_of_match`   INT UNSIGNED DEFAULT 0,
-                `matches_played` INT UNSIGNED DEFAULT 0,
-                `last_updated`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY `uk_tps_tour_student` (`tournament_id`, `student_id`),
-                INDEX `idx_tps_goals`  (`goals` DESC),
-                INDEX `idx_tps_mom`    (`man_of_match` DESC),
-                CONSTRAINT `fk_tps_tournament` FOREIGN KEY (`tournament_id`)
-                    REFERENCES `tournaments`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-        } // endif !$tournamentsExist
-
-        // 9. match_media — وسائط المباريات (جديد v2.0 - النظام الإعلامي)
-        $db->exec("CREATE TABLE IF NOT EXISTS `match_media` (
-            `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            `match_id`      INT UNSIGNED NOT NULL,
-            `media_type`    ENUM('photo', 'video') NOT NULL DEFAULT 'photo',
-            `media_url`     VARCHAR(255) NOT NULL,
-            `description`   VARCHAR(255) DEFAULT NULL,
-            `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX `idx_mm_match` (`match_id`),
-            CONSTRAINT `fk_mm_match` FOREIGN KEY (`match_id`) 
                 REFERENCES `matches`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        // ─── إضافة الأعمدة الجديدة للجداول الموجودة (آمن للتشغيل دائماً) ───
-        _addColumnIfNotExists($db, 'tournament_teams', 'sports_team_id', 
-            'INT UNSIGNED DEFAULT NULL AFTER `class_id`');
-        _addColumnIfNotExists($db, 'tournaments', 'public_token',
-            'VARCHAR(64) DEFAULT NULL UNIQUE AFTER `winner_team_id`');
-        _addColumnIfNotExists($db, 'tournaments', 'is_public',
-            'TINYINT(1) NOT NULL DEFAULT 0 AFTER `public_token`');
-        _addColumnIfNotExists($db, 'matches', 'man_of_match_student_id',
-            'INT UNSIGNED DEFAULT NULL AFTER `notes`');
-        _addColumnIfNotExists($db, 'matches', 'man_of_match_name',
-            'VARCHAR(100) DEFAULT NULL AFTER `man_of_match_student_id`');
-        _addColumnIfNotExists($db, 'tournament_player_stats', 'awards',
-            'VARCHAR(255) DEFAULT NULL AFTER `matches_played`');
-        
-        // v2.1: نظام التشجيع
-        _addColumnIfNotExists($db, 'tournament_teams', 'cheers_count',
-            'INT UNSIGNED NOT NULL DEFAULT 0');
-        _addColumnIfNotExists($db, 'tournament_player_stats', 'cheers_count',
-            'INT UNSIGNED NOT NULL DEFAULT 0');
-
-        // ─── إنشاء جدول إحصائيات اللاعبين إن لم يكن موجوداً ───
+        // 8. tournament_player_stats — إحصائيات اللاعبين
         $db->exec("CREATE TABLE IF NOT EXISTS `tournament_player_stats` (
             `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `tournament_id`  INT UNSIGNED NOT NULL,
+            `school_id`      INT UNSIGNED DEFAULT NULL,
             `student_id`     INT UNSIGNED NOT NULL,
             `team_id`        INT UNSIGNED NOT NULL,
             `goals`          INT UNSIGNED DEFAULT 0,
@@ -342,11 +275,57 @@ function ensureTournamentTables() {
             `matches_played` INT UNSIGNED DEFAULT 0,
             `last_updated`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY `uk_tps_tour_student` (`tournament_id`, `student_id`),
-            INDEX `idx_tps_goals`  (`goals` DESC),
-            INDEX `idx_tps_mom`    (`man_of_match` DESC),
+            INDEX `idx_tps_school` (`school_id`),
             CONSTRAINT `fk_tps_tournament` FOREIGN KEY (`tournament_id`)
                 REFERENCES `tournaments`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // 9. match_media — وسائط المباريات
+        $db->exec("CREATE TABLE IF NOT EXISTS `match_media` (
+            `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `match_id`      INT UNSIGNED NOT NULL,
+            `school_id`     INT UNSIGNED DEFAULT NULL,
+            `media_type`    ENUM('photo', 'video') NOT NULL DEFAULT 'photo',
+            `media_url`     VARCHAR(255) NOT NULL,
+            `description`   VARCHAR(255) DEFAULT NULL,
+            `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_mm_match` (`match_id`),
+            INDEX `idx_mm_school` (`school_id`),
+            CONSTRAINT `fk_mm_match` FOREIGN KEY (`match_id`) 
+                REFERENCES `matches`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // ─── ترحيل الأعمدة للجداول الموجودة مسبقاً ─────────────────────────
+        $childTables = ['matches', 'tournament_teams', 'standings', 'tournament_player_stats', 'match_media'];
+        foreach ($childTables as $tableName) {
+            $cols = array_column($db->query("SHOW COLUMNS FROM `$tableName`")->fetchAll(), 'Field');
+            if (!in_array('school_id', $cols)) {
+                $db->exec("ALTER TABLE `$tableName` ADD COLUMN `school_id` INT UNSIGNED DEFAULT NULL AFTER `id` NOT NULL");
+                $db->exec("ALTER TABLE `$tableName` ADD INDEX `idx_saas_school` (`school_id`)");
+            }
+            
+            // Backfill school_id from parent tournament if missing
+            if ($tableName !== 'match_media') {
+                $db->exec("
+                    UPDATE `$tableName` child
+                    JOIN tournaments t ON child.tournament_id = t.id
+                    SET child.school_id = t.school_id
+                    WHERE child.school_id IS NULL AND t.school_id IS NOT NULL
+                ");
+            } else {
+                $db->exec("
+                    UPDATE `match_media` mm
+                    JOIN matches m ON mm.match_id = m.id
+                    SET mm.school_id = m.school_id
+                    WHERE mm.school_id IS NULL AND m.school_id IS NOT NULL
+                ");
+            }
+        }
+        
+        // ─── إضافات أخرى v2.1 ───
+        _addColumnIfNotExists($db, 'tournament_teams', 'cheers_count', 'INT UNSIGNED NOT NULL DEFAULT 0');
+        _addColumnIfNotExists($db, 'tournament_player_stats', 'cheers_count', 'INT UNSIGNED NOT NULL DEFAULT 0');
+        _addColumnIfNotExists($db, 'tournament_teams', 'sports_team_id', 'INT UNSIGNED DEFAULT NULL AFTER `class_id`');
 
     } catch (Exception $e) {
         if (DEBUG_MODE) {
@@ -383,11 +362,12 @@ function getTournaments() {
             SUM(CASE WHEN m.status = 'completed' THEN 1 ELSE 0 END) as completed_matches
             FROM tournaments t
             LEFT JOIN tournament_teams tt ON tt.tournament_id = t.id
-            LEFT JOIN matches m ON m.tournament_id = t.id";
+            LEFT JOIN matches m ON m.tournament_id = t.id
+            WHERE t.school_id = ?";
     
-    $params = [];
+    $params = [schoolId()];
     if ($status) {
-        $sql .= " WHERE t.status = ?";
+        $sql .= " AND t.status = ?";
         $params[] = $status;
     }
     
@@ -404,8 +384,8 @@ function getTournament() {
     if (!$id) jsonError('معرّف البطولة مطلوب');
     
     $db = getDB();
-    $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ?");
-    $stmt->execute([$id]);
+    $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ? AND school_id = ?");
+    $stmt->execute([$id, schoolId()]);
     $tournament = $stmt->fetch();
     
     if (!$tournament) jsonError('البطولة غير موجودة');
@@ -446,13 +426,14 @@ function createTournament() {
     
     $db = getDB();
     $stmt = $db->prepare("
-        INSERT INTO tournaments (name, description, type, team_mode, sport_type, 
+        INSERT INTO tournaments (school_id, name, description, type, team_mode, sport_type, 
             start_date, end_date, randomize_teams, auto_generate, 
             points_win, points_draw, points_loss, status, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)
     ");
     
     $stmt->execute([
+        schoolId(),
         sanitize($data['name']),
         sanitize($data['description'] ?? ''),
         sanitize($data['type']),
@@ -482,11 +463,11 @@ function updateTournament() {
     
     $db = getDB();
     $stmt = $db->prepare("
-        UPDATE tournaments SET
-            name = ?, description = ?, type = ?, team_mode = ?, sport_type = ?,
+        UPDATE tournaments
+        SET name = ?, description = ?, type = ?, team_mode = ?, sport_type = ?,
             start_date = ?, end_date = ?, randomize_teams = ?, auto_generate = ?,
             points_win = ?, points_draw = ?, points_loss = ?
-        WHERE id = ? AND status IN ('draft', 'registration')
+        WHERE id = ? AND school_id = ? AND status IN ('draft', 'registration')
     ");
     
     $result = $stmt->execute([
@@ -502,7 +483,8 @@ function updateTournament() {
         (int)($data['points_win'] ?? 3),
         (int)($data['points_draw'] ?? 1),
         (int)($data['points_loss'] ?? 0),
-        $id
+        $id,
+        schoolId()
     ]);
     
     if ($stmt->rowCount() === 0) {
@@ -609,33 +591,37 @@ function completeTournament() {
     $db = getDB();
     
     // Find winner based on tournament type
-    $stmt = $db->prepare("SELECT type FROM tournaments WHERE id = ?");
-    $stmt->execute([$id]);
+    $stmt = $db->prepare("SELECT type FROM tournaments WHERE id = ? AND school_id = ?");
+    $stmt->execute([$id, schoolId()]);
     $type = $stmt->fetchColumn();
     
+    if (!$type) jsonError('البطولة غير موجودة أو لا تملك صلاحية الوصول');
+
     $winnerId = null;
     
     if (strpos($type, 'elimination') !== false) {
         $stmt = $db->prepare("
-            SELECT winner_team_id FROM matches 
-            WHERE tournament_id = ? AND bracket_type = 'final' AND status = 'completed'
-            ORDER BY round_number DESC LIMIT 1
+            SELECT m.winner_team_id FROM matches m
+            JOIN tournaments t ON m.tournament_id = t.id
+            WHERE m.tournament_id = ? AND t.school_id = ? AND m.bracket_type = 'final' AND m.status = 'completed'
+            ORDER BY m.round_number DESC LIMIT 1
         ");
-        $stmt->execute([$id]);
+        $stmt->execute([$id, schoolId()]);
         $winnerId = $stmt->fetchColumn();
     } else {
         $stmt = $db->prepare("
-            SELECT team_id FROM standings 
-            WHERE tournament_id = ? 
-            ORDER BY points DESC, goal_difference DESC, goals_for DESC 
+            SELECT s.team_id FROM standings s
+            JOIN tournaments t ON s.tournament_id = t.id
+            WHERE s.tournament_id = ? AND t.school_id = ?
+            ORDER BY s.points DESC, s.goal_difference DESC, s.goals_for DESC 
             LIMIT 1
         ");
-        $stmt->execute([$id]);
+        $stmt->execute([$id, schoolId()]);
         $winnerId = $stmt->fetchColumn();
     }
     
-    $db->prepare("UPDATE tournaments SET status = 'completed', winner_team_id = ? WHERE id = ?")
-       ->execute([$winnerId, $id]);
+    $db->prepare("UPDATE tournaments SET status = 'completed', winner_team_id = ? WHERE id = ? AND school_id = ?")
+       ->execute([$winnerId, $id, schoolId()]);
     
     updateClassPointsFromTournament($id);
     
@@ -661,25 +647,27 @@ function getTeams() {
                 JOIN student_teams st ON stm.student_team_id = st.id 
                 WHERE st.tournament_team_id = tt.id) as member_count
         FROM tournament_teams tt
+        JOIN tournaments t ON tt.tournament_id = t.id
         LEFT JOIN classes c ON tt.class_id = c.id
         LEFT JOIN grades g ON c.grade_id = g.id
-        WHERE tt.tournament_id = ?
+        WHERE tt.tournament_id = ? AND t.school_id = ?
         ORDER BY tt.seed_number, tt.id",
         
         "SELECT tt.*, c.name as class_name,
                CONCAT(g.name, ' - ', c.name) as full_class_name,
                0 as member_count
         FROM tournament_teams tt
+        JOIN tournaments t ON tt.tournament_id = t.id
         LEFT JOIN classes c ON tt.class_id = c.id
         LEFT JOIN grades g ON c.grade_id = g.id
-        WHERE tt.tournament_id = ?
+        WHERE tt.tournament_id = ? AND t.school_id = ?
         ORDER BY tt.seed_number, tt.id"
     ];
     
     foreach ($queries as $sql) {
         try {
             $stmt = $db->prepare($sql);
-            $stmt->execute([$tournamentId]);
+            $stmt->execute([$tournamentId, schoolId()]);
             jsonSuccess($stmt->fetchAll());
             return;
         } catch (PDOException $e) {
@@ -698,8 +686,8 @@ function addTeam() {
     $db = getDB();
     
     // Check tournament status
-    $stmt = $db->prepare("SELECT status FROM tournaments WHERE id = ?");
-    $stmt->execute([$data['tournament_id']]);
+    $stmt = $db->prepare("SELECT status FROM tournaments WHERE id = ? AND school_id = ?");
+    $stmt->execute([$data['tournament_id'], schoolId()]);
     $status = $stmt->fetchColumn();
     
     if (!$status) jsonError('البطولة غير موجودة');
@@ -739,9 +727,9 @@ function removeTeam() {
     $stmt = $db->prepare("
         SELECT t.status FROM tournament_teams tt
         JOIN tournaments t ON tt.tournament_id = t.id
-        WHERE tt.id = ?
+        WHERE tt.id = ? AND t.school_id = ?
     ");
-    $stmt->execute([$id]);
+    $stmt->execute([$id, schoolId()]);
     $status = $stmt->fetchColumn();
     
     if (!in_array($status, ['draft', 'registration'])) {
@@ -765,8 +753,8 @@ function addClassesAsTeams() {
     $studentIds = isset($data['student_ids']) ? (array)$data['student_ids'] : null; // جديد: قائمة الطلاب المختارين
     
     // Check tournament exists and is in draft/registration
-    $stmt = $db->prepare("SELECT status FROM tournaments WHERE id = ?");
-    $stmt->execute([$tournamentId]);
+    $stmt = $db->prepare("SELECT status FROM tournaments WHERE id = ? AND school_id = ?");
+    $stmt->execute([$tournamentId, schoolId()]);
     $status = $stmt->fetchColumn();
     
     if (!$status) jsonError('البطولة غير موجودة');
@@ -1542,8 +1530,8 @@ function generateRoundRobin($tournamentId, $teams, $isDouble) {
     foreach ($teams as $team) {
         if ($team['id']) {
             try {
-                $db->prepare("INSERT INTO standings (tournament_id, team_id) VALUES (?, ?)")
-                   ->execute([$tournamentId, $team['id']]);
+                $db->prepare("INSERT INTO standings (tournament_id, school_id, team_id) VALUES (?, ?, ?)")
+                   ->execute([$tournamentId, schoolId(), $team['id']]);
             } catch (Exception $e) {}
         }
     }
@@ -1570,12 +1558,12 @@ function generateRoundRobin($tournamentId, $teams, $isDouble) {
             }
             
             $stmt = $db->prepare("
-                INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, 
+                INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, 
                     team1_id, team2_id, status)
-                VALUES (?, ?, ?, 'main', ?, ?, 'scheduled')
+                VALUES (?, ?, ?, ?, 'main', ?, ?, 'scheduled')
             ");
             $stmt->execute([
-                $tournamentId, $round, $matchNumber,
+                $tournamentId, schoolId(), $round, $matchNumber,
                 $team1['id'], $team2['id']
             ]);
             $matchNumber++;
@@ -1647,17 +1635,17 @@ function saveMatchResult() {
     $team1Score = (int)$data['team1_score'];
     $team2Score = (int)$data['team2_score'];
     
-    $stmt = $db->prepare("SELECT * FROM matches WHERE id = ?");
-    $stmt->execute([$matchId]);
+    $stmt = $db->prepare("SELECT * FROM matches m JOIN tournaments t ON m.tournament_id = t.id WHERE m.id = ? AND t.school_id = ?");
+    $stmt->execute([$matchId, schoolId()]);
     $match = $stmt->fetch();
     
-    if (!$match) jsonError('المباراة غير موجودة');
+    if (!$match) jsonError('المباراة غير موجودة أو لا تملك صلاحية الوصول');
     if (!$match['team1_id'] || !$match['team2_id']) jsonError('المباراة غير مكتملة الفرق');
     if ($match['status'] === 'completed') jsonError('هذه المباراة منتهية بالفعل');
     
     // جلب نوع البطولة
-    $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ?");
-    $stmt->execute([$match['tournament_id']]);
+    $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ? AND school_id = ?");
+    $stmt->execute([$match['tournament_id'], schoolId()]);
     $tournament = $stmt->fetch();
     
     // في نظام الخروج المباشر/المزدوج/المزيج (الأدوار الإقصائية): لا يمكن التعادل!
@@ -1691,14 +1679,15 @@ function saveMatchResult() {
     // ─── تسجيل الهدافين (جديد) ─────────────────────────
     if (!empty($data['scorers']) && is_array($data['scorers'])) {
         $stmtScorer = $db->prepare("
-            INSERT INTO tournament_player_stats (tournament_id, team_id, student_id, goals)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO tournament_player_stats (tournament_id, school_id, team_id, student_id, goals)
+            VALUES (?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE goals = goals + VALUES(goals)
         ");
         foreach ($data['scorers'] as $s) {
             if (!empty($s['student_id']) && !empty($s['team_id'])) {
                 $stmtScorer->execute([
                     $match['tournament_id'],
+                    schoolId(),
                     (int)$s['team_id'],
                     (int)$s['student_id'],
                     (int)$s['goals']
@@ -1917,16 +1906,17 @@ function scheduleMatches() {
                t1.team_name as team1_name,
                t2.team_name as team2_name
         FROM matches m
+        JOIN tournaments t ON m.tournament_id = t.id
         LEFT JOIN tournament_teams t1 ON m.team1_id = t1.id
         LEFT JOIN tournament_teams t2 ON m.team2_id = t2.id
-        WHERE m.tournament_id = ?
+        WHERE m.tournament_id = ? AND t.school_id = ?
           AND m.status != 'completed'
           AND (m.is_bye IS NULL OR m.is_bye = 0)
           AND m.team1_id IS NOT NULL
           AND m.team2_id IS NOT NULL
         ORDER BY m.round_number ASC, m.bracket_type ASC, m.match_number ASC
     ");
-    $stmt->execute([$tournamentId]);
+    $stmt->execute([$tournamentId, schoolId()]);
     $matches = $stmt->fetchAll();
 
     if (empty($matches)) {
@@ -2064,11 +2054,12 @@ function getStandings() {
                c.name as class_name
         FROM standings s
         JOIN tournament_teams tt ON s.team_id = tt.id
+        JOIN tournaments t ON s.tournament_id = t.id
         LEFT JOIN classes c ON tt.class_id = c.id
-        WHERE s.tournament_id = ?
+        WHERE s.tournament_id = ? AND t.school_id = ?
         ORDER BY COALESCE(s.group_name, '') ASC, s.points DESC, s.goal_difference DESC, s.goals_for DESC
     ");
-    $stmt->execute([$tournamentId]);
+    $stmt->execute([$tournamentId, schoolId()]);
     jsonSuccess($stmt->fetchAll());
 }
 
@@ -2079,17 +2070,21 @@ function recalculateStandings() {
     
     $db = getDB();
     
-    $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ?");
-    $stmt->execute([$tournamentId]);
+    $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ? AND school_id = ?");
+    $stmt->execute([$tournamentId, schoolId()]);
     $tournament = $stmt->fetch();
     
+    if (!$tournament) jsonError('البطولة غير موجودة أو لا تملك صلاحية الوصول');
+    
     $db->prepare("
-        UPDATE standings SET 
-            played = 0, wins = 0, draws = 0, losses = 0,
-            goals_for = 0, goals_against = 0, goal_difference = 0,
-            points = 0, form = ''
-        WHERE tournament_id = ?
-    ")->execute([$tournamentId]);
+        UPDATE standings s
+        JOIN tournaments t ON s.tournament_id = t.id
+        SET 
+            s.played = 0, s.wins = 0, s.draws = 0, s.losses = 0,
+            s.goals_for = 0, s.goals_against = 0, s.goal_difference = 0,
+            s.points = 0, s.form = ''
+        WHERE s.tournament_id = ? AND t.school_id = ?
+    ")->execute([$tournamentId, schoolId()]);
     
     $stmt = $db->prepare("
         SELECT * FROM matches 

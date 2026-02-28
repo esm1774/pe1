@@ -39,6 +39,26 @@ const BMI_ICONS = {
     obese: '🔴'
 };
 
+const PAGE_MAP = {
+    dashboard: 'renderDashboard',
+    grades: 'renderGrades',
+    students: 'renderStudents',
+    attendance: 'renderAttendance',
+    fitness: 'renderFitness',
+    competition: 'renderCompetition',
+    tournaments: 'renderTournaments',
+    sportsTeams: 'renderSportsTeams',
+    reports: 'renderReports',
+    users: 'renderUsers',
+    parents: 'renderParents',
+    notifications: 'renderNotifications',
+    badgesAdmin: 'renderBadgeManagementPage',
+    user_profile: 'renderUserProfilePage',
+    studentDashboard: 'renderStudentDashboard',
+    studentProfile: 'renderStudentProfilePage',
+    parentDashboard: 'renderParentDashboard'
+};
+
 // ============================================================
 // API HELPER
 // ============================================================
@@ -90,6 +110,7 @@ const API = {
 // ============================================================
 let currentUser = null;
 let currentPage = 'dashboard';
+let currentSchool = null; // SaaS: current school context
 
 // ============================================================
 // AUTH FUNCTIONS
@@ -98,6 +119,7 @@ async function handleLogin() {
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     const errorEl = document.getElementById('loginError');
+    const schoolSelect = document.getElementById('schoolSelect');
 
     if (!username || !password) {
         errorEl.textContent = 'الرجاء إدخال البيانات';
@@ -105,11 +127,26 @@ async function handleLogin() {
         return;
     }
 
-    const r = await API.post('login', { username, password });
+    const loginData = { username, password };
+    // If school selector exists, include school slug
+    if (schoolSelect && schoolSelect.value) {
+        loginData.school = schoolSelect.value;
+    }
+
+    const r = await API.post('login', loginData);
     if (!r) return;
 
     if (r.success) {
         currentUser = r.data;
+        // Store school context from login response
+        if (r.data.school_id) {
+            currentSchool = {
+                id: r.data.school_id,
+                name: r.data.school_name || '',
+                slug: r.data.school_slug || '',
+                logo: r.data.school_logo || ''
+            };
+        }
         errorEl.classList.add('hidden');
         showApp();
     } else {
@@ -121,6 +158,7 @@ async function handleLogin() {
 async function handleLogout() {
     await API.post('logout');
     currentUser = null;
+    currentSchool = null;
     showLoginPage();
 }
 
@@ -128,7 +166,39 @@ async function checkAuth() {
     const r = await API.get('check_auth');
     if (r && r.success) {
         currentUser = r.data;
+        // Restore school context
+        if (r.data.school_id) {
+            currentSchool = {
+                id: r.data.school_id,
+                name: r.data.school_name || '',
+                slug: r.data.school_slug || '',
+                logo: r.data.school_logo || ''
+            };
+        }
         showApp();
+    } else {
+        // Try loading schools list for login page
+        loadSchoolsList();
+    }
+}
+
+// SaaS: Load list of schools for login page selector
+async function loadSchoolsList() {
+    try {
+        const r = await API.get('schools_list');
+        if (r && r.success && r.data && r.data.length > 0) {
+            const select = document.getElementById('schoolSelect');
+            const container = document.getElementById('schoolSelectContainer');
+            if (select && container) {
+                container.classList.remove('hidden');
+                select.innerHTML = '<option value="">اختر المدرسة...</option>';
+                r.data.forEach(s => {
+                    select.innerHTML += `<option value="${s.slug}">${s.name}${s.city ? ' - ' + s.city : ''}</option>`;
+                });
+            }
+        }
+    } catch (e) {
+        // Silent - school selector is optional
     }
 }
 
@@ -156,13 +226,24 @@ function showApp() {
     const roleNames = { admin: 'مدير', teacher: 'معلم', viewer: 'مشاهد', supervisor: 'مشرف/موجه', student: 'طالب', parent: 'ولي أمر' };
     if (roleEl) roleEl.textContent = roleNames[currentUser.role] || currentUser.role;
 
+    // SaaS: Display school name + plan in header
+    const schoolNameEl = document.getElementById('schoolNameDisplay');
+    if (schoolNameEl && currentSchool && currentSchool.name) {
+        schoolNameEl.textContent = currentSchool.name;
+        schoolNameEl.classList.remove('hidden');
+    }
+
     // Show/hide menu items based on role
     document.querySelectorAll('[data-role]').forEach(el => {
         const allowedRoles = el.dataset.role.split(',');
         el.style.display = allowedRoles.includes(currentUser.role) ? '' : 'none';
     });
 
-    if (currentUser.role === 'student') {
+    // Determine starting page (hash-based OR role-based default)
+    const hash = window.location.hash.replace('#', '');
+    if (hash && PAGE_MAP[hash]) {
+        navigateTo(hash);
+    } else if (currentUser.role === 'student') {
         navigateTo('studentDashboard');
     } else {
         navigateTo('dashboard');
@@ -171,6 +252,19 @@ function showApp() {
     // Start notification polling for parents
     if (typeof startNotificationPolling === 'function') {
         startNotificationPolling();
+    }
+}
+
+// SaaS: Check if a feature is available in current plan
+function hasFeature(feature) {
+    if (!currentUser || !currentUser.subscription) return true;
+    const features = currentUser.subscription.plan_features;
+    if (!features) return true;
+    try {
+        const parsed = typeof features === 'string' ? JSON.parse(features) : features;
+        return parsed[feature] !== false;
+    } catch (e) {
+        return true;
     }
 }
 
@@ -207,6 +301,7 @@ function navigateTo(page) {
     }
 
     currentPage = page;
+    window.location.hash = page;
 
     // Update sidebar active state
     document.querySelectorAll('.sidebar-link').forEach(link => {
@@ -241,28 +336,7 @@ function navigateTo(page) {
         }
     }
 
-    // Map pages to their render functions
-    const pageMap = {
-        dashboard: 'renderDashboard',
-        grades: 'renderGrades',
-        students: 'renderStudents',
-        attendance: 'renderAttendance',
-        fitness: 'renderFitness',
-        competition: 'renderCompetition',
-        tournaments: 'renderTournaments',
-        sportsTeams: 'renderSportsTeams',
-        reports: 'renderReports',
-        users: 'renderUsers',
-        parents: 'renderParents',
-        notifications: 'renderNotifications',
-        badgesAdmin: 'renderBadgeManagementPage',
-        user_profile: 'renderUserProfilePage',
-        studentDashboard: 'renderStudentDashboard',
-        studentProfile: 'renderStudentProfilePage',
-        parentDashboard: 'renderParentDashboard'
-    };
-
-    const funcName = pageMap[page];
+    const funcName = PAGE_MAP[page];
     const renderer = funcName ? safeGetFunction(funcName) : null;
 
     if (renderer) {

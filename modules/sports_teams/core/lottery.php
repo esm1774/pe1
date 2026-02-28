@@ -102,10 +102,11 @@ function lotteryConfirm() {
 
         // إنشاء الفريق
         $stmt = $db->prepare("
-            INSERT INTO sports_teams (name, sport_type, team_type, color, created_by)
-            VALUES (?, ?, 'mixed', ?, ?)
+            INSERT INTO sports_teams (school_id, name, sport_type, team_type, color, created_by)
+            VALUES (?, ?, ?, 'mixed', ?, ?)
         ");
         $stmt->execute([
+            schoolId(),
             $team['name'],
             $sportType,
             $teamColor,
@@ -172,10 +173,10 @@ function lotteryAvailableStudents() {
         FROM students s
         LEFT JOIN classes c ON s.class_id = c.id
         LEFT JOIN grades  g ON c.grade_id  = g.id
-        WHERE " . implode(' AND ', $where) . "
+        WHERE " . implode(' AND ', $where) . " AND s.school_id = ?
         ORDER BY s.name
     ");
-    $stmt->execute($params);
+    $stmt->execute(array_merge($params, [schoolId()]));
     jsonSuccess($stmt->fetchAll());
 }
 

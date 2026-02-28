@@ -23,11 +23,11 @@ function listSessions() {
         FROM training_sessions ts
         LEFT JOIN users u ON ts.coach_id = u.id
         LEFT JOIN training_attendance ta ON ta.session_id = ts.id
-        WHERE ts.team_id = ?
+        WHERE ts.team_id = ? AND ts.school_id = ?
         GROUP BY ts.id
         ORDER BY ts.session_date DESC
     ");
-    $stmt->execute([$teamId]);
+    $stmt->execute([$teamId, schoolId()]);
     jsonSuccess($stmt->fetchAll());
 }
 
@@ -41,10 +41,11 @@ function createSession() {
     $db = getDB();
 
     $stmt = $db->prepare("
-        INSERT INTO training_sessions (team_id, title, session_date, start_time, end_time, venue, focus, notes, coach_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO training_sessions (school_id, team_id, title, session_date, start_time, end_time, venue, focus, notes, coach_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([
+        schoolId(),
         $data['team_id'],
         $data['title']        ?? 'تدريب',
         $data['session_date'],
@@ -75,7 +76,7 @@ function updateSession() {
         UPDATE training_sessions
         SET title = ?, session_date = ?, start_time = ?, end_time = ?,
             venue = ?, focus = ?, notes = ?
-        WHERE id = ?
+        WHERE id = ? AND school_id = ?
     ")->execute([
         $data['title']        ?? 'تدريب',
         $data['session_date'] ?? date('Y-m-d'),
@@ -84,7 +85,8 @@ function updateSession() {
         $data['venue']        ?? null,
         $data['focus']        ?? null,
         $data['notes']        ?? null,
-        $data['id']
+        $data['id'],
+        schoolId()
     ]);
 
     jsonSuccess(null, 'تم تحديث جلسة التدريب');
@@ -96,7 +98,7 @@ function deleteSession() {
     if (!$id) jsonError('معرّف الجلسة مطلوب');
 
     $db = getDB();
-    $db->prepare("DELETE FROM training_sessions WHERE id = ?")->execute([$id]);
+    $db->prepare("DELETE FROM training_sessions WHERE id = ? AND school_id = ?")->execute([$id, schoolId()]);
 
     jsonSuccess(null, 'تم حذف جلسة التدريب');
 }
@@ -113,10 +115,10 @@ function getAttendance() {
     $db = getDB();
 
     // بيانات الجلسة
-    $stmt = $db->prepare("SELECT * FROM training_sessions WHERE id = ?");
-    $stmt->execute([$sessionId]);
+    $stmt = $db->prepare("SELECT * FROM training_sessions WHERE id = ? AND school_id = ?");
+    $stmt->execute([$sessionId, schoolId()]);
     $session = $stmt->fetch();
-    if (!$session) jsonError('الجلسة غير موجودة', 404);
+    if (!$session) jsonError('الجلسة غير موجودة أو لا تملك صلاحية الوصول', 404);
 
     // سجل الحضور مع أسماء الطلاب
     $stmt = $db->prepare("

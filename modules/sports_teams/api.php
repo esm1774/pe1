@@ -18,6 +18,9 @@ require_once 'core/training.php';  // التدريب
 
 $action = getParam('action', '');
 
+// Resolve current tenant (school) context
+Tenant::resolve();
+
 // التأكد من وجود الجداول
 ensureSportsTeamsTables();
 

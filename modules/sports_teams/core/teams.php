@@ -16,8 +16,8 @@ function listTeams() {
     $type     = getParam('team_type', '');
     $classId  = getParam('class_id', '');
 
-    $where  = ['1=1'];
-    $params = [];
+    $where  = ['st.school_id = ?'];
+    $params = [schoolId()];
 
     if ($sport)   { $where[] = 'st.sport_type = ?';  $params[] = $sport; }
     if ($type)    { $where[] = 'st.team_type = ?';   $params[] = $type; }
@@ -59,9 +59,9 @@ function getTeam() {
         LEFT JOIN classes c ON st.class_id = c.id
         LEFT JOIN grades  g ON c.grade_id  = g.id
         LEFT JOIN users   u ON st.coach_id = u.id
-        WHERE st.id = ?
+        WHERE st.id = ? AND st.school_id = ?
     ");
-    $stmt->execute([$id]);
+    $stmt->execute([$id, schoolId()]);
     $team = $stmt->fetch();
     if (!$team) jsonError('الفريق غير موجود', 404);
 
@@ -83,9 +83,9 @@ function getTeam() {
     $stmt = $db->prepare("
         SELECT COUNT(*) AS total_sessions,
                MAX(session_date) AS last_session
-        FROM training_sessions WHERE team_id = ?
+        FROM training_sessions WHERE team_id = ? AND school_id = ?
     ");
-    $stmt->execute([$id]);
+    $stmt->execute([$id, schoolId()]);
     $team['training_stats'] = $stmt->fetch();
 
     jsonSuccess($team);
@@ -109,16 +109,17 @@ function createTeam() {
     // تحقق من عدم التكرار
     $exists = $db->prepare("
         SELECT id FROM sports_teams
-        WHERE name = ? AND sport_type = ?
+        WHERE name = ? AND sport_type = ? AND school_id = ?
     ");
-    $exists->execute([$data['name'], $data['sport_type']]);
+    $exists->execute([$data['name'], $data['sport_type'], schoolId()]);
     if ($exists->fetch()) jsonError('يوجد فريق بنفس الاسم والرياضة مسبقاً');
 
     $stmt = $db->prepare("
-        INSERT INTO sports_teams (name, sport_type, team_type, class_id, coach_id, color, logo_emoji, description, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sports_teams (school_id, name, sport_type, team_type, class_id, coach_id, color, logo_emoji, description, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([
+        schoolId(),
         $data['name'],
         $data['sport_type'],
         $data['team_type'],
@@ -152,7 +153,7 @@ function updateTeam() {
         UPDATE sports_teams
         SET name = ?, sport_type = ?, coach_id = ?, color = ?,
             logo_emoji = ?, description = ?, is_active = ?
-        WHERE id = ?
+        WHERE id = ? AND school_id = ?
     ")->execute([
         $data['name'],
         $data['sport_type']  ?? 'كرة قدم',
@@ -161,7 +162,8 @@ function updateTeam() {
         $data['logo_emoji']  ?? '⚽',
         $data['description'] ?? null,
         isset($data['is_active']) ? (int)$data['is_active'] : 1,
-        $data['id']
+        $data['id'],
+        schoolId()
     ]);
 
     logActivity('update', 'sports_team', $data['id'], $data['name']);
@@ -174,7 +176,7 @@ function deleteTeam() {
     if (!$id) jsonError('معرّف الفريق مطلوب');
 
     $db = getDB();
-    $db->prepare("DELETE FROM sports_teams WHERE id = ?")->execute([$id]);
+    $db->prepare("DELETE FROM sports_teams WHERE id = ? AND school_id = ?")->execute([$id, schoolId()]);
 
     logActivity('delete', 'sports_team', $id);
     jsonSuccess(null, 'تم حذف الفريق بنجاح');
@@ -194,13 +196,14 @@ function listMembers() {
         SELECT tm.*, s.name AS student_name, s.student_number,
                CONCAT(g.name, ' - ', c.name) AS class_name
         FROM team_members tm
+        JOIN sports_teams st ON tm.team_id = st.id
         JOIN students s ON tm.student_id = s.id
         LEFT JOIN classes c ON s.class_id = c.id
         LEFT JOIN grades  g ON c.grade_id = g.id
-        WHERE tm.team_id = ?
+        WHERE tm.team_id = ? AND st.school_id = ?
         ORDER BY tm.status, tm.jersey_number, s.name
     ");
-    $stmt->execute([$teamId]);
+    $stmt->execute([$teamId, schoolId()]);
     jsonSuccess($stmt->fetchAll());
 }
 
@@ -212,6 +215,11 @@ function addMember() {
     if (empty($data['student_id'])) jsonError('معرّف الطالب مطلوب');
 
     $db = getDB();
+    
+    // تحقق من ملكية الفريق للمدرسة
+    $stmt = $db->prepare("SELECT id FROM sports_teams WHERE id = ? AND school_id = ?");
+    $stmt->execute([$data['team_id'], schoolId()]);
+    if (!$stmt->fetch()) jsonError('الفريق غير موجود أو لا تملك صلاحية الوصول');
 
     // هل الطالب عضو مسبقاً؟
     $exists = $db->prepare("SELECT id FROM team_members WHERE team_id = ? AND student_id = ?");
@@ -241,6 +249,12 @@ function updateMember() {
     if (empty($data['id'])) jsonError('معرّف العضوية مطلوب');
 
     $db = getDB();
+    
+    // تحقق من ملكية العضوية للمدرسة
+    $stmt = $db->prepare("SELECT tm.id FROM team_members tm JOIN sports_teams st ON tm.team_id = st.id WHERE tm.id = ? AND st.school_id = ?");
+    $stmt->execute([$data['id'], schoolId()]);
+    if (!$stmt->fetch()) jsonError('العضوية غير موجودة أو لا تملك صلاحية الوصول');
+
     $db->prepare("
         UPDATE team_members
         SET jersey_number = ?, position = ?, status = ?, notes = ?
@@ -262,6 +276,12 @@ function removeMember() {
     if (!$id) jsonError('معرّف العضوية مطلوب');
 
     $db = getDB();
+    
+    // تحقق من ملكية العضوية للمدرسة
+    $stmt = $db->prepare("SELECT tm.id FROM team_members tm JOIN sports_teams st ON tm.team_id = st.id WHERE tm.id = ? AND st.school_id = ?");
+    $stmt->execute([$id, schoolId()]);
+    if (!$stmt->fetch()) jsonError('العضوية غير موجودة أو لا تملك صلاحية الوصول');
+
     $db->prepare("DELETE FROM team_members WHERE id = ?")->execute([$id]);
 
     jsonSuccess(null, 'تم إزالة اللاعب من الفريق');
@@ -274,17 +294,18 @@ function removeMember() {
 function availableClassesST() {
     requireLogin();
     $db = getDB();
-    $stmt = $db->query("
+    $stmt = $db->prepare("
         SELECT c.id, c.name, g.name as grade_name,
                CONCAT(g.name, ' - ', c.name) as full_name,
                COUNT(s.id) as student_count
         FROM classes c
         JOIN grades g ON c.grade_id = g.id
         LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-        WHERE c.active = 1
+        WHERE c.active = 1 AND c.school_id = ?
         GROUP BY c.id
         ORDER BY g.name, c.name
     ");
+    $stmt->execute([schoolId()]);
     jsonSuccess($stmt->fetchAll());
 }
 
@@ -296,8 +317,8 @@ function availableStudentsST() {
 
     $db = getDB();
 
-    $where  = ['s.active = 1'];
-    $params = [];
+    $where  = ['s.active = 1', 's.school_id = ?'];
+    $params = [schoolId()];
 
     if ($classId) { $where[] = 's.class_id = ?'; $params[] = $classId; }
     if ($search)  { $where[] = 's.name LIKE ?';  $params[] = "%$search%"; }
@@ -328,16 +349,21 @@ function getTeamStats() {
     if (!$teamId) jsonError('معرّف الفريق مطلوب');
 
     $db = getDB();
+    
+    // تحقق من ملكية الفريق للمدرسة
+    $stmt = $db->prepare("SELECT id FROM sports_teams WHERE id = ? AND school_id = ?");
+    $stmt->execute([$teamId, schoolId()]);
+    if (!$stmt->fetch()) jsonError('الفريق غير موجود أو لا تملك صلاحية الوصول');
 
     // إحصائيات عامة
     $stmt = $db->prepare("
         SELECT
             (SELECT COUNT(*) FROM team_members   WHERE team_id = ? AND status = 'active')     AS active_members,
             (SELECT COUNT(*) FROM team_members   WHERE team_id = ? AND status = 'substitute') AS substitutes,
-            (SELECT COUNT(*) FROM training_sessions WHERE team_id = ?)                         AS total_trainings,
-            (SELECT COUNT(*) FROM training_sessions WHERE team_id = ? AND session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) AS trainings_this_month
+            (SELECT COUNT(*) FROM training_sessions WHERE team_id = ? AND school_id = ?)                         AS total_trainings,
+            (SELECT COUNT(*) FROM training_sessions WHERE team_id = ? AND school_id = ? AND session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) AS trainings_this_month
     ");
-    $stmt->execute([$teamId, $teamId, $teamId, $teamId]);
+    $stmt->execute([$teamId, $teamId, $teamId, schoolId(), $teamId, schoolId()]);
     $stats = $stmt->fetch();
 
     // متوسط الحضور لآخر 5 تدريبات
@@ -349,13 +375,13 @@ function getTeamStats() {
                    COUNT(ta.id) AS total_count
             FROM training_sessions ts
             LEFT JOIN training_attendance ta ON ta.session_id = ts.id
-            WHERE ts.team_id = ?
+            WHERE ts.team_id = ? AND ts.school_id = ?
             GROUP BY ts.id
             ORDER BY ts.session_date DESC
             LIMIT 5
         ) t
     ");
-    $stmt->execute([$teamId]);
+    $stmt->execute([$teamId, schoolId()]);
     $attendance = $stmt->fetch();
     $stats['avg_attendance'] = round($attendance['avg_attendance'] ?? 0, 1);
 
@@ -368,8 +394,8 @@ function getTeamStats() {
 
 function _autoAddClassStudents($teamId, $classId) {
     $db = getDB();
-    $stmt = $db->prepare("SELECT id FROM students WHERE class_id = ? AND active = 1");
-    $stmt->execute([$classId]);
+    $stmt = $db->prepare("SELECT id FROM students WHERE class_id = ? AND active = 1 AND school_id = ?");
+    $stmt->execute([$classId, schoolId()]);
     $students = $stmt->fetchAll();
 
     $insert = $db->prepare("

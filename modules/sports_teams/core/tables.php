@@ -15,6 +15,7 @@ function ensureSportsTeamsTables() {
         // sports_teams
         $db->exec("CREATE TABLE IF NOT EXISTS `sports_teams` (
             `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id`   INT UNSIGNED DEFAULT NULL,
             `name`        VARCHAR(100) NOT NULL,
             `sport_type`  VARCHAR(50)  NOT NULL DEFAULT 'كرة قدم',
             `team_type`   ENUM('class','school','mixed') NOT NULL DEFAULT 'mixed',
@@ -27,6 +28,7 @@ function ensureSportsTeamsTables() {
             `created_by`  INT UNSIGNED DEFAULT NULL,
             `created_at`  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
             `updated_at`  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX `idx_school` (`school_id`),
             INDEX `idx_sport`  (`sport_type`),
             INDEX `idx_type`   (`team_type`),
             INDEX `idx_active` (`is_active`)
@@ -54,6 +56,7 @@ function ensureSportsTeamsTables() {
         // training_sessions
         $db->exec("CREATE TABLE IF NOT EXISTS `training_sessions` (
             `id`           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id`    INT UNSIGNED DEFAULT NULL,
             `team_id`      INT UNSIGNED NOT NULL,
             `title`        VARCHAR(150) NOT NULL DEFAULT 'تدريب',
             `session_date` DATE         NOT NULL,
@@ -64,6 +67,7 @@ function ensureSportsTeamsTables() {
             `notes`        TEXT         DEFAULT NULL,
             `coach_id`     INT UNSIGNED DEFAULT NULL,
             `created_at`   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_school` (`school_id`),
             INDEX `idx_team` (`team_id`),
             INDEX `idx_date` (`session_date`),
             CONSTRAINT `fk_ts_team` FOREIGN KEY (`team_id`) REFERENCES `sports_teams`(`id`) ON DELETE CASCADE

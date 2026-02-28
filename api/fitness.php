@@ -1,7 +1,7 @@
 <?php
 /**
  * PE Smart School System - Fitness Tests & Results API
- * (Multi-Teacher Support)
+ * (Multi-Teacher + SaaS Support)
  */
 
 // ============================================================
@@ -9,7 +9,12 @@
 // ============================================================
 function getFitnessTests() {
     requireLogin();
-    jsonSuccess(getDB()->query("SELECT * FROM fitness_tests WHERE active = 1 ORDER BY id")->fetchAll());
+    $db = getDB();
+    $sid = schoolId();
+    $sql = "SELECT * FROM fitness_tests WHERE active = 1";
+    if ($sid) $sql .= " AND school_id = $sid";
+    $sql .= " ORDER BY id";
+    jsonSuccess($db->query($sql)->fetchAll());
 }
 
 function saveFitnessTest() {
@@ -22,10 +27,15 @@ function saveFitnessTest() {
     $unit     = sanitize($data['unit']);
     $type     = sanitize($data['type']);
     $maxScore = (int)($data['max_score'] ?? 10);
+    $sid      = schoolId();
+
     if ($id) {
-        $db->prepare("UPDATE fitness_tests SET name=?, unit=?, type=?, max_score=? WHERE id=?")->execute([$name, $unit, $type, $maxScore, $id]);
+        $sql = "UPDATE fitness_tests SET name=?, unit=?, type=?, max_score=? WHERE id=?";
+        $params = [$name, $unit, $type, $maxScore, $id];
+        if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
+        $db->prepare($sql)->execute($params);
     } else {
-        $db->prepare("INSERT INTO fitness_tests (name, unit, type, max_score) VALUES (?,?,?,?)")->execute([$name, $unit, $type, $maxScore]);
+        $db->prepare("INSERT INTO fitness_tests (school_id, name, unit, type, max_score) VALUES (?,?,?,?,?)")->execute([$sid, $name, $unit, $type, $maxScore]);
         $id = $db->lastInsertId();
     }
     logActivity($id ? 'update' : 'create', 'fitness_test', $id, $name);
@@ -36,7 +46,11 @@ function deleteFitnessTest() {
     requireRole(['admin']);
     $id = getParam('id');
     if (!$id) jsonError('معرّف غير صالح');
-    getDB()->prepare("UPDATE fitness_tests SET active = 0 WHERE id = ?")->execute([$id]);
+    $sid = schoolId();
+    $sql = "UPDATE fitness_tests SET active = 0 WHERE id = ?";
+    $params = [$id];
+    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
+    getDB()->prepare($sql)->execute($params);
     logActivity('delete', 'fitness_test', $id);
     jsonSuccess(null, 'تم حذف الاختبار');
 }
@@ -140,7 +154,14 @@ function getFitnessView() {
     if (!canAccessClass($classId)) jsonError('لا تملك صلاحية الوصول لهذا الفصل', 403);
 
     $db      = getDB();
-    $tests   = $db->query("SELECT * FROM fitness_tests WHERE active = 1 ORDER BY id")->fetchAll();
+    $sid     = schoolId();
+
+    // Fitness tests scoped to school
+    $testSql = "SELECT * FROM fitness_tests WHERE active = 1";
+    if ($sid) $testSql .= " AND school_id = $sid";
+    $testSql .= " ORDER BY id";
+    $tests   = $db->query($testSql)->fetchAll();
+
     $stmt    = $db->prepare("SELECT id, name, student_number FROM students WHERE class_id = ? AND active = 1 ORDER BY name");
     $stmt->execute([$classId]);
     $students  = $stmt->fetchAll();
@@ -196,11 +217,13 @@ function saveFitnessCriteria() {
 
 function updateClassPoints() {
     $db = getDB();
+    $sid = schoolId();
+    $schoolFilter = $sid ? "AND c.school_id = $sid" : "";
     $db->exec("INSERT INTO class_points (class_id, total_score, average_score, total_points, students_count)
         SELECT c.id, COALESCE(SUM(sf.score),0), ROUND(COALESCE(AVG(sf.score),0),2),
                ROUND(COALESCE(AVG(sf.score),0)*10), COUNT(DISTINCT s.id)
         FROM classes c LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-        LEFT JOIN student_fitness sf ON sf.student_id = s.id WHERE c.active = 1 GROUP BY c.id
+        LEFT JOIN student_fitness sf ON sf.student_id = s.id WHERE c.active = 1 $schoolFilter GROUP BY c.id
         ON DUPLICATE KEY UPDATE total_score=VALUES(total_score), average_score=VALUES(average_score),
             total_points=VALUES(total_points), students_count=VALUES(students_count)");
     $db->exec("SET @rank = 0");

@@ -6,7 +6,11 @@
 
 function getUsers() {
     requireRole(['admin']);
-    jsonSuccess(getDB()->query("SELECT id, username, name, role, active, last_login, created_at FROM users WHERE active = 1 ORDER BY id")->fetchAll());
+    $sid = schoolId();
+    $sql = "SELECT id, username, name, role, active, last_login, created_at FROM users WHERE active = 1";
+    if ($sid) $sql .= " AND school_id = $sid";
+    $sql .= " ORDER BY id";
+    jsonSuccess(getDB()->query($sql)->fetchAll());
 }
 
 function saveUser() {
@@ -19,10 +23,15 @@ function saveUser() {
     $username = sanitize($data['username']);
     $role     = sanitize($data['role']);
     $password = $data['password'] ?? '';
+    $sid      = schoolId();
     if (!in_array($role, ['admin', 'teacher', 'viewer', 'supervisor'])) jsonError('دور غير صالح');
 
-    $stmt = $db->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-    $stmt->execute([$username, $id ?? 0]);
+    // Duplicate check scoped to school
+    $dupSql = "SELECT id FROM users WHERE username = ? AND id != ?";
+    $dupParams = [$username, $id ?? 0];
+    if ($sid) { $dupSql .= " AND school_id = ?"; $dupParams[] = $sid; }
+    $stmt = $db->prepare($dupSql);
+    $stmt->execute($dupParams);
     if ($stmt->fetch()) jsonError('اسم المستخدم مستخدم بالفعل');
 
     if ($id) {
@@ -33,9 +42,10 @@ function saveUser() {
             $db->prepare("UPDATE users SET name=?, username=?, role=? WHERE id=?")->execute([$name, $username, $role, $id]);
         }
     } else {
+        Subscription::requireLimit('teachers');
         if (empty($password)) jsonError('كلمة المرور مطلوبة');
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
-        $db->prepare("INSERT INTO users (username, password, name, role) VALUES (?,?,?,?)")->execute([$username, $hash, $name, $role]);
+        $db->prepare("INSERT INTO users (school_id, username, password, name, role) VALUES (?,?,?,?,?)")->execute([$sid, $username, $hash, $name, $role]);
         $id = $db->lastInsertId();
     }
     logActivity($id ? 'update' : 'create', 'user', $id, $name);
@@ -48,7 +58,11 @@ function deleteUser() {
     if (!$id) jsonError('معرّف غير صالح');
     if ($id == 1) jsonError('لا يمكن حذف المدير الرئيسي');
     if ($id == $_SESSION['user_id']) jsonError('لا يمكنك حذف حسابك');
-    getDB()->prepare("UPDATE users SET active = 0 WHERE id = ?")->execute([$id]);
+    $sid = schoolId();
+    $sql = "UPDATE users SET active = 0 WHERE id = ?";
+    $params = [$id];
+    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
+    getDB()->prepare($sql)->execute($params);
     logActivity('delete', 'user', $id);
     jsonSuccess(null, 'تم حذف المستخدم');
 }

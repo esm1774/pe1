@@ -132,6 +132,12 @@ class Database {
 }
 
 // ============================================================
+// SAAS: TENANT & SUBSCRIPTION
+// ============================================================
+require_once __DIR__ . '/includes/tenant.php';
+require_once __DIR__ . '/includes/subscription.php';
+
+// ============================================================
 // HELPER FUNCTIONS - دوال مساعدة
 // ============================================================
 
@@ -140,6 +146,13 @@ class Database {
  */
 function getDB() {
     return Database::getInstance()->getConnection();
+}
+
+/**
+ * Get current school ID (shortcut for Tenant::id())
+ */
+function schoolId(): ?int {
+    return Tenant::id();
 }
 
 /**
@@ -186,7 +199,8 @@ function requireLogin() {
     return [
         'id' => $_SESSION['user_id'],
         'role' => $_SESSION['user_role'],
-        'name' => $_SESSION['user_name'] ?? ''
+        'name' => $_SESSION['user_name'] ?? '',
+        'school_id' => $_SESSION['school_id'] ?? null
     ];
 }
 

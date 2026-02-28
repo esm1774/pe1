@@ -1,7 +1,7 @@
 <?php
 /**
  * PE Smart School System - Dashboard API
- * (Multi-Teacher Support)
+ * (Multi-Teacher + SaaS Support)
  */
 
 function getDashboard() {
@@ -14,13 +14,18 @@ function getDashboard() {
 
     $db = getDB();
     $teacherClassIds = getTeacherClassIds(); // null = admin = no restriction
+    $sid = schoolId();
 
     // ── Build class filter clause ──────────────────────────────────────
     if ($teacherClassIds === null) {
-        // Admin: no filter
+        // Admin: no filter (but scoped to school)
         $classFilter  = '';
         $classParams  = [];
         $cFilterWhere = 'WHERE c.active = 1';
+        if ($sid) {
+            $classFilter  = "AND s.school_id = $sid";
+            $cFilterWhere = "WHERE c.active = 1 AND c.school_id = $sid";
+        }
     } elseif (empty($teacherClassIds)) {
         // Teacher with no assigned classes → return empty dashboard
         jsonSuccess([
@@ -38,8 +43,13 @@ function getDashboard() {
 
     // ── Total Students ─────────────────────────────────────────────────
     if ($teacherClassIds === null) {
-        $totalStudents = $db->query("SELECT COUNT(*) FROM students WHERE active = 1")->fetchColumn();
-        $totalClasses  = $db->query("SELECT COUNT(*) FROM classes WHERE active = 1")->fetchColumn();
+        $sql = "SELECT COUNT(*) FROM students WHERE active = 1";
+        if ($sid) $sql .= " AND school_id = $sid";
+        $totalStudents = $db->query($sql)->fetchColumn();
+
+        $sql = "SELECT COUNT(*) FROM classes WHERE active = 1";
+        if ($sid) $sql .= " AND school_id = $sid";
+        $totalClasses = $db->query($sql)->fetchColumn();
     } else {
         $ph = implode(',', array_fill(0, count($teacherClassIds), '?'));
         $stmt = $db->prepare("SELECT COUNT(*) FROM students WHERE active = 1 AND class_id IN ($ph)");
@@ -54,8 +64,13 @@ function getDashboard() {
     // ── Attendance today ───────────────────────────────────────────────
     $today = date('Y-m-d');
     if ($teacherClassIds === null) {
-        $stmt = $db->prepare("SELECT status, COUNT(*) as cnt FROM attendance WHERE attendance_date = ? GROUP BY status");
-        $stmt->execute([$today]);
+        if ($sid) {
+            $stmt = $db->prepare("SELECT a.status, COUNT(*) as cnt FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.attendance_date = ? AND s.school_id = ? GROUP BY a.status");
+            $stmt->execute([$today, $sid]);
+        } else {
+            $stmt = $db->prepare("SELECT status, COUNT(*) as cnt FROM attendance WHERE attendance_date = ? GROUP BY status");
+            $stmt->execute([$today]);
+        }
     } else {
         $ph   = implode(',', array_fill(0, count($teacherClassIds), '?'));
         $stmt = $db->prepare("
@@ -73,7 +88,13 @@ function getDashboard() {
     $healthAlerts = 0;
     try {
         if ($teacherClassIds === null) {
-            $healthAlerts = $db->query("SELECT COUNT(DISTINCT student_id) FROM student_health WHERE is_active = 1")->fetchColumn();
+            if ($sid) {
+                $healthAlerts = $db->prepare("SELECT COUNT(DISTINCT sh.student_id) FROM student_health sh JOIN students s ON sh.student_id = s.id WHERE sh.is_active = 1 AND s.school_id = ?");
+                $healthAlerts->execute([$sid]);
+                $healthAlerts = $healthAlerts->fetchColumn();
+            } else {
+                $healthAlerts = $db->query("SELECT COUNT(DISTINCT student_id) FROM student_health WHERE is_active = 1")->fetchColumn();
+            }
         } else {
             $ph   = implode(',', array_fill(0, count($teacherClassIds), '?'));
             $stmt = $db->prepare("
@@ -87,16 +108,17 @@ function getDashboard() {
     } catch (Exception $e) {}
 
     // ── Class ranking ──────────────────────────────────────────────────
+    $schoolFilter = $sid ? "AND c.school_id = $sid" : "";
     if ($teacherClassIds === null) {
-        $rankingSql = "
+        $ranking = $db->query("
             SELECT c.id as class_id, CONCAT(g.name, ' - ', c.name) as class_name,
                    COUNT(DISTINCT s.id) as students_count,
                    ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score
             FROM classes c JOIN grades g ON c.grade_id = g.id
             LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
             LEFT JOIN student_fitness sf ON sf.student_id = s.id
-            WHERE c.active = 1 GROUP BY c.id ORDER BY avg_score DESC LIMIT 5";
-        $ranking = $db->query($rankingSql)->fetchAll();
+            WHERE c.active = 1 $schoolFilter GROUP BY c.id ORDER BY avg_score DESC LIMIT 5
+        ")->fetchAll();
     } else {
         $ph      = implode(',', array_fill(0, count($teacherClassIds), '?'));
         $stmt    = $db->prepare("
@@ -120,7 +142,8 @@ function getDashboard() {
                    ROUND(AVG(sf.score), 2) as avg_score
             FROM students s JOIN student_fitness sf ON sf.student_id = s.id
             JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
-            WHERE s.active = 1 GROUP BY s.id ORDER BY avg_score DESC LIMIT 1
+            WHERE s.active = 1 " . ($sid ? "AND s.school_id = $sid" : "") . "
+            GROUP BY s.id ORDER BY avg_score DESC LIMIT 1
         ")->fetch();
     } else {
         $ph   = implode(',', array_fill(0, count($teacherClassIds), '?'));

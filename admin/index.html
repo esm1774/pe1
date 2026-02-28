@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المنصة | PE Smart School</title>
+    <meta name="description" content="لوحة تحكم المنصة لإدارة المدارس والاشتراكات في نظام PE Smart School SaaS">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <!-- ============================================================
+     LOGIN PAGE
+     ============================================================ -->
+    <div id="loginPage" class="login-wrapper">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="icon">🛡️</div>
+                <h1>لوحة تحكم المنصة</h1>
+                <p>PE Smart School - Super Admin</p>
+            </div>
+
+            <div id="loginError" class="login-error hidden"></div>
+
+            <div class="form-group">
+                <label>اسم المستخدم</label>
+                <input type="text" id="loginUsername" class="form-input" placeholder="superadmin"
+                    autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <input type="password" id="loginPassword" class="form-input" placeholder="••••••••"
+                    autocomplete="current-password">
+            </div>
+
+            <button onclick="handleLogin()" class="btn btn-primary" id="loginBtn">
+                🔐 تسجيل الدخول
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+     MAIN APP
+     ============================================================ -->
+    <div id="adminApp" class="admin-app">
+        <!-- TOP NAV -->
+        <nav class="top-nav">
+            <div class="nav-brand">
+                <div class="brand-icon">🛡️</div>
+                <h2>PE <span>Smart</span> Admin</h2>
+            </div>
+            <div class="nav-user">
+                <span class="user-name">مرحباً، <strong id="adminNameDisplay">المدير</strong></span>
+                <button onclick="handleLogout()" class="btn btn-outline btn-sm">🚪 خروج</button>
+            </div>
+        </nav>
+
+        <!-- BODY -->
+        <div class="admin-body">
+            <!-- SIDEBAR -->
+            <aside class="sidebar">
+                <ul class="sidebar-menu">
+                    <li>
+                        <button class="sidebar-link active" onclick="navigate('dashboard')" data-page="dashboard">
+                            <span class="icon">📊</span> لوحة المعلومات
+                        </button>
+                    </li>
+                    <li>
+                        <button class="sidebar-link" onclick="navigate('schools')" data-page="schools">
+                            <span class="icon">🏫</span> المدارس
+                        </button>
+                    </li>
+                    <li>
+                        <button class="sidebar-link" onclick="navigate('plans')" data-page="plans">
+                            <span class="icon">💎</span> الخطط والأسعار
+                        </button>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- MAIN CONTENT -->
+            <main class="main-content" id="mainContent">
+                <div class="spinner"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div id="modalOverlay" class="modal-overlay" onclick="event.target===this && closeModal()">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/admin.js"></script>
+</body>
+
+</html>

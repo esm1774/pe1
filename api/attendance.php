@@ -95,15 +95,18 @@ function getAbsenceReport() {
     requireLogin();
     $db = getDB();
     $teacherClassIds = getTeacherClassIds();
+    $sid = schoolId();
 
     if ($teacherClassIds === null) {
-        // Admin: all students
-        $stmt = $db->query("
+        // Admin: all students (scoped to school)
+        $sql = "
             SELECT s.id, s.name, CONCAT(g.name, ' - ', c.name) as class_name, COUNT(a.id) as absent_count
             FROM students s JOIN attendance a ON a.student_id = s.id AND a.status = 'absent'
             JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
-            WHERE s.active = 1 GROUP BY s.id ORDER BY absent_count DESC LIMIT 20
-        ");
+            WHERE s.active = 1";
+        if ($sid) $sql .= " AND s.school_id = $sid";
+        $sql .= " GROUP BY s.id ORDER BY absent_count DESC LIMIT 20";
+        $stmt = $db->query($sql);
     } elseif (empty($teacherClassIds)) {
         jsonSuccess([]);
         return;

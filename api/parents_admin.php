@@ -9,7 +9,11 @@
 function getParents() {
     requireRole(['admin']);
     $db = getDB();
-    $parents = $db->query("SELECT id, username, name, email, phone, active, last_login, created_at FROM parents ORDER BY created_at DESC")->fetchAll();
+    $sid = schoolId();
+    $sql = "SELECT id, username, name, email, phone, active, last_login, created_at FROM parents WHERE 1=1";
+    if ($sid) $sql .= " AND school_id = $sid";
+    $sql .= " ORDER BY created_at DESC";
+    $parents = $db->query($sql)->fetchAll();
     
     // For each parent, get count of linked students
     foreach ($parents as &$p) {
@@ -36,10 +40,14 @@ function saveParent() {
     $password = $data['password'] ?? '';
     $email = sanitize($data['email'] ?? null);
     $phone = sanitize($data['phone'] ?? null);
+    $sid = schoolId();
 
-    // Check unique username
-    $stmt = $db->prepare("SELECT id FROM parents WHERE username = ? AND id != ?");
-    $stmt->execute([$username, $id ?? 0]);
+    // Check unique username scoped to school
+    $dupSql = "SELECT id FROM parents WHERE username = ? AND id != ?";
+    $dupParams = [$username, $id ?? 0];
+    if ($sid) { $dupSql .= " AND school_id = ?"; $dupParams[] = $sid; }
+    $stmt = $db->prepare($dupSql);
+    $stmt->execute($dupParams);
     if ($stmt->fetch()) jsonError('اسم المستخدم مستخدم بالفعل');
 
     if ($id) {
@@ -57,8 +65,8 @@ function saveParent() {
         // Create
         if (empty($password)) jsonError('كلمة المرور مطلوبة للمستخدم الجديد');
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
-        $stmt = $db->prepare("INSERT INTO parents (name, username, password, email, phone) VALUES (?,?,?,?,?)");
-        $stmt->execute([$name, $username, $hash, $email, $phone]);
+        $stmt = $db->prepare("INSERT INTO parents (school_id, name, username, password, email, phone) VALUES (?,?,?,?,?,?)");
+        $stmt->execute([$sid, $name, $username, $hash, $email, $phone]);
         $id = $db->lastInsertId();
         logActivity('create_parent', 'parents', $id, $name);
     }
@@ -73,9 +81,12 @@ function deleteParent() {
     requireRole(['admin']);
     $id = getParam('id');
     if (!$id) jsonError('معرّف غير صالح');
-
     $db = getDB();
-    $db->prepare("UPDATE parents SET active = 0 WHERE id = ?")->execute([$id]);
+    $sid = schoolId();
+    $sql = "UPDATE parents SET active = 0 WHERE id = ?";
+    $params = [$id];
+    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
+    $db->prepare($sql)->execute($params);
     logActivity('delete_parent', 'parents', $id);
     jsonSuccess(null, 'تم تعطيل حساب ولي الأمر');
 }
@@ -110,15 +121,17 @@ function searchStudentsForLinking() {
     if (strlen($query) < 2) jsonSuccess([]);
 
     $db = getDB();
-    $stmt = $db->prepare("
+    $sid = schoolId();
+    $sql = "
         SELECT s.id, s.name, s.student_number, CONCAT(g.name, ' - ', c.name) as class_name
         FROM students s
         JOIN classes c ON s.class_id = c.id
         JOIN grades g ON c.grade_id = g.id
-        WHERE (s.name LIKE ? OR s.student_number LIKE ?) AND s.active = 1
-        LIMIT 10
-    ");
+        WHERE (s.name LIKE ? OR s.student_number LIKE ?) AND s.active = 1";
+    if ($sid) $sql .= " AND s.school_id = $sid";
+    $sql .= " LIMIT 10";
     $searchTerm = "%$query%";
+    $stmt = $db->prepare($sql);
     $stmt->execute([$searchTerm, $searchTerm]);
     jsonSuccess($stmt->fetchAll());
 }

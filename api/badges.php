@@ -6,7 +6,11 @@
 function getBadges() {
     requireLogin();
     $db = getDB();
-    $badges = $db->query("SELECT * FROM badges ORDER BY id ASC")->fetchAll();
+    $sid = schoolId();
+    $sql = "SELECT * FROM badges WHERE 1=1";
+    if ($sid) $sql .= " AND school_id = $sid";
+    $sql .= " ORDER BY id ASC";
+    $badges = $db->query($sql)->fetchAll();
     jsonSuccess($badges);
 }
 
@@ -87,13 +91,14 @@ function saveBadge() {
     $color = sanitize($data['color']);
     $type = sanitize($data['badge_type'] ?? 'manual');
     $criteriaValue = isset($data['criteria_value']) && $data['criteria_value'] !== '' ? (float)$data['criteria_value'] : null;
+    $sid = schoolId();
 
     if ($id) {
-        $stmt = $db->prepare("UPDATE badges SET name = ?, description = ?, icon = ?, color = ?, badge_type = ?, criteria_value = ? WHERE id = ?");
+        $stmt = $db->prepare("UPDATE badges SET name = ?, description = ?, icon = ?, color = ?, badge_type = ?, criteria_value = ? WHERE id = ?" . ($sid ? " AND school_id = $sid" : ""));
         $stmt->execute([$name, $description, $icon, $color, $type, $criteriaValue, $id]);
     } else {
-        $stmt = $db->prepare("INSERT INTO badges (name, description, icon, color, badge_type, criteria_value) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $description, $icon, $color, $type, $criteriaValue]);
+        $stmt = $db->prepare("INSERT INTO badges (school_id, name, description, icon, color, badge_type, criteria_value) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$sid, $name, $description, $icon, $color, $type, $criteriaValue]);
     }
 
     jsonSuccess(null, 'تم حفظ الوسام بنجاح');

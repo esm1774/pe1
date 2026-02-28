@@ -10,6 +10,7 @@ function getStudents() {
     $gradeId         = getParam('grade_id');
     $search          = getParam('search', '');
     $teacherClassIds = getTeacherClassIds();
+    $sid = schoolId();
 
     // Validate single-class access
     if ($classId && !canAccessClass((int)$classId)) {
@@ -23,6 +24,9 @@ function getStudents() {
 
     $params = [];
     $where = '';
+
+    // SaaS: scope to school
+    if ($sid) { $where .= " AND s.school_id = ?"; $params[] = $sid; }
     if ($classId) {
         $where .= " AND s.class_id = ?";
         $params[] = $classId;
@@ -100,14 +104,19 @@ function saveStudent() {
     $name    = sanitize($data['name']);
     $studentNumber = sanitize($data['student_number']);
     $classId = (int)$data['class_id'];
+    $sid     = schoolId();
 
     // Validate class ownership
     if (!canAccessClass($classId)) {
         jsonError('لا تملك صلاحية إضافة طالب في هذا الفصل', 403);
     }
 
-    $stmt = $db->prepare("SELECT id FROM students WHERE student_number = ? AND id != ? AND active = 1");
-    $stmt->execute([$studentNumber, $id ?? 0]);
+    // Duplicate check scoped to school
+    $dupSql = "SELECT id FROM students WHERE student_number = ? AND id != ? AND active = 1";
+    $dupParams = [$studentNumber, $id ?? 0];
+    if ($sid) { $dupSql .= " AND school_id = ?"; $dupParams[] = $sid; }
+    $stmt = $db->prepare($dupSql);
+    $stmt->execute($dupParams);
     if ($stmt->fetch()) jsonError('رقم الطالب مستخدم بالفعل');
 
     $dob = !empty($data['date_of_birth']) ? sanitize($data['date_of_birth']) : null;
@@ -128,12 +137,13 @@ function saveStudent() {
             $params[] = $id;
             $db->prepare($sql)->execute($params);
         } else {
+            Subscription::requireLimit('students');
             // New student default password
             if (!$password) {
                 $password = password_hash($studentNumber, PASSWORD_DEFAULT);
             }
-            $db->prepare("INSERT INTO students (name, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password) VALUES (?,?,?,?,?,?,?,?)")
-               ->execute([$name, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes, $password]);
+            $db->prepare("INSERT INTO students (school_id, name, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password) VALUES (?,?,?,?,?,?,?,?,?)")
+               ->execute([$sid, $name, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes, $password]);
             $id = $db->lastInsertId();
         }
         jsonSuccess(['id' => $id], 'تم حفظ بيانات الطالب بنجاح');
@@ -243,16 +253,20 @@ function importStudents() {
 
     $db = getDB();
     
-    // Cache grades and classes for lookup
+    // Cache grades and classes for lookup (scoped to school)
     $grades = [];
-    $stmt = $db->query("SELECT id, code, name FROM grades WHERE active = 1");
+    $gradeSql = "SELECT id, code, name FROM grades WHERE active = 1";
+    if ($sid) $gradeSql .= " AND school_id = $sid";
+    $stmt = $db->query($gradeSql);
     foreach ($stmt->fetchAll() as $g) {
         $grades[mb_strtolower($g['code'])] = $g['id'];
         $grades[mb_strtolower($g['name'])] = $g['id'];
     }
     
     $classes = [];
-    $stmt = $db->query("SELECT id, grade_id, section, name FROM classes WHERE active = 1");
+    $classSql = "SELECT id, grade_id, section, name FROM classes WHERE active = 1";
+    if ($sid) $classSql .= " AND school_id = $sid";
+    $stmt = $db->query($classSql);
     foreach ($stmt->fetchAll() as $c) {
         $key = $c['grade_id'] . '_' . mb_strtolower($c['section']);
         $classes[$key] = $c['id'];
@@ -273,7 +287,8 @@ function importStudents() {
     $errors_list = [];
     $lineNum = 1; // Header is line 1
     
-    $stmtCheck = $db->prepare("SELECT id, password FROM students WHERE student_number = ?");
+    $stmtCheck = $db->prepare("SELECT id, password FROM students WHERE student_number = ?" . ($sid ? " AND school_id = $sid" : ""));
+    $sid = schoolId(); // ensure school_id for inserts
     
     // --- بداية التعديل: حلقة القراءة الفعالة ---
     while (($cols = fgetcsv($handle)) !== FALSE) {
@@ -390,8 +405,8 @@ function importStudents() {
                 if (!$password) {
                     $password = password_hash($studentNumber, PASSWORD_DEFAULT);
                 }
-                $db->prepare("INSERT INTO students (name, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password) VALUES (?,?,?,?,?,?,?,?)")
-                   ->execute([sanitize($name), sanitize($studentNumber), $classId, $dob, $bloodType, $guardianPhone, $medicalNotes ? sanitize($medicalNotes) : null, $password]);
+                $db->prepare("INSERT INTO students (school_id, name, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password) VALUES (?,?,?,?,?,?,?,?,?)")
+                   ->execute([$sid, sanitize($name), sanitize($studentNumber), $classId, $dob, $bloodType, $guardianPhone, $medicalNotes ? sanitize($medicalNotes) : null, $password]);
                 $imported++;
             }
         } catch (PDOException $e) {

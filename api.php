@@ -8,6 +8,9 @@
 
 require_once 'config.php';
 
+// Resolve current tenant (school) context
+Tenant::resolve();
+
 // Set JSON headers ONLY for non-file-download actions
 $action = getParam('action', '');
 if ($action !== 'students_template') {
@@ -199,12 +202,31 @@ require_once 'api/badges.php';
 // ROUTE REQUESTS
 // ============================================================
 try {
+    // SaaS Middleware: Check subscription for protected actions
+    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'schools_list', 'get_public_plans', 'register_school'];
+    if (!in_array($action, $publicActions)) {
+        Subscription::requireActive();
+    }
+
+    // Feature-gated actions
+    $featureActions = [
+        'tournaments' => ['tournament_save', 'tournament_delete'],
+        'badges' => ['badge_save', 'badge_delete', 'award_badge', 'run_auto_badges'],
+        'sports_teams' => [],  // handled in module
+    ];
+    foreach ($featureActions as $feature => $actions) {
+        if (in_array($action, $actions)) {
+            Subscription::requireFeature($feature);
+        }
+    }
+
     switch ($action) {
         // AUTH
         case 'check_auth':      checkAuth(); break;
         case 'login':           login(); break;
         case 'student_login':   studentLogin(); break;
         case 'logout':          logout(); break;
+        case 'schools_list':    getSchoolsList(); break;
 
         // DASHBOARD
         case 'dashboard':       getDashboard(); break;
@@ -305,9 +327,12 @@ try {
         case 'get_student_badges':  getStudentBadges(); break;
         case 'award_badge':         awardBadge(); break;
         case 'revoke_badge':        revokeBadge(); break;
-        case 'badge_save':          saveBadge(); break;
         case 'badge_delete':        deleteBadge(); break;
         case 'run_auto_badges':     runAutoBadges(); break;
+
+        // PUBLIC / ONBOARDING
+        case 'get_public_plans':    getPublicPlans(); break;
+        case 'register_school':     registerSchool(); break;
 
         default:
             jsonError('إجراء غير معروف', 404);
@@ -318,3 +343,68 @@ try {
 } catch (Exception $e) {
     jsonError($e->getMessage(), 500);
 }
+/**
+ * Public Plans List for Registration
+ */
+function getPublicPlans() {
+    $db = getDB();
+    $plans = $db->query("SELECT id, name, slug, price_monthly, max_students, max_teachers, max_classes FROM plans ORDER BY sort_order")->fetchAll();
+    jsonSuccess($plans);
+}
+
+/**
+ * Public School Registration
+ */
+function registerSchool() {
+    $data = getPostData();
+    validateRequired($data, ['name', 'slug', 'admin_username', 'admin_password']);
+    
+    $db = getDB();
+    $name = sanitize($data['name']);
+    $slug = strtolower(sanitize($data['slug']));
+    $adminName = sanitize($data['admin_name'] ?? ('مدير ' . $name));
+    $adminEmail = sanitize($data['admin_email'] ?? '');
+    $adminUser = sanitize($data['admin_username']);
+    $adminPass = $data['admin_password'];
+    $planId = !empty($data['plan_id']) ? (int)$data['plan_id'] : null;
+
+    // Check slug uniqueness
+    $stmt = $db->prepare("SELECT id FROM schools WHERE slug = ?");
+    $stmt->execute([$slug]);
+    if ($stmt->fetch()) jsonError('المعرف الفريد (slug) مستخدم بالفعل، اختر اسماً آخر');
+
+    $db->beginTransaction();
+    try {
+        // Find plan limits
+        $maxStudents = 100; $maxTeachers = 5;
+        if ($planId) {
+            $p = $db->prepare("SELECT max_students, max_teachers FROM plans WHERE id = ?");
+            $p->execute([$planId]);
+            $plan = $p->fetch();
+            if ($plan) {
+                $maxStudents = (int)$plan['max_students'];
+                $maxTeachers = (int)$plan['max_teachers'];
+            }
+        }
+
+        $stmt = $db->prepare("INSERT INTO schools (name, slug, email, plan_id, max_students, max_teachers, subscription_status, trial_ends_at) VALUES (?,?,?,?,?,?,'trial',?)");
+        $stmt->execute([$name, $slug, $adminEmail, $planId, $maxStudents, $maxTeachers, date('Y-m-d', strtotime('+14 days'))]);
+        $schoolId = $db->lastInsertId();
+
+        // Create Admin User
+        $hash = password_hash($adminPass, PASSWORD_BCRYPT, ['cost' => 12]);
+        $db->prepare("INSERT INTO users (school_id, username, password, name, role) VALUES (?,?,?,?,?)")
+           ->execute([$schoolId, $adminUser, $hash, $adminName, 'admin']);
+
+        // Create Default Grades
+        $db->prepare("INSERT INTO grades (school_id, name, code, sort_order) VALUES (?,?,?,?)")->execute([$schoolId, 'الصف الأول', '1', 1]);
+        $db->prepare("INSERT INTO grades (school_id, name, code, sort_order) VALUES (?,?,?,?)")->execute([$schoolId, 'الصف الثاني', '2', 2]);
+
+        $db->commit();
+        jsonSuccess(['slug' => $slug], 'تم تسجيل مدرستك بنجاح!');
+    } catch (Exception $e) {
+        $db->rollBack();
+        jsonError('خطأ أثناء الإنشاء: ' . $e->getMessage());
+    }
+}
+?>

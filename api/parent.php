@@ -81,12 +81,14 @@ function linkChildrenByPhone() {
     
     if (!$phone) return jsonError('رقم الجوال غير مسجل في ملفك الشخصي');
 
-    // Find students with matching guardian phone
-    $stmt = $db->prepare("
+    // Find students with matching guardian phone (same school)
+    $sid = schoolId();
+    $sql = "
         SELECT id FROM students 
         WHERE guardian_phone = ? 
-        AND id NOT IN (SELECT student_id FROM parent_students WHERE parent_id = ?)
-    ");
+        AND id NOT IN (SELECT student_id FROM parent_students WHERE parent_id = ?)";
+    if ($sid) $sql .= " AND school_id = $sid";
+    $stmt = $db->prepare($sql);
     $stmt->execute([$phone, $parentId]);
     $studentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 

@@ -11,6 +11,9 @@ function getCompetition() {
     $db = getDB();
     $userId = $_SESSION['user_id'];
     $userRole = $_SESSION['user_role'];
+    $sid = schoolId();
+    $schoolFilter = $sid ? "AND c.school_id = $sid" : "";
+    $studentSchoolFilter = $sid ? "AND s.school_id = $sid" : "";
 
     // 1. School-wide Class Ranking
     $classRanking = $db->query("
@@ -22,7 +25,7 @@ function getCompetition() {
         FROM classes c JOIN grades g ON c.grade_id = g.id
         LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
         LEFT JOIN student_fitness sf ON sf.student_id = s.id
-        WHERE c.active = 1 GROUP BY c.id ORDER BY avg_score DESC
+        WHERE c.active = 1 $schoolFilter GROUP BY c.id ORDER BY avg_score DESC
     ")->fetchAll();
 
     // 2. School-wide Top 10 Students
@@ -31,7 +34,7 @@ function getCompetition() {
                ROUND(AVG(sf.score), 2) as avg_score, SUM(sf.score) as total_score, COUNT(sf.id) as test_count
         FROM students s JOIN student_fitness sf ON sf.student_id = s.id
         JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
-        WHERE s.active = 1 GROUP BY s.id ORDER BY avg_score DESC LIMIT 10
+        WHERE s.active = 1 $studentSchoolFilter GROUP BY s.id ORDER BY avg_score DESC LIMIT 10
     ")->fetchAll();
 
     $studentData = null;
@@ -64,7 +67,7 @@ function getCompetition() {
             $schoolRanking = $db->query("
                 SELECT s.id, ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score
                 FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
-                WHERE s.active = 1 GROUP BY s.id ORDER BY avg_score DESC
+                WHERE s.active = 1 $studentSchoolFilter GROUP BY s.id ORDER BY avg_score DESC
             ")->fetchAll();
             
             $schoolRank = 0;
@@ -251,6 +254,8 @@ function getClassReport() {
 function getCompareReport() {
     requireRole(['admin', 'teacher', 'supervisor', 'viewer']);
     $db = getDB();
+    $sid = schoolId();
+    $schoolFilter = $sid ? "AND c.school_id = $sid" : "";
     $classes = $db->query("
         SELECT c.id, CONCAT(g.name, ' - ', c.name) as class_name,
                COUNT(DISTINCT s.id) as students_count,
@@ -258,7 +263,7 @@ function getCompareReport() {
         FROM classes c JOIN grades g ON c.grade_id = g.id
         LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
         LEFT JOIN student_fitness sf ON sf.student_id = s.id
-        WHERE c.active = 1 GROUP BY c.id HAVING students_count > 0 ORDER BY avg_score DESC
+        WHERE c.active = 1 $schoolFilter GROUP BY c.id HAVING students_count > 0 ORDER BY avg_score DESC
     ")->fetchAll();
 
     $maxAvg = !empty($classes) ? max(array_column($classes, 'avg_score')) : 1;
