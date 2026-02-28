@@ -105,3 +105,40 @@ function notifyClassParents($classId, $type, $title, $message) {
         createNotification($parentId, $type, $title, $message, null);
     }
 }
+
+/**
+ * NEW: Send bulk notifications to broad targets (students/parents)
+ */
+function sendBulkNotification($data) {
+    $db = getDB();
+    $schoolId = schoolId(); // Current school focus
+    $type = $data['type'] ?? 'general';
+    $title = $data['title'] ?? 'تنبيه جديد';
+    $message = $data['message'] ?? '';
+    $link = $data['link'] ?? '';
+    $targets = $data['targets'] ?? 'all_students_and_parents';
+
+    // Append link to message if provided and not already in message
+    if ($link && strpos($message, $link) === false) {
+        $message .= "\nرابط: " . $link;
+    }
+
+    if ($targets === 'all_students_and_parents') {
+        // Find all students and their parents in this school
+        $stmt = $db->prepare("
+            SELECT DISTINCT s.id as student_id, p.id as parent_id
+            FROM students s
+            JOIN parent_students ps ON s.id = ps.student_id
+            JOIN parents p ON ps.parent_id = p.id
+            WHERE s.school_id = ? AND s.active = 1 AND p.active = 1
+        ");
+        $stmt->execute([$schoolId]);
+        $pairs = $stmt->fetchAll();
+
+        foreach ($pairs as $row) {
+            createNotification($row['parent_id'], $type, $title, $message, $row['student_id']);
+        }
+        return count($pairs);
+    }
+    return 0;
+}

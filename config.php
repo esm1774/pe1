@@ -22,6 +22,20 @@ define('DB_PORT', 3306);                 // المنفذ - عادة 3306
 define('APP_NAME', 'PE Smart School System');
 define('APP_VERSION', '2.0.0');
 define('APP_TIMEZONE', 'Asia/Riyadh');
+
+// Determine Base URL
+$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$rootHome = "http://localhost/pe1"; // Fallback
+if (isset($_SERVER['PHP_SELF'])) {
+    $rootHome = $protocol . "://" . $host . dirname($_SERVER['PHP_SELF']);
+    // Adjust if called from a subdirectory
+    if (strpos($_SERVER['PHP_SELF'], '/modules/') !== false) $rootHome = $protocol . "://" . $host . dirname(dirname(dirname($_SERVER['PHP_SELF'])));
+    elseif (strpos($_SERVER['PHP_SELF'], '/api/') !== false) $rootHome = $protocol . "://" . $host . dirname(dirname($_SERVER['PHP_SELF']));
+    elseif (strpos($_SERVER['PHP_SELF'], '/admin/') !== false) $rootHome = $protocol . "://" . $host . dirname(dirname($_SERVER['PHP_SELF']));
+}
+define('BASE_URL', rtrim($rootHome, '/'));
+
 define('SESSION_LIFETIME', 7200); // ساعتان
 
 // ============================================================
@@ -40,7 +54,7 @@ date_default_timezone_set(APP_TIMEZONE);
 // ERROR HANDLING - معالجة الأخطاء
 // ============================================================
 // في بيئة الإنتاج، غيّر إلى 0
-define('DEBUG_MODE', false);
+define('DEBUG_MODE', true);
 
 if (DEBUG_MODE) {
     error_reporting(E_ALL);

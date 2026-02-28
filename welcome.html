@@ -4,7 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PE Smart School | منصة التربية البدنية الذكية</title>
+    <title>PE Smart School | منصة التحول الرقمي للتربية البدنية</title>
+
+    <!-- SEO & Identity -->
+    <meta name="description"
+        content="المنصة الأولى المتخصصة في إدارة النشاط الرياضي المدرسي، تنظيم البطولات، تتبع اللياقة البدنية، وتوليد التقارير الذكية.">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,21 +24,12 @@
                 extend: {
                     colors: {
                         emerald: {
-                            50: '#ecfdf5',
-                            100: '#d1fae5',
-                            200: '#a7f3d0',
-                            300: '#6ee7b7',
-                            400: '#34d399',
-                            500: '#10b981',
-                            600: '#059669',
-                            700: '#047857',
-                            800: '#065f46',
-                            900: '#064e3b',
+                            50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7',
+                            400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857',
+                            800: '#065f46', 900: '#064e3b',
                         }
                     },
-                    fontFamily: {
-                        cairo: ['Cairo', 'sans-serif'],
-                    }
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] }
                 }
             }
         }
@@ -55,355 +50,526 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .gradient-text {
+        .emerald-gradient {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .feature-card:hover {
-            transform: translateY(-8px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .feature-box:hover {
+            transform: translateY(-10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .hero-pattern {
-            background-image: radial-gradient(#10b981 0.5px, transparent 0.5px);
-            background-size: 24px 24px;
+        .hero-bg {
+            background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+        }
+
+        .blob {
+            width: 400px;
+            height: 400px;
+            background: #10b981;
+            filter: blur(120px);
+            border-radius: 50%;
             opacity: 0.1;
+            position: absolute;
         }
 
-        /* Modern scrollbar */
+        /* Modern Scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 10px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #f1f5f9;
+            background: #f0fdf4;
         }
 
         ::-webkit-scrollbar-thumb {
             background: #10b981;
-            border-radius: 10px;
+            border-radius: 20px;
+            border: 3px solid #f0fdf4;
+        }
+
+        .role-card:hover .role-icon {
+            transform: scale(1.1) rotate(5deg);
         }
     </style>
 </head>
 
-<body class="bg-[#f8fafc] text-slate-900 overflow-x-hidden">
+<body class="bg-[#fcfdfd] text-slate-800 overflow-x-hidden selection:bg-emerald-100 selection:text-emerald-900">
 
-    <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 z-50 px-6 py-4">
-        <nav class="max-w-7xl mx-auto glass rounded-2xl px-6 py-3 flex items-center justify-between shadow-sm">
-            <div class="flex items-center gap-3">
+    <!-- Navbar -->
+    <header class="fixed top-0 left-0 right-0 z-[100] px-6 py-5">
+        <nav
+            class="max-w-7xl mx-auto glass rounded-[2.5rem] px-8 py-4 flex items-center justify-between shadow-2xl shadow-emerald-900/5">
+            <div class="flex items-center gap-4">
                 <div
-                    class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-                    <i data-lucide="award" class="w-6 h-6"></i>
+                    class="w-11 h-11 emerald-gradient rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+                    <i data-lucide="zap" class="w-6 h-6"></i>
                 </div>
-                <span class="text-xl font-black tracking-tight text-emerald-900">PE Smart <span
-                        class="text-emerald-500">School</span></span>
+                <div class="flex flex-col">
+                    <span class="text-xl font-black text-emerald-950 leading-none">PE Smart</span>
+                    <span class="text-[10px] font-black tracking-[0.2em] text-emerald-600 uppercase">School
+                        Edition</span>
+                </div>
             </div>
 
-            <div class="hidden md:flex items-center gap-8 text-sm font-bold text-slate-600">
-                <a href="#features" class="hover:text-emerald-600 transition-colors">المميزات</a>
+            <div class="hidden lg:flex items-center gap-10 text-sm font-black text-slate-500">
+                <a href="#features" class="hover:text-emerald-600 transition-colors">الأدوات</a>
+                <a href="#whoweare" class="hover:text-emerald-600 transition-colors">من نخدم؟</a>
                 <a href="#tournaments" class="hover:text-emerald-600 transition-colors">البطولات</a>
+                <a href="#health" class="hover:text-emerald-600 transition-colors">الصحة والتحليل</a>
                 <a href="#pricing" class="hover:text-emerald-600 transition-colors">الأسعار</a>
-                <a href="#schools" class="hover:text-emerald-600 transition-colors">المدارس</a>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-4">
                 <a href="index.html"
-                    class="px-5 py-2.5 text-sm font-bold text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors">دخول</a>
+                    class="hidden sm:block text-sm font-black text-emerald-700 px-6 py-3 hover:bg-emerald-50 rounded-2xl transition-all">دخول</a>
                 <a href="register.html"
-                    class="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all transform hover:-translate-y-0.5">ابدأ
-                    تجربة مجانية</a>
+                    class="px-8 py-3.5 text-sm font-black text-white emerald-gradient rounded-2xl shadow-xl shadow-emerald-300 transform transition-transform hover:-translate-y-1 active:scale-95">سجل
+                    مدرستك</a>
             </div>
         </nav>
     </header>
 
     <!-- Hero Section -->
-    <section class="relative pt-40 pb-20 px-6 overflow-hidden">
-        <div class="absolute inset-0 hero-pattern pointer-events-none"></div>
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 relative z-10">
-            <div class="flex-1 text-center lg:text-right">
+    <section class="relative pt-48 pb-32 px-6 overflow-hidden hero-bg">
+        <div class="blob top-0 -left-40"></div>
+        <div class="blob bottom-0 -right-40"></div>
+
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-20">
+            <div class="flex-1 text-center lg:text-right z-10">
                 <div
-                    class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black mb-6 border border-emerald-100 uppercase tracking-widest">
-                    <span class="relative flex h-2 w-2">
-                        <span
-                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    مستقبل التربية البدنية الذكية
+                    class="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black mb-10 border border-emerald-100 shadow-sm animate-bounce">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    النسخة 3.0: نظام ذكاء رياضي متكامل
                 </div>
-                <h1 class="text-5xl lg:text-7xl font-black leading-tight mb-6 text-slate-900">
-                    منصة متكاملة <br> لإدارة <span class="gradient-text">الرياضة المدرسية</span>
+                <h1 class="text-6xl lg:text-8xl font-black leading-tight mb-8 text-slate-950">
+                    رقمنة <span class="text-gradient">الرياضة</span> <br> في مدرستك
                 </h1>
-                <p class="text-lg text-slate-500 max-w-2xl mx-auto lg:mx-0 mb-10 leading-relaxed font-semibold">
-                    حوّل حصة التربية البدنية إلى تجربة احترافية. أنشئ البطولات، تتبع لياقة الطلاب، وزرع روح التنافس
-                    باحترافية كاملة من هاتفك أو جهازك اللوحي.
+                <p class="text-xl text-slate-500 max-w-2xl mx-auto lg:mx-0 mb-12 leading-relaxed font-bold">
+                    وداعاً للورق والجدولة اليدوية. منصتنا توفر لمعلمي التربية البدنية أدوات احترافية لإدارة البطولات،
+                    تتبع اللياقة، وبناء جيل رياضي يفتخر بإنجازاته.
                 </p>
-                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+
+                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5">
                     <a href="register.html"
-                        class="w-full sm:w-auto px-10 py-5 bg-emerald-600 text-white rounded-2xl font-black text-lg shadow-2xl shadow-emerald-300 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3">
-                        سجل مدرستك الآن
+                        class="w-full sm:w-auto px-12 py-6 emerald-gradient text-white rounded-3xl font-black text-xl shadow-2xl shadow-emerald-200 hover:shadow-emerald-400/40 transition-all flex items-center justify-center gap-4">
+                        ابدأ رحلة التحول
                         <i data-lucide="arrow-left" class="w-6 h-6"></i>
                     </a>
                     <a href="#features"
-                        class="w-full sm:w-auto px-10 py-5 bg-white text-slate-700 rounded-2xl font-black text-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
-                        استكشف المميزات
-                        <i data-lucide="play" class="w-6 h-6"></i>
+                        class="w-full sm:w-auto px-12 py-6 bg-white text-slate-700 rounded-3xl font-black text-xl border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center gap-4">
+                        شاهد الأدوات
                     </a>
-                </div>
-
-                <div class="mt-12 flex items-center justify-center lg:justify-start gap-6 grayscale opacity-60">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
-                        <span class="text-xs font-bold">معتمد لجميع المدارس</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600"></i>
-                        <span class="text-xs font-bold">آمن ومتوافق مع الخصوصية</span>
-                    </div>
                 </div>
             </div>
 
-            <div class="flex-1 relative">
-                <div class="absolute -top-10 -right-10 w-40 h-40 bg-emerald-100 rounded-full blur-3xl opacity-50"></div>
-                <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-200 rounded-full blur-3xl opacity-50">
+            <div class="flex-1 relative group">
+                <div
+                    class="absolute -inset-4 bg-emerald-400/20 rounded-[3rem] blur-2xl group-hover:bg-emerald-400/30 transition-all">
                 </div>
                 <div
-                    class="relative glass p-4 rounded-3xl shadow-2xl rotate-3 transform transition-transform hover:rotate-0 duration-700">
-                    <img src="assets/img/pe_smart_landing_hero_boys_1772252970163.png" alt="PE Smart Dashboard"
-                        class="rounded-2xl w-full border border-white/50 shadow-inner">
+                    class="relative glass p-5 rounded-[3.5rem] shadow-3xl transform -rotate-1 group-hover:rotate-0 transition-all duration-700 ease-out">
+                    <img src="assets/img/pe_smart_landing_hero_boys_1772252970163.png" alt="Dashboard Preview"
+                        class="rounded-[2.5rem] w-full shadow-2xl">
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Stats Bar -->
-    <div class="max-w-7xl mx-auto px-6 mb-24">
+    <!-- Stats Section -->
+    <div class="max-w-7xl mx-auto px-6 mb-32">
         <div
-            class="bg-emerald-900 rounded-[2.5rem] px-10 py-12 text-white flex flex-wrap justify-around gap-12 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 pointer-events-none hero-pattern"></div>
-            <div class="text-center relative z-10">
-                <div class="text-4xl font-black mb-2 text-emerald-400">150+</div>
-                <div class="text-sm font-bold opacity-70">مدرسة مسجلة</div>
+            class="bg-emerald-950 rounded-[4rem] p-16 text-white grid grid-cols-2 lg:grid-cols-4 gap-12 relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10"
+                style="background-image: radial-gradient(#fff 0.5px, transparent 0.5px); background-size: 32px 32px;">
+            </div>
+            <div class="text-center relative z-10 border-l border-white/10 last:border-0 pl-12 last:pl-0">
+                <div class="text-5xl font-black mb-3 text-emerald-400">100%</div>
+                <div class="text-sm font-bold opacity-60 tracking-widest uppercase">أتمتة للنشاط</div>
+            </div>
+            <div class="text-center relative z-10 border-l border-white/10 pl-12">
+                <div class="text-5xl font-black mb-3 text-emerald-400">0</div>
+                <div class="text-sm font-bold opacity-60 tracking-widest uppercase">هدر ورقي</div>
+            </div>
+            <div class="text-center relative z-10 border-l border-white/10 pl-12">
+                <div class="text-5xl font-black mb-3 text-emerald-400">Secure</div>
+                <div class="text-sm font-bold opacity-60 tracking-widest uppercase">تشفير تام</div>
             </div>
             <div class="text-center relative z-10">
-                <div class="text-4xl font-black mb-2 text-emerald-400">12,000+</div>
-                <div class="text-sm font-bold opacity-70">طالب نشط</div>
-            </div>
-            <div class="text-center relative z-10">
-                <div class="text-4xl font-black mb-2 text-emerald-400">850+</div>
-                <div class="text-sm font-bold opacity-70">بطولة مكتملة</div>
-            </div>
-            <div class="text-center relative z-10">
-                <div class="text-4xl font-black mb-2 text-emerald-400">99%</div>
-                <div class="text-sm font-bold opacity-70">نسبة الرضا</div>
+                <div class="text-5xl font-black mb-3 text-emerald-400">24/7</div>
+                <div class="text-sm font-bold opacity-60 tracking-widest uppercase">دعم تقني مستمر</div>
             </div>
         </div>
     </div>
 
-    <!-- Features Section -->
-    <section id="features" class="py-24 px-6 relative">
+    <!-- Features Grid -->
+    <section id="features" class="py-32 px-6">
         <div class="max-w-7xl mx-auto">
-            <div class="text-center max-w-3xl mx-auto mb-20">
-                <h2 class="text-4xl font-black mb-6">حلول ذكية لكل <span class="text-emerald-600">تحدي رياضي</span></h2>
-                <p class="text-slate-500 font-semibold leading-relaxed">
-                    لقد فكّرنا في كل شيء لتوفير منصة تدعم المعلم، تحفز الطالب، وتطمئن ولي الأمر.
+            <div class="text-center max-w-4xl mx-auto mb-24">
+                <span class="text-emerald-600 font-black tracking-widest uppercase text-sm mb-4 block">كل ما تحتاجه في
+                    مكان واحد</span>
+                <h2 class="text-5xl font-black mb-8 text-slate-900 leading-tight">حلول برمجية مخصصة <br> لمجتمعنا <span
+                        class="text-emerald-600">الرياضي المدرسي</span></h2>
+                <p class="text-lg text-slate-500 font-bold leading-relaxed">
+                    من إدارة الحضور وحتى توزيع الميداليات، لقد بنينا نظاماً يغطي كافة جوانب التربية البدنية بمعايير
+                    احترافية.
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                <!-- Card 1 -->
                 <div
-                    class="feature-card bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all">
+                    class="feature-box bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-lg shadow-slate-200/50">
                     <div
-                        class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-8">
-                        <i data-lucide="trophy" class="w-8 h-8"></i>
+                        class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mb-10 shadow-inner">
+                        <i data-lucide="shrub" class="w-10 h-10"></i>
                     </div>
-                    <h3 class="text-2xl font-black mb-4">محرك بطولات متقدم</h3>
-                    <p class="text-slate-500 font-semibold leading-relaxed">
-                        نظام متكامل لجدولة المباريات، توليد جداول خروج المغلوب (Brackets)، ونظام المجموعات، مع رصد حي
-                        للنتائج.
-                    </p>
+                    <h3 class="text-2xl font-black mb-5 text-slate-900">محرك البطولات المتقدم</h3>
+                    <ul class="space-y-4 text-slate-500 font-bold">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            نظام خروج مغلوب (Brackets)</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            نظام مجموعات ونقاط</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            جدولة مباريات ذكية</li>
+                    </ul>
                 </div>
 
-                <!-- Feature 2 -->
+                <!-- Card 2 -->
                 <div
-                    class="feature-card bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all">
+                    class="feature-box bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-lg shadow-slate-200/50">
                     <div
-                        class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-8">
-                        <i data-lucide="activity" class="w-8 h-8"></i>
+                        class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mb-10 shadow-inner">
+                        <i data-lucide="heart-pulse" class="w-10 h-10"></i>
                     </div>
-                    <h3 class="text-2xl font-black mb-4">ملف لياقة صحي</h3>
-                    <p class="text-slate-500 font-semibold leading-relaxed">
-                        تتبع مؤشر كتلة الجسم (BMI)، التنبؤ بالمشكلات الصحية، وحفظ نتائج اختبارات اللياقة البدنية لكل
-                        طالب.
-                    </p>
+                    <h3 class="text-2xl font-black mb-5 text-slate-900">تحليلات اللياقة والـ BMI</h3>
+                    <ul class="space-y-4 text-slate-500 font-bold">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            تتبع قياسات الطالب تاريخياً</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            تنبيهات صحية فورية (AI)</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            مقارنة تطور الطالب فصلياً</li>
+                    </ul>
                 </div>
 
-                <!-- Feature 3 -->
+                <!-- Card 3 -->
                 <div
-                    class="feature-card bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all">
+                    class="feature-box bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-lg shadow-slate-200/50">
                     <div
-                        class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-8">
-                        <i data-lucide="users" class="w-8 h-8"></i>
+                        class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mb-10 shadow-inner">
+                        <i data-lucide="dices" class="w-10 h-10"></i>
                     </div>
-                    <h3 class="text-2xl font-black mb-4">إدارة الفرق والقرعة</h3>
-                    <p class="text-slate-500 font-semibold leading-relaxed">
-                        نظام ذكي لتوزيع الطلاب على الفرق (عشوائي أو بمهارة) وإدارة التدريبات الرياضية المدرسية.
-                    </p>
+                    <h3 class="text-2xl font-black mb-5 text-slate-900">قرعة وتوزيع الفرق</h3>
+                    <ul class="space-y-4 text-slate-500 font-bold">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            معالج قرعة (Lottery Wizard)</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            توزيع حسب مستوى الأداء</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            إدارة حصص التمرين</li>
+                    </ul>
                 </div>
 
-                <!-- Feature 4 -->
+                <!-- Card 4 -->
                 <div
-                    class="feature-card bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all">
+                    class="feature-box bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-lg shadow-slate-200/50">
                     <div
-                        class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-8">
-                        <i data-lucide="bell" class="w-8 h-8"></i>
+                        class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mb-10 shadow-inner">
+                        <i data-lucide="award" class="w-10 h-10"></i>
                     </div>
-                    <h3 class="text-2xl font-black mb-4">إشعارات أولياء الأمور</h3>
-                    <p class="text-slate-500 font-semibold leading-relaxed">
-                        إعلام فوري لأولياء الأمور بمشاركة أبنائهم في المباريات، إنجازاتهم الرياضية، أو ملاحظات الحضور
-                        والغياب.
-                    </p>
+                    <h3 class="text-2xl font-black mb-5 text-slate-900">التحفيز الرقمي والشهادات</h3>
+                    <ul class="space-y-4 text-slate-500 font-bold">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            شواهد تقدير (Drag & Drop)</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            نظام الأوسمة والبادجات</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            جائزة "رجل المباراة" الفورية</li>
+                    </ul>
                 </div>
 
-                <!-- Feature 5 -->
+                <!-- Card 5 -->
                 <div
-                    class="feature-card bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all">
+                    class="feature-box bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-lg shadow-slate-200/50">
                     <div
-                        class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-8">
-                        <i data-lucide="star" class="w-8 h-8"></i>
+                        class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mb-10 shadow-inner">
+                        <i data-lucide="megaphone" class="w-10 h-10"></i>
                     </div>
-                    <h3 class="text-2xl font-black mb-4">الأوسمة والتحفيز</h3>
-                    <p class="text-slate-500 font-semibold leading-relaxed">
-                        نظام "Gamification" لمنح الطلاب أوسمة افتراضية، لقب "رجل المباراة"، وجوائز تشجيعية تزيد من
-                        التفاعل.
-                    </p>
+                    <h3 class="text-2xl font-black mb-5 text-slate-900">إشعارات أولياء الأمور</h3>
+                    <ul class="space-y-4 text-slate-500 font-bold">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            تنبيهات الحضور والغياب</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            إشعار فور المشاركة في مباراة</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            تقارير أداء دورية موجهة</li>
+                    </ul>
                 </div>
 
-                <!-- Feature 6 -->
+                <!-- Card 6 -->
                 <div
-                    class="feature-card bg-white p-10 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all">
+                    class="feature-box bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-lg shadow-slate-200/50">
                     <div
-                        class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-8">
-                        <i data-lucide="file-text" class="w-8 h-8"></i>
+                        class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mb-10 shadow-inner">
+                        <i data-lucide="bar-chart-3" class="w-10 h-10"></i>
                     </div>
-                    <h3 class="text-2xl font-black mb-4">تقارير ختامية مؤتمتة</h3>
-                    <p class="text-slate-500 font-semibold leading-relaxed">
-                        توليد تقارير الإنجاز بشكل فوري مع صور البطولات وإحصائيات كاملة لتقديمها لإدارة المدرسة.
-                    </p>
+                    <h3 class="text-2xl font-black mb-5 text-slate-900">تقارير الختام والتوثيق</h3>
+                    <ul class="space-y-4 text-slate-500 font-bold">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            ملف إنجاز مصور بضغطة زر</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            إحصائيات الطلاب والنتائج</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-emerald-500"></i>
+                            أرشيف رقمي لكافة البطولات</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Tournament Showcase -->
-    <section id="tournaments" class="py-24 px-6 bg-slate-900 text-white overflow-hidden relative">
-        <div class="absolute inset-0 opacity-20 pointer-events-none hero-pattern"></div>
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row-reverse items-center gap-20 relative z-10">
-            <div class="flex-1">
-                <div
-                    class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-black mb-6 border border-emerald-500/20 uppercase tracking-widest">
-                    قوة التنظيم
+    <!-- Deep Dive: Tournaments -->
+    <section id="tournaments" class="py-32 px-6 bg-slate-900 text-white overflow-hidden relative">
+        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent">
+        </div>
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-24">
+            <div class="flex-1 order-2 lg:order-1 relative">
+                <div class="absolute inset-0 bg-emerald-500/20 blur-[150px] rounded-full"></div>
+                <img src="assets/img/pe_smart_badges_showcase_1772252356011.png" alt="Tournaments Interface"
+                    class="relative rounded-[3rem] shadow-4xl transform -rotate-2 hover:rotate-0 transition-all duration-700">
+            </div>
+            <div class="flex-1 order-1 lg:order-2">
+                <span class="text-emerald-400 font-black mb-4 block tracking-tighter uppercase">نظام التحكيم
+                    والجدولة</span>
+                <h3 class="text-5xl font-black mb-10 leading-none">إدارة البطولات <br> باحترافية <span
+                        class="text-emerald-500 italic underline underline-offset-8">الأندية الكبرى</span></h3>
+                <p class="text-lg text-slate-400 font-bold mb-10 leading-relaxed italic">
+                    لقد صممنا محركاً للبطولات يدير آلاف الطلاب بكفاءة. سواء كنت تنظم دوري فصول، أو تحدي على مستوى
+                    المنطقة، PE Smart يتولى التفاصيل التقنية وتترك لك متعة التنظيم.
+                </p>
+                <div class="grid grid-cols-2 gap-8 text-sm font-black">
+                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+                        <i data-lucide="layout" class="w-6 h-6 text-emerald-400"></i>
+                        عرض Brackets تفاعلي
+                    </div>
+                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+                        <i data-lucide="table-2" class="w-6 h-6 text-emerald-400"></i>
+                        جداول ترتيب فورية
+                    </div>
+                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+                        <i data-lucide="clock" class="w-6 h-6 text-emerald-400"></i>
+                        جدولة ذكية للمباريات
+                    </div>
+                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+                        <i data-lucide="share-2" class="w-6 h-6 text-emerald-400"></i>
+                        نشر النتائج علناً
+                    </div>
                 </div>
-                <h2 class="text-4xl lg:text-5xl font-black mb-8 leading-tight">محرك بطولات <br> لا مثيل له في المدارس
-                </h2>
-                <ul class="space-y-6">
-                    <li class="flex items-start gap-4">
+            </div>
+        </div>
+    </section>
+
+    <!-- Deep Dive: Health -->
+    <section id="health" class="py-32 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-24">
+            <div class="flex-1">
+                <span class="text-emerald-600 font-black mb-4 block tracking-tighter uppercase">الصحة والنمو</span>
+                <h3 class="text-5xl font-black mb-10 leading-none tracking-tight text-slate-900">رؤية كاملة <br> لصحة
+                    ولياقة <span class="text-emerald-600">كل طالب</span></h3>
+                <p class="text-lg text-slate-500 font-bold mb-10 leading-relaxed">
+                    النظام لا يسجل الأرقام فحسب، بل يحللها. تتبع تذبذب وزن الطالب، سرعته، وقدرته على التحمل عبر السنوات،
+                    مع تنبيهات ذكية للمعلمين في حال وجود أي مؤشرات صحية تتطلب الاهتمام.
+                </p>
+                <div class="space-y-6">
+                    <div
+                        class="flex items-center gap-5 p-6 bg-slate-50 rounded-[2rem] border border-slate-100 hover:border-emerald-200 transition-all cursor-default">
                         <div
-                            class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                            <i data-lucide="check" class="w-5 h-5"></i>
+                            class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-600">
+                            <i data-lucide="scale" class="w-6 h-6"></i>
                         </div>
-                        <div>
-                            <h4 class="text-xl font-bold mb-1">قرعة إلكترونية شفافة</h4>
-                            <p class="text-slate-400 font-semibold italic text-sm">توزيع الفرق والمواجهات بضغطة زر
-                                واحدة.</p>
-                        </div>
-                    </li>
-                    <li class="flex items-start gap-4">
+                        <span class="text-lg font-black text-slate-800">حساب مؤشر BMI آلياً مع تصنيفات طبية</span>
+                    </div>
+                    <div
+                        class="flex items-center gap-5 p-6 bg-slate-50 rounded-[2rem] border border-slate-100 hover:border-emerald-200 transition-all cursor-default">
                         <div
-                            class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                            <i data-lucide="check" class="w-5 h-5"></i>
+                            class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-600">
+                            <i data-lucide="line-chart" class="w-6 h-6"></i>
                         </div>
-                        <div>
-                            <h4 class="text-xl font-bold mb-1">دعم جميع أنواع البطولات</h4>
-                            <p class="text-slate-400 font-semibold italic text-sm">خروج المغلوب، المجموعات، والترتيب
-                                الدوري.</p>
-                        </div>
-                    </li>
-                    <li class="flex items-start gap-4">
-                        <div
-                            class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                            <i data-lucide="check" class="w-5 h-5"></i>
-                        </div>
-                        <div>
-                            <h4 class="text-xl font-bold mb-1">شاشات عرض حية للمباريات</h4>
-                            <p class="text-slate-400 font-semibold italic text-sm">اعرض النتائج مباشرة في فناء المدرسة
-                                أو القاعة الرياضية.</p>
-                        </div>
-                    </li>
-                </ul>
-                <div class="mt-12">
-                    <a href="register.html"
-                        class="inline-flex items-center gap-3 text-emerald-400 font-black text-lg hover:text-emerald-300 transition-colors">
-                        ابدأ بتنظيم بطولتك الأولى الآن
-                        <i data-lucide="chevron-left" class="w-6 h-6"></i>
-                    </a>
+                        <span class="text-lg font-black text-slate-800">مخططات بيانية لمستوى تطور اللياقة الفردية</span>
+                    </div>
                 </div>
             </div>
             <div class="flex-1 relative">
-                <div
-                    class="absolute inset-0 bg-emerald-500 rounded-full blur-[120px] opacity-20 transform translate-x-20">
+                <div class="absolute -inset-10 bg-emerald-100 rounded-full blur-[100px] opacity-30"></div>
+                <img src="assets/img/pe_smart_fitness_profile_1772276700000_1772276788422.png" alt="Fitness Analytics"
+                    class="relative rounded-[3.5rem] shadow-3xl hover:scale-105 transition-all duration-700">
+            </div>
+        </div>
+    </section>
+
+    <!-- Deep Dive: Certificates -->
+    <section id="awards" class="py-32 px-6 bg-emerald-50 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row-reverse items-center gap-24">
+            <div class="flex-1">
+                <span class="text-emerald-700 font-black mb-4 block tracking-tighter uppercase">التوثيق والتقدير</span>
+                <h3 class="text-5xl font-black mb-10 leading-none tracking-tight text-slate-900">حوّل المجهود <br> إلى
+                    <span class="text-emerald-600 italic">لحظة فخر</span> ممتدة
+                </h3>
+                <p class="text-lg text-slate-600 font-bold mb-10 leading-relaxed italic">
+                    نظام تقارير الختام يولد ملفات PDF احترافية تشمل نتائج الطلاب، وصور الفعاليات، وكلمة المعلم، لتكون
+                    جاهزة لتقديمها لقائد المدرسة أو في حفل الختام.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <div
+                        class="px-6 py-3 bg-white rounded-xl border border-emerald-100 font-black text-emerald-700 shadow-sm">
+                        شهادات شكر آلية</div>
+                    <div
+                        class="px-6 py-3 bg-white rounded-xl border border-emerald-100 font-black text-emerald-700 shadow-sm">
+                        ملف إنجاز مصور</div>
+                    <div
+                        class="px-6 py-3 bg-white rounded-xl border border-emerald-100 font-black text-emerald-700 shadow-sm">
+                        شواهد حضور</div>
+                    <div
+                        class="px-6 py-3 bg-white rounded-xl border border-emerald-100 font-black text-emerald-700 shadow-sm">
+                        سجل إحصائي سنوي</div>
                 </div>
+            </div>
+            <div class="flex-1 relative">
+                <img src="assets/img/pe_smart_certificates_1772276800000_1772276882706.png" alt="Certificates"
+                    class="relative rounded-[3.5rem] shadow-4xl hover:rotate-2 transition-all duration-700">
+            </div>
+        </div>
+    </section>
+
+    <!-- Who We Serve Section -->
+    <section id="whoweare" class="py-32 px-6 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center max-w-3xl mx-auto mb-24">
+                <h2 class="text-5xl font-black mb-8 leading-tight">شريك لكل أفراد <br> <span
+                        class="text-emerald-600">المنظومة التعليمية</span></h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Teacher -->
                 <div
-                    class="bg-slate-800 p-3 rounded-[2.5rem] shadow-3xl border border-slate-700 max-w-lg mx-auto transform -rotate-2">
-                    <img src="assets/img/pe_smart_badges_showcase_1772252356011.png" alt="Tournaments Showcase"
-                        class="rounded-[2rem]">
+                    class="role-card p-10 bg-slate-50 rounded-[3rem] border border-slate-100 text-center hover:bg-white hover:shadow-2xl hover:border-emerald-200 transition-all duration-500">
+                    <div
+                        class="role-icon w-20 h-20 emerald-gradient rounded-3xl mx-auto mb-8 flex items-center justify-center text-white shadow-xl transition-transform">
+                        <i data-lucide="user-plus" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="text-2xl font-black mb-4">المعلم</h4>
+                    <p class="text-sm text-slate-500 font-bold leading-relaxed lowercase italic italic">تنظيم حصصه، رصد
+                        درجاته وبطولاته في ثوانٍ معدودة.</p>
+                </div>
+                <!-- Admin -->
+                <div
+                    class="role-card p-10 bg-slate-50 rounded-[3rem] border border-slate-100 text-center hover:bg-white hover:shadow-2xl hover:border-emerald-200 transition-all duration-500">
+                    <div
+                        class="role-icon w-20 h-20 bg-slate-900 rounded-3xl mx-auto mb-8 flex items-center justify-center text-white shadow-xl transition-transform">
+                        <i data-lucide="shield-check" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="text-2xl font-black mb-4">المدير</h4>
+                    <p class="text-sm text-slate-500 font-bold leading-relaxed lowercase italic italic">لوحة بيانات
+                        لمتابعة تفاعل المعلمين، إحصائيات النشاط، والتقارير.</p>
+                </div>
+                <!-- Parent -->
+                <div
+                    class="role-card p-10 bg-slate-50 rounded-[3rem] border border-slate-100 text-center hover:bg-white hover:shadow-2xl hover:border-emerald-200 transition-all duration-500">
+                    <div
+                        class="role-icon w-20 h-20 bg-emerald-500 rounded-3xl mx-auto mb-8 flex items-center justify-center text-white shadow-xl transition-transform">
+                        <i data-lucide="heart" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="text-2xl font-black mb-4">ولي الأمر</h4>
+                    <p class="text-sm text-slate-500 font-bold leading-relaxed lowercase italic italic">متابعة صحة وحضور
+                        وتميز الابن الرياضي وبطولاته.</p>
+                </div>
+                <!-- Student -->
+                <div
+                    class="role-card p-10 bg-slate-50 rounded-[3rem] border border-slate-100 text-center hover:bg-white hover:shadow-2xl hover:border-emerald-200 transition-all duration-500">
+                    <div
+                        class="role-icon w-20 h-20 emerald-gradient rounded-3xl mx-auto mb-8 flex items-center justify-center text-white shadow-xl transition-transform">
+                        <i data-lucide="medal" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="text-2xl font-black mb-4">الطالب</h4>
+                    <p class="text-sm text-slate-500 font-bold leading-relaxed lowercase italic italic">ملف شخصي يوثق
+                        إنجازاته الرياضية ويحفزه للأفضل.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Schools / SaaS Section -->
-    <section id="schools" class="py-24 px-6 bg-white">
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
-            <div class="flex-1 order-2 lg:order-1">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-emerald-50 p-8 rounded-3xl text-center">
-                        <div class="text-4xl font-black text-emerald-600 mb-2">99.9%</div>
-                        <div class="text-xs font-bold text-slate-500 uppercase">جاهزية النظام</div>
-                    </div>
-                    <div class="bg-slate-50 p-8 rounded-3xl text-center">
-                        <div class="text-4xl font-black text-slate-800 mb-2">Multi</div>
-                        <div class="text-xs font-bold text-slate-500 uppercase">رابط خاص بكل مدرسة</div>
-                    </div>
-                    <div class="bg-slate-900 p-8 rounded-3xl text-center text-white col-span-2">
-                        <div class="flex items-center justify-center gap-3 text-xl font-black mb-2">
-                            <i data-lucide="cloud" class="w-6 h-6 text-emerald-400"></i>
-                            نظام سحابي متطور
+    <!-- Technical Edge -->
+    <section class="py-32 px-6 bg-slate-50 border-y border-slate-200">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-16 items-center">
+            <div class="lg:col-span-2">
+                <h3 class="text-4xl font-black mb-8 leading-tight text-slate-900">تكنولوجيا <span
+                        class="text-emerald-600 italic">SaaS</span> سحابية <br> تتطور مع احتياجاتك</h3>
+                <p class="text-lg text-slate-500 font-bold mb-10 leading-relaxed">
+                    لا حاجة لتركيب خوادم محلية. النظام يعمل عبر الحوسبة السحابية مع دعم كامل لتقنية PWA، مما يعني أنه
+                    يعمل كـ "تطبيق جوال" بمجرد إضافته للشاشة الرئيسية، مع سرعة تصفح فائقة واستقرار تام.
+                </p>
+                <div class="flex flex-wrap gap-10">
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-600">
+                            <i data-lucide="smartphone" class="w-6 h-6"></i>
                         </div>
-                        <div class="text-xs font-bold opacity-60 uppercase">لا يتطلب تركيب برامج - يعمل من أي مكان</div>
+                        <div>
+                            <div class="font-black text-slate-800">PWA Ready</div>
+                            <div class="text-[10px] uppercase tracking-tighter text-slate-400 font-bold">تطبيق ويب تقدمي
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-600">
+                            <i data-lucide="cloud" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <div class="font-black text-slate-800">Cloud Data</div>
+                            <div class="text-[10px] uppercase tracking-tighter text-slate-400 font-bold">حفظ تلقائي
+                                سحابي</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-600">
+                            <i data-lucide="shield-lock" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <div class="font-black text-slate-800">Bank-level Security</div>
+                            <div class="text-[10px] uppercase tracking-tighter text-slate-400 font-bold">أمان فائق
+                                للبيانات</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="flex-1 text-center lg:text-right order-1 lg:order-2">
-                <h2 class="text-4xl font-black mb-8 leading-tight">مساحة خاصة <span
-                        class="text-emerald-600">بمدرستك</span> <br> وهوية مستقلة</h2>
-                <p class="text-slate-500 font-semibold mb-8 leading-relaxed">
-                    نحن لا نقدم مجرد برنامج، نحن نقدم "بيئة عمل". عند تسجيل مدرستك، ستحصل على رابط خاص (مثلاً: <code
-                        class="bg-emerald-50 px-2 py-1 rounded text-emerald-700 font-bold">school_name.pesmart.com</code>)
-                    يسمح لك بإدارة طلابك ومعلميك في خصوصية تامة واحترافية عالية.
-                </p>
-                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                    <div class="flex items-center gap-3 px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50">
-                        <i data-lucide="globe" class="w-6 h-6 text-emerald-600"></i>
-                        <span class="font-bold text-slate-700">دعم كافة النطاقات</span>
+            <div class="bg-white p-10 rounded-[3.5rem] shadow-3xl border border-slate-200 transform rotate-1">
+                <div class="text-center mb-10">
+                    <div
+                        class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-inner">
+                        <i data-lucide="download" class="w-10 h-10"></i>
                     </div>
-                    <div class="flex items-center gap-3 px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50">
-                        <i data-lucide="lock" class="w-6 h-6 text-emerald-600"></i>
-                        <span class="font-bold text-slate-700">تشفير كامل للبيانات</span>
+                    <h4 class="text-2xl font-black text-slate-900 italic">ثبّت التطبيق الآن</h4>
+                    <p class="text-xs text-slate-400 font-bold mt-2">افتح الموقع من متصفح جوالك واختر "إضافة للشاشة
+                        الرئيسية"</p>
+                </div>
+                <div class="space-y-4">
+                    <div class="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                        <span class="text-sm font-black text-slate-600">إصدار النظام</span>
+                        <span class="text-xs font-black text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">v3.1.0
+                            Stable</span>
+                    </div>
+                    <div class="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                        <span class="text-sm font-black text-slate-600">مزود السحابة</span>
+                        <span class="text-xs font-black text-slate-500 uppercase">Enterprise Clusters</span>
                     </div>
                 </div>
             </div>
@@ -411,190 +577,206 @@
     </section>
 
     <!-- Pricing Section -->
-    <section id="pricing" class="py-24 px-6 bg-slate-50 relative overflow-hidden">
-        <div class="max-w-7xl mx-auto relative z-10">
-            <div class="text-center max-w-3xl mx-auto mb-20">
-                <h2 class="text-4xl font-black mb-6">باقات تناسب <span class="text-emerald-600">طموح مدرستك</span></h2>
-                <p class="text-slate-500 font-semibold">ابدأ مجاناً وجرب كافة المميزات، غيّر باقتك في أي وقت.</p>
-            </div>
+    <section id="pricing" class="py-32 px-6">
+        <div class="max-w-7xl mx-auto text-center">
+            <h2 class="text-5xl font-black mb-20 text-slate-900 leading-tight">ابدأ اليوم.. <span
+                    class="text-emerald-600 underline underline-offset-8">لا مفاجآت</span> في التكاليف</h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Basic -->
-                <div class="bg-white p-10 rounded-[2.5rem] border border-slate-200 flex flex-col shadow-sm">
-                    <div class="mb-8">
-                        <h4 class="text-xl font-bold mb-2">الباقة التجريبية</h4>
-                        <div class="text-4xl font-black mb-2">مجانية <span class="text-sm font-bold text-slate-400">/ 14
-                                يوم</span></div>
-                        <p class="text-slate-500 text-sm font-semibold">لاكتشاف المميزات للفرق الرياضية الصغيرة.</p>
-                    </div>
-                    <ul class="space-y-4 mb-10 flex-1">
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-500"></i> حتى 50 طالب</li>
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-500"></i> 1 بطولة واحدة نشطة</li>
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-500"></i> الحضور والغياب</li>
-                        <li class="flex items-center gap-3 text-sm font-bold opacity-30"><i data-lucide="x"
-                                class="w-5 h-5"></i> تقارير ختامية مصورة</li>
-                    </ul>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+                <!-- Free -->
+                <div
+                    class="p-8 rounded-[3rem] bg-white border border-slate-200 flex flex-col items-center hover:border-emerald-200 transition-all">
+                    <div class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">للتجربة</div>
+                    <div class="text-4xl font-black mb-10 text-slate-900 leading-none">مجاني <br> <span
+                            class="text-xs font-bold text-slate-400">فترة تجريبية 14 يوم</span></div>
                     <a href="register.html"
-                        class="w-full py-4 bg-slate-100 text-slate-700 rounded-2xl font-black text-center hover:bg-slate-200 transition-colors">ابدأ
-                        الآن</a>
+                        class="w-full py-4 bg-slate-100 text-slate-700 rounded-2xl font-black mb-10 hover:bg-slate-200 transition-colors">ابدأ
+                        التجربة</a>
+                    <ul class="text-sm font-bold text-slate-500 space-y-4 text-right w-full pr-6">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            حتى 50 طالب</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            حتى 2 معلمين</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            إدارة الحضور والإشعارات</li>
+                    </ul>
                 </div>
 
-                <!-- Premium -->
+                <!-- Basic -->
                 <div
-                    class="bg-emerald-600 p-10 rounded-[2.5rem] text-white flex flex-col shadow-2xl shadow-emerald-200 relative transform lg:scale-110 z-10">
+                    class="p-8 rounded-[3.5rem] bg-white border-2 border-emerald-500 flex flex-col items-center shadow-3xl relative z-10 transform scale-105">
                     <div
-                        class="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-400 text-white px-6 py-1 rounded-full text-xs font-black uppercase tracking-widest">
+                        class="absolute top-0 right-0 bg-emerald-500 text-white px-8 py-2 font-black text-[10px] uppercase tracking-widest rotate-45 transform translate-x-10 translate-y-6">
                         الأكثر طلباً</div>
-                    <div class="mb-8">
-                        <h4 class="text-xl font-bold mb-2">باقة الاحتراف</h4>
-                        <div class="text-4xl font-black mb-2">99 ر.س <span class="text-sm font-bold opacity-60">/
-                                شهرياً</span></div>
-                        <p class="opacity-70 text-sm font-semibold">للمدارس المتوسطة والكبيرة والنشاط المكثف.</p>
+                    <div class="text-sm font-black text-emerald-600 uppercase tracking-widest mb-4">الباقة الأساسية
                     </div>
-                    <ul class="space-y-4 mb-10 flex-1">
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-300"></i> عدد غير محدود من الطلاب</li>
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-300"></i> بطولات غير محدودة</li>
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-300"></i> نظام الأوسمة والجوائز</li>
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-300"></i> تقارير ختامية وشواهد</li>
-                    </ul>
+                    <div class="text-5xl font-black mb-10 text-slate-900 leading-none">99 ر.س <br> <span
+                            class="text-xs font-bold text-slate-400">شهرياً للمدرسة</span></div>
                     <a href="register.html"
-                        class="w-full py-4 bg-white text-emerald-600 rounded-2xl font-black text-center shadow-lg hover:bg-emerald-50 transition-colors">اشترك
+                        class="w-full py-4 emerald-gradient text-white rounded-2xl font-black mb-10 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">اشترك
                         الآن</a>
+                    <ul class="text-sm font-bold text-slate-500 space-y-4 text-right w-full pr-6">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            حتى 200 طالب</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            حتى 5 معلمين</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            أرشيف التقارير والشهادات</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            نظام الأوسمة والتحفيز</li>
+                    </ul>
+                </div>
+
+                <!-- Advanced -->
+                <div
+                    class="p-8 rounded-[3rem] bg-white border border-slate-200 flex flex-col items-center hover:border-emerald-200 transition-all">
+                    <div class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">باقة القمة</div>
+                    <div class="text-5xl font-black mb-10 text-slate-900 leading-none">199 ر.س <br> <span
+                            class="text-xs font-bold text-slate-400">شهرياً للمدرسة</span></div>
+                    <a href="register.html"
+                        class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black mb-10 hover:bg-slate-800 transition-colors">اشترك
+                        الآن</a>
+                    <ul class="text-sm font-bold text-slate-500 space-y-4 text-right w-full pr-6">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            حتى 500 طالب</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            حتى 15 معلم</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            نظام البطولات (Brackets)</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            توزيع الفرق التلقائي</li>
+                    </ul>
                 </div>
 
                 <!-- Enterprise -->
-                <div class="bg-white p-10 rounded-[2.5rem] border border-slate-200 flex flex-col shadow-sm">
-                    <div class="mb-8">
-                        <h4 class="text-xl font-bold mb-2">باقة المجمعات</h4>
-                        <div class="text-4xl font-black mb-2">تواصل معنا</div>
-                        <p class="text-slate-500 text-sm font-semibold">لإدارة مكاتب التعليم أو مجمعات المدارس الكبيرة.
-                        </p>
-                    </div>
-                    <ul class="space-y-4 mb-10 flex-1">
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-500"></i> إدارة مجمعات تعليمية</li>
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-500"></i> دعم فني مخصص (VIP)</li>
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-500"></i> تخصيص كامل للواجهات</li>
-                        <li class="flex items-center gap-3 text-sm font-bold"><i data-lucide="check"
-                                class="w-5 h-5 text-emerald-500"></i> نطاق فرعي مخصص للمجمع</li>
+                <div
+                    class="p-8 rounded-[3rem] bg-white border border-slate-200 flex flex-col items-center hover:border-emerald-200 transition-all">
+                    <div class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">المجموعات</div>
+                    <div class="text-4xl font-black mb-10 text-slate-900 leading-none">مخصص <br> <span
+                            class="text-xs font-bold text-slate-400">للمجمعات والمدارس الكبرى</span></div>
+                    <a href="contact.html"
+                        class="w-full py-4 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl font-black mb-10 hover:bg-emerald-100 transition-colors text-center">تواصل
+                        معنا</a>
+                    <ul class="text-sm font-bold text-slate-500 space-y-4 text-right w-full pr-6">
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            طلاب ومعلمين غير محدودين</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            دعم فني مخصص (VIP)</li>
+                        <li class="flex items-center gap-3"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>
+                            تدريب طاقم العمل</li>
                     </ul>
-                    <button onclick="window.location.href='mailto:sales@pesmart.com'"
-                        class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-center hover:bg-slate-800 transition-colors">تواصل
-                        مع الطلبات</button>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-slate-900 text-white pt-24 pb-12 px-6 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-5 pointer-events-none hero-pattern"></div>
+    <footer class="bg-slate-950 text-white pt-40 pb-16 px-6 relative">
+        <div class="absolute inset-0 opacity-5"
+            style="background-image: radial-gradient(#fff 0.5px, transparent 0.5px); background-size: 40px 40px;"></div>
         <div
-            class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between gap-16 border-b border-slate-800 pb-20 relative z-10">
-            <div class="max-w-xs">
-                <div class="flex items-center gap-3 mb-8">
-                    <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white">
-                        <i data-lucide="award" class="w-6 h-6"></i>
-                    </div>
-                    <span class="text-xl font-black tracking-tight">PE Smart <span
-                            class="text-emerald-500">School</span></span>
-                </div>
-                <p class="text-sm font-bold text-slate-400 mb-8 leading-relaxed italic">
-                    المنصة الأولى عربياً المتخصصة في إدارة النشاط الرياضي المدرسي باستخدام تقنيات الذكاء الرياضي
-                    الحديثة.
-                </p>
+            class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-20 border-b border-white/5 pb-24 relative z-10">
+            <div class="lg:col-span-2 space-y-10">
                 <div class="flex items-center gap-4">
+                    <div
+                        class="w-14 h-14 emerald-gradient rounded-2xl flex items-center justify-center text-white shadow-2xl">
+                        <i data-lucide="zap" class="w-8 h-8"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-2xl font-black tracking-tight leading-none">PE Smart</span>
+                        <span class="text-[10px] font-black tracking-[0.4em] text-emerald-500 uppercase mt-1">School
+                            Edition</span>
+                    </div>
+                </div>
+                <p class="max-w-md text-slate-400 font-bold leading-relaxed italic uppercase italic">
+                    مستقبل الرياضة المدرسية يبدأ من هنا. منصة سعودية طوّرت بشغف لتمكين المعلم وتحفيز الطالب برؤية تقنية
+                    طموحة.
+                </p>
+                <div class="flex items-center gap-5">
                     <a href="#"
-                        class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors"><i
-                            data-lucide="twitter" class="w-5 h-5"></i></a>
+                        class="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-emerald-600 transition-all transform hover:-translate-y-1"><i
+                            data-lucide="twitter" class="w-6 h-6"></i></a>
                     <a href="#"
-                        class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors"><i
-                            data-lucide="instagram" class="w-5 h-5"></i></a>
+                        class="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-emerald-600 transition-all transform hover:-translate-y-1"><i
+                            data-lucide="instagram" class="w-6 h-6"></i></a>
                     <a href="#"
-                        class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors"><i
-                            data-lucide="youtube" class="w-5 h-5"></i></a>
+                        class="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-emerald-600 transition-all transform hover:-translate-y-1"><i
+                            data-lucide="youtube" class="w-6 h-6"></i></a>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-12">
-                <div>
-                    <h5 class="text-sm font-black uppercase tracking-widest text-emerald-500 mb-6 font-bold">المنصة</h5>
-                    <ul class="space-y-4 text-sm font-bold text-slate-400">
-                        <li><a href="welcome.html" class="hover:text-emerald-400 transition-colors">عن المنصة</a></li>
-                        <li><a href="#features" class="hover:text-emerald-400 transition-colors">المميزات</a></li>
-                        <li><a href="#pricing" class="hover:text-emerald-400 transition-colors">خطط الاشتراك</a></li>
-                        <li><a href="contact.html" class="hover:text-emerald-400 transition-colors">شركاء النجاح</a>
-                        </li>
-                    </ul>
-                </div>
-                <div>
-                    <h5 class="text-sm font-black uppercase tracking-widest text-emerald-500 mb-6 font-bold">الدعم</h5>
-                    <ul class="space-y-4 text-sm font-bold text-slate-400">
-                        <li><a href="help.html" class="hover:text-emerald-400 transition-colors">مركز المساعدة</a></li>
-                        <li><a href="privacy.html" class="hover:text-emerald-400 transition-colors">سياسة الخصوصية</a>
-                        </li>
-                        <li><a href="terms.html" class="hover:text-emerald-400 transition-colors">شروط الاستخدام</a>
-                        </li>
-                        <li><a href="contact.html" class="hover:text-emerald-400 transition-colors">اتصل بنا</a></li>
-                    </ul>
-                </div>
-                <div class="col-span-2 md:col-span-1">
-                    <h5 class="text-sm font-black uppercase tracking-widest text-emerald-500 mb-6 font-bold">تطبيق
-                        الجوال</h5>
-                    <p class="text-xs font-bold text-slate-500 mb-6">احصل على التطبيق على جهازك اللوحي أو هاتفك لإدارة
-                        سريعة.</p>
-                    <div class="flex flex-col gap-3">
-                        <button
-                            class="bg-black border border-slate-700 rounded-xl px-5 py-3 flex items-center gap-3 hover:border-emerald-500 transition-colors">
-                            <i data-lucide="apple" class="w-8 h-8"></i>
-                            <div class="text-right">
-                                <div class="text-[10px] font-bold opacity-60">Available on</div>
-                                <div class="text-xs font-black">App Store</div>
-                            </div>
-                        </button>
-                        <button
-                            class="bg-black border border-slate-700 rounded-xl px-5 py-3 flex items-center gap-3 hover:border-emerald-500 transition-colors">
-                            <i data-lucide="play" class="w-8 h-8"></i>
-                            <div class="text-right">
-                                <div class="text-[10px] font-bold opacity-60">Get it on</div>
-                                <div class="text-xs font-black">Google Play</div>
-                            </div>
-                        </button>
-                    </div>
+            <div>
+                <h5 class="text-sm font-black text-emerald-500 tracking-[0.2em] mb-10 uppercase">الدعم والموارد</h5>
+                <ul class="space-y-5 text-sm font-bold text-slate-400">
+                    <li><a href="help.html" class="hover:text-emerald-400 transition-colors">مركز المساعدة</a></li>
+                    <li><a href="privacy.html" class="hover:text-emerald-400 transition-colors">سياسة الخصوصية</a></li>
+                    <li><a href="terms.html" class="hover:text-emerald-400 transition-colors">شروط الاستخدام</a></li>
+                    <li><a href="contact.html" class="hover:text-emerald-400 transition-colors">اتصل بنا</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h5 class="text-sm font-black text-emerald-500 tracking-[0.2em] mb-10 uppercase">التطبيق</h5>
+                <p class="text-[10px] font-black text-slate-500 mb-6 uppercase leading-relaxed">حمّل التطبيق الرسمي
+                    للمنصة على أجهزة Apple و Android</p>
+                <div class="space-y-3">
+                    <button
+                        class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 flex items-center gap-4 hover:border-emerald-500/50 transition-all">
+                        <i data-lucide="apple" class="w-7 h-7"></i>
+                        <div class="text-right">
+                            <div class="text-[10px] font-bold opacity-50 uppercase">Available on</div>
+                            <div class="text-xs font-black">App Store</div>
+                        </div>
+                    </button>
+                    <button
+                        class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 flex items-center gap-4 hover:border-emerald-500/50 transition-all">
+                        <i data-lucide="play" class="w-7 h-7"></i>
+                        <div class="text-right">
+                            <div class="text-[10px] font-bold opacity-50 uppercase">Get it on</div>
+                            <div class="text-xs font-black">Google Play</div>
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>
 
         <div
-            class="max-w-7xl mx-auto pt-8 flex flex-col md:row items-center justify-between text-[11px] font-bold text-slate-500 tracking-wider relative z-10 transition-colors">
+            class="max-w-7xl mx-auto pt-16 flex flex-col md:row items-center justify-between text-xs font-black text-slate-600 tracking-tighter uppercase relative z-10 transition-colors">
             <p>&copy; 2026 PE Smart School. جميع الحقوق محفوظة.</p>
-            <p class="mt-4 md:mt-0">تم التطوير بشغف لدعم مستقبل الرياضة المدرسية 🇸🇦</p>
+            <p class="mt-4 md:mt-0 italic lowercase tracking-wider">تم التطوير لدعم رؤية المملكة 2030 في القطاع الرياضي
+                والتعليمي 🇸🇦</p>
         </div>
     </footer>
 
     <script>
-        // Initialize Icons
+        // Initialize Lucide Icons
         lucide.createIcons();
 
-        // Simple scroll animation for header shadow
+        // Header Shrink Effect
         window.addEventListener('scroll', () => {
-            const header = document.querySelector('header');
-            if (window.scrollY > 50) {
-                header.classList.add('py-2');
-                header.querySelector('nav').classList.add('shadow-xl', 'bg-white/90');
+            const header = document.querySelector('header nav');
+            if (window.scrollY > 40) {
+                header.classList.add('py-2', 'px-6', 'rounded-[1.5rem]');
+                header.classList.remove('py-4', 'px-8', 'rounded-[2.5rem]');
             } else {
-                header.classList.remove('py-2');
-                header.querySelector('nav').classList.remove('shadow-xl', 'bg-white/90');
+                header.classList.add('py-4', 'px-8', 'rounded-[2.5rem]');
+                header.classList.remove('py-2', 'px-6', 'rounded-[1.5rem]');
             }
+        });
+
+        // Intersection Observer for Animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100', 'translate-y-0');
+                    entry.target.classList.remove('opacity-0', 'translate-y-10');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.feature-box, .role-card').forEach(el => {
+            el.classList.add('transition-all', 'duration-700', 'opacity-0', 'translate-y-10');
+            observer.observe(el);
         });
     </script>
 </body>

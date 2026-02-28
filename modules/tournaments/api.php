@@ -513,15 +513,6 @@ function startTournament() {
     
     $db = getDB();
     
-    // Check team count (only non-eliminated teams)
-    $stmt = $db->prepare("SELECT COUNT(*) FROM tournament_teams WHERE tournament_id = ? AND is_eliminated = 0");
-    $stmt->execute([$id]);
-    $teamCount = $stmt->fetchColumn();
-    
-    if ($teamCount < 2) {
-        jsonError('يجب إضافة فريقين على الأقل غير مُقصاة');
-    }
-    
     // Get tournament info
     $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ?");
     $stmt->execute([$id]);
@@ -529,58 +520,48 @@ function startTournament() {
     
     if (!$tournament) jsonError('البطولة غير موجودة');
     
-    // Prevent regenerating if already started
     if ($tournament['status'] === 'in_progress') {
-        jsonError('البطولة جارية بالفعل! لا يمكن إعادة توليد المباريات.');
+        jsonError('البطولة جارية بالفعل!');
+    }
+
+    // Check team count (only non-eliminated teams)
+    $stmt = $db->prepare("SELECT COUNT(*) FROM tournament_teams WHERE tournament_id = ? AND is_eliminated = 0");
+    $stmt->execute([$id]);
+    if ($stmt->fetchColumn() < 2) {
+        jsonError('يجب إضافة فريقين على الأقل للبدء');
     }
     
-    // Check if matches already exist - prevent regeneration
+    // Generate matches only if auto_generate and no matches exist
     $stmt = $db->prepare("SELECT COUNT(*) FROM matches WHERE tournament_id = ?");
     $stmt->execute([$id]);
     $existingMatches = (int)$stmt->fetchColumn();
     
-    if ($existingMatches > 0) {
-        // Just reset elimination status, don't regenerate
-        $db->prepare("UPDATE tournament_teams SET is_eliminated = 0, elimination_count = 0 WHERE tournament_id = ?")->execute([$id]);
-        $db->prepare("UPDATE tournaments SET status = 'in_progress' WHERE id = ?")->execute([$id]);
-        logActivity('start', 'tournament', $id);
-        jsonSuccess(null, 'تم استئناف البطولة (المباريات موجودة)');
-    }
-    
-    // Generate matches only if auto_generate and no matches exist
     if ($tournament['auto_generate'] && $existingMatches === 0) {
         // Reset teams first
         $db->prepare("UPDATE tournament_teams SET is_eliminated = 0, elimination_count = 0 WHERE tournament_id = ?")->execute([$id]);
         generateMatchesForTournament($id, $tournament['type'], $tournament['randomize_teams']);
     }
     
-    // ─── توليد رابط عام للبطولة (v2.0) ─────────────────────────
-    $stmt = $db->prepare("SELECT public_token FROM tournaments WHERE id = ?");
-    $stmt->execute([$id]);
-    $existingToken = $stmt->fetchColumn();
+    // ─── NEW: Generate public link (if not exists) ──────────────────
+    $publicToken = $tournament['public_token'] ?: bin2hex(random_bytes(16));
+    $db->prepare("UPDATE tournaments SET public_token = ?, is_public = 1, status = 'in_progress' WHERE id = ?")
+       ->execute([$publicToken, $id]);
 
-    if (!$existingToken) {
-        $publicToken = bin2hex(random_bytes(16)); // 32-char hex token
-        $db->prepare("UPDATE tournaments SET public_token = ?, is_public = 1 WHERE id = ?")
-           ->execute([$publicToken, $id]);
-    } else {
-        $publicToken = $existingToken;
-        // تأكد أن is_public = 1
-        $db->prepare("UPDATE tournaments SET is_public = 1 WHERE id = ?")->execute([$id]);
-    }
-
-    // ─── تحديث الحالة ─────────────────────────────────────────────
-    $db->prepare("UPDATE tournaments SET status = 'in_progress' WHERE id = ?")->execute([$id]);
-
-    // ─── إشعار جماعي لجميع الطلاب وأولياء الأمور ──────────────
-    _sendTournamentStartNotifications($db, $id, $tournament['name'], $publicToken);
+    // ─── NEW: Bulk notification ─────────────────────────────────────
+    $publicUrl = BASE_URL . "/tournament.php?t={$publicToken}";
+    sendBulkNotification([
+        'type' => 'tournament_started',
+        'title' => "🏆 انطلقت البطولة {$tournament['name']}!",
+        'message' => "🔴 تابعوا النتائج والأهداف مباشرة من هنا.",
+        'link' => $publicUrl,
+        'targets' => 'all_students_and_parents'
+    ]);
 
     logActivity('start', 'tournament', $id);
     jsonSuccess([
         'public_token' => $publicToken,
-        'public_url'   => (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST']
-                          . dirname(dirname(dirname($_SERVER['PHP_SELF']))) . '/tournament.php?t=' . $publicToken
-    ], 'تم بدء البطولة بنجاح');
+        'public_url'   => $publicUrl
+    ], 'تم بدء البطولة بنجاح وإرسال الإشعارات');
 }
 
 function completeTournament() {
@@ -598,32 +579,46 @@ function completeTournament() {
     if (!$type) jsonError('البطولة غير موجودة أو لا تملك صلاحية الوصول');
 
     $winnerId = null;
+    $completedMatches = 0;
+
+    // Check if any matches were completed
+    $stmt = $db->prepare("SELECT COUNT(*) FROM matches WHERE tournament_id = ? AND status = 'completed'");
+    $stmt->execute([$id]);
+    $completedMatches = (int)$stmt->fetchColumn();
     
-    if (strpos($type, 'elimination') !== false) {
-        $stmt = $db->prepare("
-            SELECT m.winner_team_id FROM matches m
-            JOIN tournaments t ON m.tournament_id = t.id
-            WHERE m.tournament_id = ? AND t.school_id = ? AND m.bracket_type = 'final' AND m.status = 'completed'
-            ORDER BY m.round_number DESC LIMIT 1
-        ");
-        $stmt->execute([$id, schoolId()]);
-        $winnerId = $stmt->fetchColumn();
-    } else {
-        $stmt = $db->prepare("
-            SELECT s.team_id FROM standings s
-            JOIN tournaments t ON s.tournament_id = t.id
-            WHERE s.tournament_id = ? AND t.school_id = ?
-            ORDER BY s.points DESC, s.goal_difference DESC, s.goals_for DESC 
-            LIMIT 1
-        ");
-        $stmt->execute([$id, schoolId()]);
-        $winnerId = $stmt->fetchColumn();
+    if ($completedMatches > 0) {
+        if (strpos($type, 'elimination') !== false) {
+            $stmt = $db->prepare("
+                SELECT m.winner_team_id FROM matches m
+                JOIN tournaments t ON m.tournament_id = t.id
+                WHERE m.tournament_id = ? AND t.school_id = ? AND m.bracket_type = 'final' AND m.status = 'completed'
+                ORDER BY m.round_number DESC LIMIT 1
+            ");
+            $stmt->execute([$id, schoolId()]);
+            $winnerId = $stmt->fetchColumn();
+        } else {
+            $stmt = $db->prepare("
+                SELECT s.team_id FROM standings s
+                JOIN tournaments t ON s.tournament_id = t.id
+                WHERE s.tournament_id = ? AND t.school_id = ?
+                ORDER BY s.points DESC, s.goal_difference DESC, s.goals_for DESC 
+                LIMIT 1
+            ");
+            $stmt->execute([$id, schoolId()]);
+            $winnerId = $stmt->fetchColumn();
+        }
     }
     
-    $db->prepare("UPDATE tournaments SET status = 'completed', winner_team_id = ? WHERE id = ? AND school_id = ?")
-       ->execute([$winnerId, $id, schoolId()]);
+    // Ensure winnerId is null if not found (fetchColumn returns false)
+    if ($winnerId === false) $winnerId = null;
     
-    updateClassPointsFromTournament($id);
+    $stmt = $db->prepare("UPDATE tournaments SET status = 'completed', winner_team_id = ? WHERE id = ? AND school_id = ?");
+    $stmt->execute([$winnerId, $id, schoolId()]);
+    
+    if ($completedMatches > 0) {
+        // Only update points if matches were actually played
+        updateClassPointsFromTournament($id);
+    }
     
     logActivity('complete', 'tournament', $id);
     jsonSuccess(['winner_id' => $winnerId], 'تم إنهاء البطولة');
@@ -2248,31 +2243,40 @@ function updateClassPointsFromTournament($tournamentId) {
     try {
         $db = getDB();
         
+        // Fetch teams with their final ranks and attempt to resolve a class_id
+        // Try direct class_id first, then through sports_teams if available
         $stmt = $db->prepare("
-            SELECT tt.class_id, tt.final_rank,
-                   CASE 
-                       WHEN tt.final_rank = 1 THEN 100
-                       WHEN tt.final_rank = 2 THEN 75
-                       WHEN tt.final_rank = 3 THEN 50
-                       ELSE 25
-                   END as bonus_points
+            SELECT 
+                COALESCE(tt.class_id, st.class_id) as resolved_class_id,
+                tt.final_rank,
+                CASE 
+                    WHEN tt.final_rank = 1 THEN 100
+                    WHEN tt.final_rank = 2 THEN 75
+                    WHEN tt.final_rank = 3 THEN 50
+                    ELSE 25
+                END as bonus_points
             FROM tournament_teams tt
-            WHERE tt.tournament_id = ? AND tt.class_id IS NOT NULL
+            LEFT JOIN sports_teams st ON tt.sports_team_id = st.id
+            WHERE tt.tournament_id = ? AND (tt.class_id IS NOT NULL OR tt.sports_team_id IS NOT NULL)
         ");
         $stmt->execute([$tournamentId]);
         $teams = $stmt->fetchAll();
         
         foreach ($teams as $team) {
-            if ($team['class_id'] && $team['bonus_points']) {
+            $classId = $team['resolved_class_id'];
+            $points = $team['bonus_points'];
+            
+            if ($classId && $points && $team['final_rank'] !== null) {
+                // Ensure record exists in class_points
                 $db->prepare("
                     INSERT INTO class_points (class_id, total_points) 
                     VALUES (?, ?)
                     ON DUPLICATE KEY UPDATE total_points = total_points + VALUES(total_points)
-                ")->execute([$team['class_id'], $team['bonus_points']]);
+                ")->execute([$classId, $points]);
             }
         }
     } catch (Exception $e) {
-        // Silent fail - class_points might not exist
+        error_log("Error in updateClassPointsFromTournament: " . $e->getMessage());
     }
 }
 
@@ -2613,43 +2617,6 @@ function setManOfMatch() {
     jsonSuccess(null, 'تم اختيار أفضل لاعب في المباراة');
 }
 
-/**
- * إرسال إشعارات جماعية عند بدء البطولة
- */
-function _sendTournamentStartNotifications($db, $tournamentId, $tournamentName, $publicToken) {
-    try {
-        $publicUrl = "/tournament.php?t=" . $publicToken;
-        $message = "🔴 انطلقت الآن بطولة: {$tournamentName}! تابعوا النتائج والأهداف مباشرة من هنا.";
-
-        $stmt = $db->prepare("
-            SELECT DISTINCT s.parent_id, s.id as student_id
-            FROM tournament_teams tt
-            JOIN students s ON tt.class_id = s.class_id
-            WHERE tt.tournament_id = ? AND tt.class_id IS NOT NULL
-        ");
-        $stmt->execute([$tournamentId]);
-        $targets = $stmt->fetchAll();
-
-        foreach ($targets as $target) {
-            if (function_exists('sendNotificationToStudent')) {
-                sendNotificationToStudent($target['student_id'], [
-                    'title' => '🏆 انطلقت البطولة!',
-                    'message' => $message,
-                    'link' => $publicUrl
-                ]);
-            }
-            if ($target['parent_id'] && function_exists('sendNotificationToParent')) {
-                sendNotificationToParent($target['parent_id'], [
-                    'title' => '🏆 بطولة مدرسية جديدة',
-                    'message' => $message,
-                    'link' => $publicUrl
-                ]);
-            }
-        }
-    } catch (Exception $e) {
-        error_log("Notification Error: " . $e->getMessage());
-    }
-}
 
 function getTournamentShareInfo() {
     $id = getParam('id');
