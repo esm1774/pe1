@@ -82,7 +82,7 @@ async function renderStudents() {
         </div>
 
         <div class="flex justify-end gap-3 mb-6 no-print">
-            <button onclick="downloadTemplate(false)" class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-emerald-600 transition flex items-center gap-2">📄 تحميل قالب CSV</button>
+            <button onclick="downloadTemplate(false)" class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-emerald-600 transition flex items-center gap-2">📄 تحميل قالب Excel</button>
             ${students.length > 0 ? `<button onclick="downloadTemplate(true)" class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-emerald-600 transition flex items-center gap-2">📤 تصدير القائمة الحالية</button>` : ''}
         </div>
 
@@ -324,7 +324,7 @@ async function deleteStudent(id) {
  */
 function downloadTemplate(withData = false) {
     const classId = studentFilter.class_id || '';
-    let url = `api.php?action=students_template&with_data=${withData ? '1' : '0'}`;
+    let url = `api.php?action=students_template&with_data=${withData ? '1' : '0'}&format=xlsx`;
     if (classId) url += `&class_id=${classId}`;
 
     // Open download in new tab
@@ -354,8 +354,7 @@ async function showImportModal() {
                 <ol class="text-sm text-blue-700 space-y-1 list-decimal mr-5">
                     <li>حمّل <button onclick="downloadTemplate(false)" class="text-blue-600 underline font-bold cursor-pointer">القالب الفارغ</button> أولاً</li>
                     <li>افتحه في Excel واملأ بيانات الطلاب</li>
-                    <li>احفظ الملف بصيغة <strong>CSV UTF-8</strong> (ملف ← حفظ باسم ← CSV UTF-8)</li>
-                    <li>ارفع الملف هنا</li>
+                    <li>ارفع الملف هنا بصيغة <strong>Excel (xlsx)</strong> أو <strong>CSV</strong></li>
                 </ol>
             </div>
             
@@ -428,10 +427,10 @@ async function showImportModal() {
                      ondrop="event.preventDefault();this.classList.remove('border-green-500','bg-green-50');handleFileDrop(event)">
                     <span class="text-4xl block mb-2">📂</span>
                     <p class="text-gray-500 font-semibold">اسحب الملف هنا أو اضغط لاختياره</p>
-                    <p class="text-gray-400 text-sm mt-1">CSV أو TXT (محفوظ من Excel)</p>
+                    <p class="text-gray-400 text-sm mt-1">Excel (xlsx), CSV أو TXT</p>
                     <p id="selectedFileName" class="text-green-600 font-bold mt-2 hidden"></p>
                 </div>
-                <input type="file" id="importFile" accept=".csv,.txt" class="hidden" onchange="handleFileSelect(this)">
+                <input type="file" id="importFile" accept=".csv,.txt,.xlsx" class="hidden" onchange="handleFileSelect(this)">
             </div>
             
             <!-- Import Result -->
@@ -481,8 +480,8 @@ function showSelectedFile(file) {
     const btn = document.getElementById('importBtn');
     const ext = file.name.split('.').pop().toLowerCase();
 
-    if (!['csv', 'txt'].includes(ext)) {
-        nameEl.textContent = '❌ صيغة غير مدعومة! استخدم CSV أو TXT';
+    if (!['csv', 'txt', 'xlsx'].includes(ext)) {
+        nameEl.textContent = '❌ صيغة غير مدعومة! استخدم XLSX أو CSV';
         nameEl.className = 'text-red-600 font-bold mt-2';
         nameEl.classList.remove('hidden');
         btn.disabled = true;

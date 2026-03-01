@@ -195,26 +195,45 @@ function importStudents() {
     $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     
     // Validate extension
-    if (!in_array($ext, ['csv', 'txt'])) {
-        jsonError('يجب رفع ملف CSV أو TXT فقط. يمكنك حفظ ملف Excel كـ CSV');
-    }
-    
-    // --- بداية التعديل: قراءة الملف سطراً بسطر ---
-    
-    $handle = fopen($file, 'r');
-    if (!$handle) {
-        jsonError('لا يمكن فتح الملف للقراءة');
+    if (!in_array($ext, ['csv', 'txt', 'xlsx'])) {
+        jsonError('يجب رفع ملف CSV أو XLSX. يمكنك حفظ ملف Excel كـ XLSX أو CSV');
     }
 
-    // Read and process header row
-    $header = fgetcsv($handle);
-    if (!$header) {
-        fclose($handle);
-        jsonError('الملف فارغ أو لا يمكن قراءته');
-    }
+    $sid = schoolId(); // Ensure school context is set early
+    $allRows = []; // Used for Excel
+    $handle = null; // Used for CSV
     
-    // Remove BOM if present from the first header cell
-    $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+    // --- بداية التعديل: قراءة الملف ---
+    if ($ext === 'xlsx') {
+        if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
+            jsonError('مكتبة PhpSpreadsheet غير مثبتة بشكل صحيح. تأكد من وجود المجلد vendor');
+        }
+        require_once __DIR__ . '/../vendor/autoload.php';
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $allRows = $worksheet->toArray('', true, true, false);
+            $header = array_shift($allRows);
+            if (!$header) jsonError('ملف الإكسل فارغ');
+        } catch (Exception $e) {
+            jsonError('خطأ في قراءة ملف الإكسل: ' . $e->getMessage());
+        }
+    } else {
+        $handle = fopen($file, 'r');
+        if (!$handle) {
+            jsonError('لا يمكن فتح الملف للقراءة');
+        }
+
+        // Read and process header row
+        $header = fgetcsv($handle);
+        if (!$header) {
+            fclose($handle);
+            jsonError('الملف فارغ أو لا يمكن قراءته');
+        }
+        
+        // Remove BOM if present from the first header cell
+        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+    }
     $header = array_map('trim', $header);
 
     // Map Arabic/English column names to fields
@@ -288,10 +307,17 @@ function importStudents() {
     $lineNum = 1; // Header is line 1
     
     $stmtCheck = $db->prepare("SELECT id, password FROM students WHERE student_number = ?" . ($sid ? " AND school_id = $sid" : ""));
-    $sid = schoolId(); // ensure school_id for inserts
     
-    // --- بداية التعديل: حلقة القراءة الفعالة ---
-    while (($cols = fgetcsv($handle)) !== FALSE) {
+    // --- بداية التعديل: حلقة القراءة الموحدة ---
+    $rowId = 0;
+    while (true) {
+        if ($ext === 'xlsx') {
+            if ($rowId >= count($allRows)) break;
+            $cols = $allRows[$rowId++];
+        } else {
+            $cols = fgetcsv($handle);
+            if ($cols === false) break;
+        }
         $lineNum++;
         if (empty($cols) || count($cols) < 2) continue;
         
@@ -414,7 +440,7 @@ function importStudents() {
             $skipped++;
         }
     }
-    fclose($handle); // إغلاق الملف
+    if ($handle) fclose($handle); // إغلاق الملف إذا كان CSV
     // --- نهاية التعديل ---
     
     logActivity('import_students', 'students', null, "Imported: $imported, Updated: $updated, Skipped: $skipped");
@@ -510,6 +536,35 @@ function exportStudentsTemplate() {
             $rows[] = ['عبدالله فهد القحطاني', '1003', '2', '1', '2008-03-10', 'O+', '0556789012', ''];
         }
         
+        $format = getParam('format', 'csv');
+
+        if ($format === 'xlsx') {
+            if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
+                jsonError('مكتبة PhpSpreadsheet غير مثبتة');
+            }
+            require_once __DIR__ . '/../vendor/autoload.php';
+            
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Students');
+            $sheet->fromArray([$headers], NULL, 'A1');
+            $sheet->fromArray($rows, NULL, 'A2');
+            
+            // Auto size columns
+            foreach (range('A', $sheet->getHighestColumn()) as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            if (ob_get_level()) ob_end_clean();
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="studentsExport_' . date('Ymd_His') . '.xlsx"');
+            header('Cache-Control: max-age=0');
+            
+            $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+            $writer->save('php://output');
+            exit;
+        }
+
         // Build CSV content
         $csv = $bom;
         $csv .= implode(',', $headers) . "\n";
