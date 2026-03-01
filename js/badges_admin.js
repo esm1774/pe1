@@ -2,6 +2,14 @@
  * PE Smart School System - Badge Management (Admin)
  */
 
+// ── Emoji Collections ───────────────────────────────────────
+const BADGE_EMOJI_CATEGORIES = {
+    'رياضة': ['⚽', '🏀', '🏐', '🏈', '🎾', '🏓', '🏸', '🥏', '🏒', '⛳', '🥊', '🥋', '🤸', '🏋️', '🤾', '⛹️', '🏊', '🚴', '🏇', '🧗', '🤺', '🏂', '⛷️', '🏄', '🤽', '🏌️', '🚣'],
+    'إنجازات': ['⭐', '🌟', '💫', '✨', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '👑', '💎', '🔥', '⚡', '💪', '🎯', '🚀', '💥', '🌠', '🎗️'],
+    'أنشطة': ['🏃', '🏃‍♂️', '🤸‍♂️', '🧘', '🤼', '🏇', '🎿', '🛹', '🤿', '🪂', '🏋️‍♂️', '⛹️‍♂️', '🚶', '🧗‍♂️', '🏄‍♂️'],
+    'تعبيرات': ['😎', '🤩', '💯', '👏', '🙌', '💐', '🎉', '🎊', '🎈', '🪄', '📜', '📣', '🔔', '🎓', '📚']
+};
+
 async function renderBadgeManagementPage() {
     const mc = document.getElementById('mainContent');
     mc.innerHTML = showLoading();
@@ -104,7 +112,19 @@ function showBadgeForm(badge = null) {
                     </div>
                     <div class="space-y-2">
                         <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mr-2">الأيقونة (Emoji)</label>
-                        <input type="text" id="badgeIcon" value="${badge ? esc(badge.icon) : '⭐'}" class="w-full px-6 py-5 bg-gray-50 border-2 border-gray-50 rounded-[1.5rem] focus:bg-white focus:border-emerald-500 focus:outline-none text-center text-4xl" placeholder="⭐">
+                        <div class="flex items-center gap-3">
+                            <div id="badgeIconPreview" class="w-20 h-20 bg-gray-50 border-2 border-gray-100 rounded-[1.5rem] flex items-center justify-center text-5xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-all" onclick="document.getElementById('badgeEmojiPicker').classList.toggle('hidden')">${badge ? badge.icon : '⭐'}</div>
+                            <input type="hidden" id="badgeIcon" value="${badge ? esc(badge.icon) : '⭐'}">
+                            <input type="text" id="badgeIconCustom" value="" class="flex-1 px-4 py-3 bg-gray-50 border-2 border-gray-50 rounded-xl focus:bg-white focus:border-emerald-500 focus:outline-none text-center text-2xl" placeholder="أو اكتب إيموجي" maxlength="2" oninput="if(this.value){document.getElementById('badgeIcon').value=this.value;document.getElementById('badgeIconPreview').textContent=this.value;}">
+                        </div>
+                        <div id="badgeEmojiPicker" class="hidden mt-3 bg-white border-2 border-emerald-100 rounded-2xl p-4 shadow-xl max-h-60 overflow-y-auto animate-in">
+                            ${Object.entries(BADGE_EMOJI_CATEGORIES).map(([cat, emojis]) => `
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 mt-3 first:mt-0">${cat}</p>
+                                <div class="grid grid-cols-9 gap-1 mb-2">
+                                    ${emojis.map(e => `<button type="button" onclick="document.getElementById('badgeIcon').value='${e}';document.getElementById('badgeIconPreview').textContent='${e}';document.getElementById('badgeEmojiPicker').classList.add('hidden');document.getElementById('badgeIconCustom').value='';" class="w-9 h-9 flex items-center justify-center text-xl rounded-lg hover:bg-emerald-50 hover:scale-125 transition-all cursor-pointer active:scale-90">${e}</button>`).join('')}
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 </div>
                 

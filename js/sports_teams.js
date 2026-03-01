@@ -59,6 +59,14 @@ const MEMBER_STATUS_AR = {
     suspended: { text: 'موقوف', color: 'bg-gray-100 text-gray-700' }
 };
 
+// ── Team Logo Emoji Options ─────────────────────────────────
+const TEAM_EMOJI_CATEGORIES = {
+    'كرات رياضية': ['⚽', '🏀', '🏐', '🏈', '🎾', '🏓', '🏸', '🥏', '🏒', '⛳', '🏉', '🥎', '🏑', '🥍'],
+    'أنشطة رياضية': ['🏃', '🏊', '🚴', '🏋️', '🤸', '🤾', '⛹️', '🏇', '🧗', '🤺', '🏂', '⛷️', '🏄', '🤽', '🏌️', '🚣', '🎿', '🛹', '🤿', '🤼', '🧘'],
+    'حيوانات وتمائم': ['🦅', '🦁', '🐅', '🐉', '🦈', '🐺', '🦊', '🐻', '🦍', '🐆', '🦬', '🐗', '🦂', '🦏', '🐎', '🦌', '🦇', '🐍', '🦋', '🐝'],
+    'رموز': ['⭐', '🔥', '⚡', '💪', '🏆', '👑', '💎', '🚀', '🎯', '💥', '🌟', '✨', '🎖️', '🏅', '⚔️', '🛡️', '🔱']
+};
+
 // ============================================================
 // MAIN RENDER
 // ============================================================
@@ -825,8 +833,19 @@ async function showTeamForm(id = null) {
                 </div>
                 <div>
                     <label class="block font-semibold text-gray-700 mb-1">رمز الفريق</label>
-                    <input type="text" id="tfEmoji" value="${team?.logo_emoji || '⚽'}" maxlength="2"
-                           class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none text-center text-3xl">
+                    <div class="flex items-center gap-2">
+                        <div id="tfEmojiPreview" class="w-14 h-14 bg-gray-50 border-2 border-gray-100 rounded-xl flex items-center justify-center text-3xl cursor-pointer hover:border-green-400 hover:bg-green-50 transition-all flex-shrink-0" onclick="document.getElementById('tfEmojiPicker').classList.toggle('hidden')">${team?.logo_emoji || '⚽'}</div>
+                        <input type="hidden" id="tfEmoji" value="${team?.logo_emoji || '⚽'}">
+                        <input type="text" id="tfEmojiCustom" value="" class="flex-1 px-3 py-2 bg-gray-50 border-2 border-gray-100 rounded-xl focus:bg-white focus:border-green-500 focus:outline-none text-center text-xl" placeholder="✏️" maxlength="2" oninput="if(this.value){document.getElementById('tfEmoji').value=this.value;document.getElementById('tfEmojiPreview').textContent=this.value;}">
+                    </div>
+                    <div id="tfEmojiPicker" class="hidden mt-2 bg-white border-2 border-green-100 rounded-2xl p-3 shadow-xl max-h-48 overflow-y-auto">
+                        ${Object.entries(TEAM_EMOJI_CATEGORIES).map(([cat, emojis]) => `
+                            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 mt-2 first:mt-0">${cat}</p>
+                            <div class="grid grid-cols-8 gap-1 mb-1">
+                                ${emojis.map(e => `<button type="button" onclick="document.getElementById('tfEmoji').value='${e}';document.getElementById('tfEmojiPreview').textContent='${e}';document.getElementById('tfEmojiPicker').classList.add('hidden');document.getElementById('tfEmojiCustom').value='';" class="w-8 h-8 flex items-center justify-center text-lg rounded-lg hover:bg-green-50 hover:scale-125 transition-all cursor-pointer active:scale-90">${e}</button>`).join('')}
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             </div>
 

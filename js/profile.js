@@ -196,6 +196,26 @@ async function renderProfileTab(sid) {
                     <p class="text-sm opacity-80">التقييم العام للياقة</p>
                     <p class="text-lg font-bold mt-1">${d.totalScore} / ${d.totalMax}</p>
                 </div>
+                
+                ${canEdit() ? `
+                <div class="mt-6">
+                    <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2">📜 شهادات التفوق والتقدير</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button onclick="showSportsCertificate('excellence', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
+                            <span>🏆</span> شهادة تفوق رياضي
+                        </button>
+                        <button onclick="showSportsCertificate('appreciation', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
+                            <span>🎖️</span> شهادة تقدير
+                        </button>
+                        <button onclick="showSportsCertificate('sports_star', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
+                            <span>⭐</span> نجم الرياضة
+                        </button>
+                        <button onclick="showSportsCertificate('attendance', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
+                            <span>📅</span> شهادة انتظام
+                        </button>
+                    </div>
+                </div>
+                ` : ''}
             </div>
         </div>`;
     } else if (profileTab === 'measurements') {
@@ -387,7 +407,11 @@ async function renderProfileTab(sid) {
                     <h4 class="text-2xl font-black text-gray-800">🏅 سجل التميز والأوسمة</h4>
                     <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">الأوسمة الرقمية التي حصل عليها الطالب</p>
                 </div>
-                ${canEdit() ? `<button onclick="showAwardBadgeForm(${sid})" class="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-100 flex items-center justify-center gap-2 text-sm"><span>✨</span> منح وسام جديد</button>` : ''}
+                ${canEdit() ? `
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="showAwardBadgeForm(${sid})" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-100 flex items-center justify-center gap-2 text-sm"><span>✨</span> منح وسام جديد</button>
+                    <button onclick="showSportsCertificate('excellence', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-amber-500 text-white px-6 py-3 rounded-2xl font-black hover:bg-amber-600 transition shadow-xl shadow-amber-100 flex items-center justify-center gap-2 text-sm cursor-pointer"><span>📜</span> شهادة تفوق</button>
+                </div>` : ''}
             </div>
 
             ${badges.length > 0 ? `
@@ -1001,7 +1025,184 @@ function printCertificate() {
                 cert.style.height = '100%';
             </script>
         </body>
-        </html>
+         </html>
     `);
     printWindow.document.close();
+}
+
+// ============================================================
+// SPORTS EXCELLENCE CERTIFICATES
+// ============================================================
+const CERT_TYPES = {
+    excellence: {
+        title: 'شهادة تفوق رياضي',
+        titleEn: 'Certificate of Sports Excellence',
+        emoji: '🏆',
+        borderColor: 'border-amber-500',
+        bgGrad: 'from-amber-50 to-yellow-50',
+        accentColor: 'text-amber-700',
+        accentBg: 'bg-amber-600',
+        sealEmoji: '🥇',
+        body: 'نظير تحقيقه نتائج متميزة ومستوى عالٍ من الأداء الرياضي في حصص التربية البدنية، والتزامه بمعايير اللياقة والتفوق.',
+        stampText: 'ختم التفوق الرياضي'
+    },
+    appreciation: {
+        title: 'شهادة تقدير',
+        titleEn: 'Certificate of Appreciation',
+        emoji: '🎖️',
+        borderColor: 'border-blue-500',
+        bgGrad: 'from-blue-50 to-indigo-50',
+        accentColor: 'text-blue-700',
+        accentBg: 'bg-blue-600',
+        sealEmoji: '🏅',
+        body: 'تقديرًا لجهوده المتميزة والتزامه بروح الفريق وأخلاقيات الرياضة الحميدة، وتعاونه المثمر مع زملائه في الأنشطة الرياضية.',
+        stampText: 'ختم التقدير'
+    },
+    sports_star: {
+        title: 'نجم الرياضة المدرسية',
+        titleEn: 'School Sports Star',
+        emoji: '⭐',
+        borderColor: 'border-emerald-500',
+        bgGrad: 'from-emerald-50 to-teal-50',
+        accentColor: 'text-emerald-700',
+        accentBg: 'bg-emerald-600',
+        sealEmoji: '🌟',
+        body: 'اعترافًا بموهبته الرياضية الاستثنائية وتألقه في الأنشطة البدنية والمسابقات الرياضية المدرسية، ليكون قدوة يُحتذى بها.',
+        stampText: 'ختم التميز'
+    },
+    attendance: {
+        title: 'شهادة انتظام وحضور',
+        titleEn: 'Outstanding Attendance Certificate',
+        emoji: '📅',
+        borderColor: 'border-purple-500',
+        bgGrad: 'from-purple-50 to-pink-50',
+        accentColor: 'text-purple-700',
+        accentBg: 'bg-purple-600',
+        sealEmoji: '💫',
+        body: 'نظير التزامه الكامل بحضور حصص التربية البدنية ومواظبته على المشاركة الفعّالة في جميع الأنشطة الرياضية دون غياب.',
+        stampText: 'ختم الانتظام'
+    }
+};
+
+function showSportsCertificate(type, studentName, stats) {
+    const c = CERT_TYPES[type] || CERT_TYPES.excellence;
+    const dateStr = new Date().toLocaleDateString('ar-SA', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    const att = stats.attendance || {};
+    const totalAtt = (att.present || 0) + (att.absent || 0) + (att.late || 0);
+    const attPct = totalAtt > 0 ? Math.round(((att.present || 0) + ((att.late || 0) * 0.5)) / totalAtt * 100) : 0;
+
+    const certHtml = `
+    <div class="p-4 sm:p-8 overflow-hidden bg-white">
+        <!-- Top Customization Options (No Print) -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-2xl border-2 border-gray-100 flex flex-wrap items-center justify-between gap-4 no-print">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🎨</span>
+                <div>
+                    <p class="font-black text-gray-800 text-sm">استوديو تصميم الشهادة:</p>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-tight">اضغط للتحرير • اسحب للتحريك • ارفع الصور</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="toggleMoveMode()" id="moveModeBtn" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-emerald-100 border border-emerald-400 hover:bg-emerald-700 transition">
+                    📍 تفعيل وضع التحريك
+                </button>
+                <button onclick="changeCertificateLogo()" class="bg-white text-gray-600 px-4 py-2 rounded-xl text-xs font-black shadow-sm border border-gray-100 hover:bg-gray-50 transition">
+                    🖼️ تغيير الشعار
+                </button>
+                <button onclick="resetCertificateLayout()" class="bg-white text-gray-500 px-4 py-2 rounded-xl text-xs font-bold border border-gray-100 hover:bg-gray-50 transition">
+                    🔄 إعادة ضبط
+                </button>
+            </div>
+        </div>
+
+        <div id="certificateContainer" class="relative border-[8px] sm:border-[16px] border-double ${c.borderColor} p-6 sm:p-12 text-center bg-gradient-to-br ${c.bgGrad} overflow-hidden rounded-sm mx-auto transition-all" style="width: 100%; max-width: 650px; min-height: 80vh; direction: rtl;">
+            <!-- Background Decorative Elements -->
+            <div class="absolute -top-20 -right-20 w-80 h-80 bg-white rounded-full opacity-30 pointer-events-none"></div>
+            <div class="absolute -bottom-20 -left-20 w-80 h-80 bg-white rounded-full opacity-30 pointer-events-none"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[200px] opacity-[0.03] pointer-events-none select-none">${c.emoji}</div>
+            
+            <!-- Draggable Sections -->
+            <div id="certSectionHeader" class="draggable-element relative z-10 flex flex-col items-center mb-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
+                <div id="certLogoArea" class="w-24 h-24 mb-4 flex items-center justify-center pointer-events-none">
+                    <div id="certLogoEmoji" class="w-20 h-20 ${c.accentBg} text-white rounded-2xl flex items-center justify-center text-4xl shadow-xl">🏃</div>
+                    <img id="certLogoImage" src="" class="hidden w-24 h-24 object-contain shadow-lg rounded-xl">
+                </div>
+                <h2 contenteditable="true" id="certSchoolName" class="text-2xl font-black ${c.accentColor} tracking-tight uppercase outline-none px-4 rounded-lg">نظام التربية البدنية الذكي</h2>
+                <div class="w-32 h-1 ${c.accentBg} mt-2 rounded-full pointer-events-none opacity-60"></div>
+            </div>
+
+            <div id="certSectionTitle" class="draggable-element relative z-10 mb-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
+                <div class="text-7xl mb-3 pointer-events-none">${c.emoji}</div>
+                <h1 contenteditable="true" class="text-4xl sm:text-5xl font-black text-gray-800 mb-2 outline-none px-4 rounded-lg" style="font-family: 'Cairo', sans-serif;">${c.title}</h1>
+                <p contenteditable="true" class="${c.accentColor} font-bold uppercase tracking-widest text-sm outline-none">${c.titleEn}</p>
+            </div>
+
+            <div id="certSectionContent" class="draggable-element relative z-10 mb-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
+                <p contenteditable="true" class="text-gray-500 text-base sm:text-lg outline-none px-2 rounded-lg mb-6">تشهد إدارة التربية البدنية بمنح هذه الشهادة للطالب المتميز:</p>
+                <p contenteditable="true" class="text-4xl sm:text-5xl font-black text-gray-900 underline decoration-4 underline-offset-8 outline-none px-4 rounded-lg mb-6" style="text-decoration-color: var(--accent, ${c.borderColor.replace('border-', '#').replace('-500', '')})">${esc(studentName)}</p>
+                <p contenteditable="true" class="text-gray-500 text-sm sm:text-base leading-relaxed px-4 sm:px-8 outline-none rounded-lg max-w-lg mx-auto">${c.body}</p>
+            </div>
+
+            <!-- Stats Section -->
+            <div id="certSectionStats" class="draggable-element relative z-10 mb-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
+                <div class="flex flex-wrap justify-center gap-4 sm:gap-6">
+                    <div class="bg-white/60 backdrop-blur-sm rounded-2xl px-4 sm:px-6 py-3 border border-white shadow-sm text-center">
+                        <p class="text-2xl font-black ${c.accentColor}">${stats.percentage || 0}%</p>
+                        <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest">اللياقة البدنية</p>
+                    </div>
+                    <div class="bg-white/60 backdrop-blur-sm rounded-2xl px-4 sm:px-6 py-3 border border-white shadow-sm text-center">
+                        <p class="text-2xl font-black text-green-600">${attPct}%</p>
+                        <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest">نسبة الحضور</p>
+                    </div>
+                    ${stats.badges > 0 ? `
+                    <div class="bg-white/60 backdrop-blur-sm rounded-2xl px-4 sm:px-6 py-3 border border-white shadow-sm text-center">
+                        <p class="text-2xl font-black text-amber-600">${stats.badges}</p>
+                        <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest">أوسمة</p>
+                    </div>` : ''}
+                </div>
+            </div>
+
+            <div id="certSectionFooter" class="draggable-element relative z-10 mt-auto pt-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
+                <div class="flex justify-between w-full items-end gap-4 px-4">
+                    <div class="flex-1 text-right">
+                        <p class="text-xs text-gray-400 font-bold uppercase mb-1">تاريخ المنح</p>
+                        <p contenteditable="true" class="text-lg font-black text-gray-700 font-mono outline-none">${dateStr}</p>
+                    </div>
+                    
+                    <div class="relative w-28 h-28 flex items-center justify-center pointer-events-none">
+                        <div class="absolute inset-0 ${c.accentBg} rounded-full opacity-10 animate-pulse"></div>
+                        <div class="absolute inset-2 border-4 border-dashed ${c.borderColor} rounded-full opacity-20"></div>
+                        <span class="text-5xl relative z-10 drop-shadow-lg">${c.sealEmoji}</span>
+                    </div>
+
+                    <div class="flex-1 text-left">
+                        <p contenteditable="true" class="text-xs text-gray-400 font-bold uppercase mb-1 outline-none">${c.stampText}</p>
+                        <p contenteditable="true" class="text-lg font-black ${c.accentColor} italic outline-none">المعلم المسؤول</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons (No Print) -->
+        <div class="mt-8 flex gap-4 no-print max-w-[650px] mx-auto">
+            <button onclick="printCertificate()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition flex items-center justify-center gap-2 cursor-pointer">
+                <span>🖨️</span> طباعة النسخة النهائية
+            </button>
+            <button onclick="closeModal()" class="bg-gray-100 text-gray-500 px-8 py-4 rounded-2xl font-black hover:bg-gray-200 transition cursor-pointer">إغلاق</button>
+        </div>
+    </div>
+
+    <style>
+        .draggable-element.moving { background: rgba(99, 102, 241, 0.05) !important; border-color: #818cf8 !important; border-style: dashed !important; z-index: 50 !important; }
+        .move-mode .draggable-element { cursor: move !important; border: 2px dashed #e2e8f0; }
+        .move-mode .draggable-element:hover { border-color: #818cf8; }
+        [contenteditable="true"]:hover { background: rgba(255,255,255,0.5); border-radius: 8px; }
+    </style>
+    `;
+
+    showModal(certHtml);
+    initCertificateDraggable();
 }
