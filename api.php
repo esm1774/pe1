@@ -158,6 +158,20 @@ function ensureSchema() {
             CONSTRAINT `fk_sb_badge`   FOREIGN KEY (`badge_id`)   REFERENCES `badges`(`id`)   ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // ── Password Resets ─────────────────────────────────────────────
+        $db->exec("CREATE TABLE IF NOT EXISTS `password_resets` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id` INT UNSIGNED DEFAULT NULL,
+            `email` VARCHAR(150) NOT NULL,
+            `user_type` VARCHAR(50) NOT NULL,
+            `user_id` INT UNSIGNED NOT NULL,
+            `otp` VARCHAR(10) NOT NULL,
+            `expires_at` DATETIME NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_pr_email` (`email`),
+            INDEX `idx_pr_otp` (`otp`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         // ── Ensure classes.created_by column exists ─────────────────────
         $classCols = array_column($db->query("SHOW COLUMNS FROM classes")->fetchAll(), 'Field');
         if (!in_array('created_by', $classCols)) {
@@ -172,6 +186,32 @@ function ensureSchema() {
             `max_value` DECIMAL(10,2) NOT NULL,
             `score` INT NOT NULL,
             CONSTRAINT `fk_criteria_test_auto` FOREIGN KEY (`test_id`) REFERENCES `fitness_tests`(`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // ── Sports Calendar ─────────────────────────────────────────────
+        $db->exec("CREATE TABLE IF NOT EXISTS `sports_calendar` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id` INT UNSIGNED DEFAULT NULL,
+            `title` VARCHAR(255) NOT NULL,
+            `description` TEXT DEFAULT NULL,
+            `event_date` DATE NOT NULL,
+            `end_date` DATE DEFAULT NULL,
+            `start_time` TIME DEFAULT NULL,
+            `end_time` TIME DEFAULT NULL,
+            `event_type` ENUM('match','training','tournament','fitness','ceremony','meeting','holiday','other') NOT NULL DEFAULT 'other',
+            `location` VARCHAR(255) DEFAULT NULL,
+            `color` VARCHAR(20) DEFAULT '#10b981',
+            `icon` VARCHAR(50) DEFAULT '📅',
+            `is_recurring` TINYINT(1) DEFAULT 0,
+            `recurrence_pattern` VARCHAR(50) DEFAULT NULL,
+            `target_grades` VARCHAR(255) DEFAULT NULL,
+            `is_public` TINYINT(1) DEFAULT 1,
+            `created_by` INT UNSIGNED DEFAULT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX `idx_cal_school` (`school_id`),
+            INDEX `idx_cal_date` (`event_date`),
+            INDEX `idx_cal_type` (`event_type`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     } catch (Exception $e) {
@@ -197,13 +237,14 @@ require_once 'api/parent.php';
 require_once 'api/parents_admin.php';
 require_once 'api/notifications.php';
 require_once 'api/badges.php';
+require_once 'api/calendar.php';
 
 // ============================================================
 // ROUTE REQUESTS
 // ============================================================
 try {
     // SaaS Middleware: Check subscription for protected actions
-    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'schools_list', 'get_public_plans', 'register_school'];
+    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'schools_list', 'get_public_plans', 'register_school', 'forgot_password', 'reset_password'];
     if (!in_array($action, $publicActions)) {
         Subscription::requireActive();
     }
@@ -227,6 +268,8 @@ try {
         case 'student_login':   studentLogin(); break;
         case 'logout':          logout(); break;
         case 'schools_list':    getSchoolsList(); break;
+        case 'forgot_password': forgotPassword(); break;
+        case 'reset_password':  resetPassword(); break;
 
         // DASHBOARD
         case 'dashboard':       getDashboard(); break;
@@ -329,6 +372,13 @@ try {
         case 'revoke_badge':        revokeBadge(); break;
         case 'badge_delete':        deleteBadge(); break;
         case 'run_auto_badges':     runAutoBadges(); break;
+
+        // SPORTS CALENDAR
+        case 'calendar_events':      getCalendarEvents(); break;
+        case 'calendar_save':        saveCalendarEvent(); break;
+        case 'calendar_delete':      deleteCalendarEvent(); break;
+        case 'calendar_summary':     getCalendarSummary(); break;
+        case 'calendar_export_ics':  exportCalendarICS(); break;
 
         // PUBLIC / ONBOARDING
         case 'get_public_plans':    getPublicPlans(); break;

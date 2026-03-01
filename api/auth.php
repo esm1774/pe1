@@ -206,3 +206,147 @@ function getSchoolsList() {
         jsonSuccess([]);
     }
 }
+
+/**
+ * Send OTP Email Helper
+ */
+function sendOTP($email, $otp, $name) {
+    if (empty($email)) return false;
+    $subject = "رمز استعادة كلمة المرور - PE Smart School";
+    $message = "مرحباً $name،\n\nرمز استعادة كلمة المرور الخاص بك هو: $otp\n" .
+               "هذا الرمز صالح لمدة 15 دقيقة فقط.\n\n" .
+               "إذا لم تطلب استعادة كلمة المرور، يرجى تجاهل هذه الرسالة.";
+    
+    $headers = "From: noreply@pesmart.school.local\r\n" .
+               "Reply-To: noreply@pesmart.school.local\r\n" .
+               "Content-Type: text/plain; charset=utf-8\r\n" .
+               "X-Mailer: PHP/" . phpversion();
+
+    return @mail($email, $subject, $message, $headers);
+}
+
+/**
+ * Handle Forgot Password Request (Generate & Send OTP)
+ */
+function forgotPassword() {
+    $data = getPostData();
+    $email = sanitize($data['email'] ?? '');
+    
+    if (empty($email)) jsonError('الرجاء إدخال البريد الإلكتروني');
+
+    $db = getDB();
+    $userType = null;
+    $userId = null;
+    $userName = '';
+    $schoolId = null;
+
+    // 1. Check users table
+    $stmt = $db->prepare("SELECT id, name, school_id FROM users WHERE email = ? AND active = 1 LIMIT 1");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+    if ($user) {
+        $userType = 'user';
+        $userId = $user['id'];
+        $userName = $user['name'];
+        $schoolId = $user['school_id'];
+    }
+
+    // 2. Check parents table
+    if (!$userType) {
+        $stmt = $db->prepare("SELECT id, name, school_id FROM parents WHERE email = ? AND active = 1 LIMIT 1");
+        $stmt->execute([$email]);
+        $parent = $stmt->fetch();
+        if ($parent) {
+            $userType = 'parent';
+            $userId = $parent['id'];
+            $userName = $parent['name'];
+            $schoolId = $parent['school_id'];
+        }
+    }
+
+    // 3. Check platform_admins table
+    if (!$userType) {
+        try {
+            $stmt = $db->prepare("SELECT id, name FROM platform_admins WHERE email = ? AND active = 1 LIMIT 1");
+            $stmt->execute([$email]);
+            $admin = $stmt->fetch();
+            if ($admin) {
+                $userType = 'platform_admin';
+                $userId = $admin['id'];
+                $userName = $admin['name'];
+                $schoolId = null;
+            }
+        } catch (Exception $e) {}
+    }
+
+    if (!$userType) {
+        // Return success anyway to prevent email enumeration
+        jsonSuccess(null, 'إذا كان البريد الإلكتروني مسجلاً لدينا، فستصلك رسالة تحتوي على رمز الاستعادة');
+        return;
+    }
+
+    // Generate OTP & Save
+    $otp = sprintf("%06d", mt_rand(100000, 999999));
+    $expiresAt = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+    // Invalidate old OTPs for this email
+    $db->prepare("DELETE FROM password_resets WHERE email = ?")->execute([$email]);
+
+    $db->prepare("INSERT INTO password_resets (school_id, email, user_type, user_id, otp, expires_at) VALUES (?, ?, ?, ?, ?, ?)")
+       ->execute([$schoolId, $email, $userType, $userId, $otp, $expiresAt]);
+
+    // Send Email
+    sendOTP($email, $otp, $userName);
+
+    // Provide OTP in response ONLY in debug mode for testing (or keep it clean)
+    $msg = 'أرسلنا رمز الاستعادة إلى بريدك الإلكتروني (صالح لمدة 15 دقيقة)';
+    if (defined('DEBUG_MODE') && DEBUG_MODE) {
+        $msg .= " - وضع التطوير، الرمز: $otp";
+    }
+
+    jsonSuccess(null, $msg);
+}
+
+/**
+ * Handle Password Reset via OTP
+ */
+function resetPassword() {
+    $data = getPostData();
+    $email = sanitize($data['email'] ?? '');
+    $otp = sanitize($data['otp'] ?? '');
+    $newPassword = $data['new_password'] ?? '';
+
+    if (empty($email) || empty($otp) || empty($newPassword)) {
+        jsonError('جميع الحقول مطلوبة');
+    }
+
+    if (strlen($newPassword) < 6) {
+        jsonError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+    }
+
+    $db = getDB();
+    $stmt = $db->prepare("SELECT id, user_type, user_id FROM password_resets WHERE email = ? AND otp = ? AND expires_at > NOW() ORDER BY id DESC LIMIT 1");
+    $stmt->execute([$email, $otp]);
+    $reset = $stmt->fetch();
+
+    if (!$reset) {
+        jsonError('رمز الاستعادة غير صحيح أو منتهي الصلاحية');
+    }
+
+    $hash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+    $userType = $reset['user_type'];
+    $userId = $reset['user_id'];
+
+    if ($userType === 'user') {
+        $db->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hash, $userId]);
+    } elseif ($userType === 'parent') {
+        $db->prepare("UPDATE parents SET password = ? WHERE id = ?")->execute([$hash, $userId]);
+    } elseif ($userType === 'platform_admin') {
+        $db->prepare("UPDATE platform_admins SET password = ? WHERE id = ?")->execute([$hash, $userId]);
+    }
+
+    // Delete used OTP
+    $db->prepare("DELETE FROM password_resets WHERE id = ?")->execute([$reset['id']]);
+
+    jsonSuccess(null, 'تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.');
+}

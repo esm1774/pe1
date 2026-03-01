@@ -432,7 +432,7 @@
             </div>
             <div id="loginError"
                 class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm"></div>
-            <div class="space-y-4">
+            <div id="loginFormContainer" class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">اسم المستخدم</label>
                     <input type="text" id="loginUsername"
@@ -440,7 +440,12 @@
                         placeholder="أدخل اسم المستخدم">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">كلمة المرور</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-semibold text-gray-700">كلمة المرور</label>
+                        <button onclick="toggleForgotPassword(true)"
+                            class="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline">نسيت كلمة
+                            المرور؟</button>
+                    </div>
                     <input type="password" id="loginPassword"
                         class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
                         placeholder="أدخل كلمة المرور">
@@ -460,14 +465,61 @@
                     </a>
                 </div>
             </div>
-            <!-- <div class="mt-6 p-4 bg-gray-50 rounded-xl">
-                <p class="text-xs text-gray-500 font-semibold mb-2">بيانات تجريبية:</p>
-                <div class="text-xs text-gray-600 space-y-1">
-                    <p>👑 مدير: <strong>admin / admin123</strong></p>
-                    <p>👨‍🏫 معلم: <strong>teacher / teacher123</strong></p>
-                    <p>👁️ مشاهد: <strong>viewer / viewer123</strong></p>
-                </div> 
-            </div> -->
+
+            <!-- Forgot Password Container -->
+            <div id="forgotPasswordContainer" class="hidden space-y-4">
+                <div class="text-center mb-4">
+                    <p class="text-sm font-bold text-gray-600">أدخل بريدك الإلكتروني المسجل في النظام وسنرسل لك رمزاً
+                        للاستعادة</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
+                    <input type="email" id="forgotEmail"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                        placeholder="example@domain.com" dir="ltr">
+                </div>
+                <button onclick="handleForgotPassword()"
+                    class="w-full bg-gradient-to-l from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-lg cursor-pointer">إرسال
+                    رمز الاستعادة</button>
+                <div class="pt-4 text-center">
+                    <button onclick="toggleForgotPassword(false)"
+                        class="text-sm font-bold text-gray-500 hover:text-gray-700 transition">العودة لتسجيل
+                        الدخول</button>
+                </div>
+            </div>
+
+            <!-- Reset Password Container -->
+            <div id="resetPasswordContainer" class="hidden space-y-4">
+                <div class="text-center mb-4">
+                    <p class="text-sm font-bold text-gray-600">لقد أرسلنا رمز الاستعادة إلى بريدك الإلكتروني.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
+                    <input type="email" id="resetEmail" disabled
+                        class="w-full px-4 py-3 bg-gray-50 text-gray-500 border-2 border-gray-200 rounded-xl focus:outline-none"
+                        dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">رمز الاستعادة (OTP)</label>
+                    <input type="text" id="resetOTP"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none text-center text-xl tracking-widest font-black"
+                        placeholder="000000" maxlength="6" dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">كلمة المرور الجديدة</label>
+                    <input type="password" id="resetNewPassword"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                        placeholder="أدخل كلمة المرور الجديدة">
+                </div>
+                <button onclick="handleResetPassword()"
+                    class="w-full bg-gradient-to-l from-green-600 to-emerald-600 text-white py-3 rounded-xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg cursor-pointer">تعيين
+                    كلمة المرور الجديدة</button>
+                <div class="pt-4 text-center">
+                    <button onclick="toggleForgotPassword(false)"
+                        class="text-sm font-bold text-gray-500 hover:text-gray-700 transition">العودة لتسجيل
+                        الدخول</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -580,6 +632,11 @@
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="admin,teacher,supervisor">
                         <span class="text-xl">🏅</span><span>الفرق الرياضية</span>
+                    </a>
+                    <a onclick="navigateTo('sportsCalendar')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">📅</span><span>التقويم الرياضي</span>
                     </a>
                     <a onclick="navigateTo('reports')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
@@ -697,6 +754,7 @@
     <script src="js/parents.js?v=3.1.0"></script>
     <script src="js/notifications.js?v=3.1.0"></script>
     <script src="js/badges_admin.js?v=3.1.0"></script>
+    <script src="js/calendar.js?v=3.1.0"></script>
 
     <!-- Initialize app AFTER all scripts are loaded -->
     <script>

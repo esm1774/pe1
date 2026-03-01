@@ -56,7 +56,8 @@ const PAGE_MAP = {
     user_profile: 'renderUserProfilePage',
     studentDashboard: 'renderStudentDashboard',
     studentProfile: 'renderStudentProfilePage',
-    parentDashboard: 'renderParentDashboard'
+    parentDashboard: 'renderParentDashboard',
+    sportsCalendar: 'renderSportsCalendar'
 };
 
 // ============================================================
@@ -463,9 +464,77 @@ function calcBMI(height, weight) {
 // KEYBOARD
 // ============================================================
 document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !currentUser) handleLogin();
+    if (e.key === 'Enter' && !currentUser) {
+        if (document.getElementById('forgotPasswordContainer') && !document.getElementById('forgotPasswordContainer').classList.contains('hidden')) {
+            handleForgotPassword();
+        } else if (document.getElementById('resetPasswordContainer') && !document.getElementById('resetPasswordContainer').classList.contains('hidden')) {
+            handleResetPassword();
+        } else if (document.getElementById('loginFormContainer') && !document.getElementById('loginFormContainer').classList.contains('hidden')) {
+            handleLogin();
+        } else {
+            handleLogin(); // fallback
+        }
+    }
     if (e.key === 'Escape') closeModal();
 });
+
+// ============================================================
+// FORGOT PASSWORD
+// ============================================================
+function toggleForgotPassword(show) {
+    if (show) {
+        document.getElementById('loginFormContainer').classList.add('hidden');
+        document.getElementById('resetPasswordContainer').classList.add('hidden');
+        document.getElementById('forgotPasswordContainer').classList.remove('hidden');
+        document.getElementById('loginError').classList.add('hidden');
+    } else {
+        document.getElementById('forgotPasswordContainer').classList.add('hidden');
+        document.getElementById('resetPasswordContainer').classList.add('hidden');
+        document.getElementById('loginFormContainer').classList.remove('hidden');
+        document.getElementById('loginError').classList.add('hidden');
+    }
+}
+
+async function handleForgotPassword() {
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) {
+        showToast('الرجاء إدخال البريد الإلكتروني', 'error');
+        return;
+    }
+    const r = await API.post('forgot_password', { email });
+    if (r && r.success) {
+        showToast(r.message || 'تم الإرسال');
+        document.getElementById('forgotPasswordContainer').classList.add('hidden');
+        document.getElementById('resetPasswordContainer').classList.remove('hidden');
+        document.getElementById('resetEmail').value = email;
+    } else {
+        showToast(r?.error || 'حدث خطأ', 'error');
+    }
+}
+
+async function handleResetPassword() {
+    const email = document.getElementById('resetEmail').value.trim();
+    const otp = document.getElementById('resetOTP').value.trim();
+    const newPassword = document.getElementById('resetNewPassword').value;
+
+    if (!otp || !newPassword) {
+        showToast('الرجاء تعبئة جميع الحقول', 'error');
+        return;
+    }
+    if (newPassword.length < 6) {
+        showToast('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+        return;
+    }
+
+    const r = await API.post('reset_password', { email, otp, new_password: newPassword });
+    if (r && r.success) {
+        showToast(r.message || 'تم تعيين كلمة المرور بنجاح');
+        toggleForgotPassword(false);
+        document.getElementById('loginPassword').value = '';
+    } else {
+        showToast(r?.error || 'رمز الاستعادة غير صحيح أو منتهي', 'error');
+    }
+}
 
 // ============================================================
 // NOTE: checkAuth() is called from index.html AFTER all JS files load
