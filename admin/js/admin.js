@@ -247,6 +247,7 @@ async function renderSchools() {
             ? `<button class="action-btn toggle-off" onclick="toggleSchool(${s.id}, 0)" title="تعطيل">⏸️</button>`
             : `<button class="action-btn toggle-on" onclick="toggleSchool(${s.id}, 1)" title="تفعيل">▶️</button>`
         }
+                                        <button class="action-btn toggle-off" onclick="deleteSchool(${s.id}, '${esc(s.name)}')" title="حذف نهائي" style="background:var(--accent-pink);color:white;border:none">🗑️</button>
                                     </div>
                                 </td>
                             </tr>
@@ -470,6 +471,24 @@ async function impersonateSchool(id) {
         }, 500);
     } else {
         toast(r?.error || 'خطأ في الدخول', 'error');
+    }
+}
+
+async function deleteSchool(id, name) {
+    if (!confirm(`⚠️ تحذير خطير جداً ⚠️\n\nهل أنت متأكد من مسح المدرسة "${name}" وبيانات كل المعلمين والطلاب والاختبارات التابعة لها بشكل نهائي؟! لا يمكن التراجع عن هذا الإجراء.`)) {
+        return;
+    }
+
+    if (!confirm(`تأكيد أخير: اكتب "نعم" أو اضغط OK لإكمال الحذف للمدرسة "${name}"`)) {
+        return;
+    }
+
+    const r = await API.post('school_delete', { id });
+    if (r && r.success) {
+        toast(r.message || 'تم مسح المدرسة نهائياً');
+        renderSchools();
+    } else {
+        toast(r?.error || 'حدث خطأ أثناء الحذف', 'error');
     }
 }
 

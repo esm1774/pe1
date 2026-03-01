@@ -58,7 +58,8 @@ const PAGE_MAP = {
     studentProfile: 'renderStudentProfilePage',
     parentDashboard: 'renderParentDashboard',
     sportsCalendar: 'renderSportsCalendar',
-    analytics: 'renderAnalytics'
+    analytics: 'renderAnalytics',
+    audit_logs: 'renderAuditLog'
 };
 
 // ============================================================

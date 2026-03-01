@@ -598,6 +598,11 @@
                         data-role="admin,supervisor">
                         <span class="text-xl">📈</span><span>تحليلات متقدمة</span>
                     </a>
+                    <a onclick="navigateTo('audit_logs')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,supervisor">
+                        <span class="text-xl">🛡️</span><span>سجل الأنشطة</span>
+                    </a>
                     <a onclick="navigateTo('dashboard')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="parent">
@@ -763,6 +768,7 @@
     <script src="js/badges_admin.js?v=3.1.0"></script>
     <script src="js/calendar.js?v=3.1.0"></script>
     <script src="js/analytics.js?v=3.1.0"></script>
+    <script src="js/audit_log.js?v=3.1.0"></script>
 
     <!-- Initialize app AFTER all scripts are loaded -->
     <script>

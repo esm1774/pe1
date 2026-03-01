@@ -198,6 +198,60 @@ function savePlan() {
 // ============================================================
 // PLATFORM ANALYTICS
 // ============================================================
+// SCHOOL DELETION
+// ============================================================
+function deleteSchool() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+
+    if (!$id) jsonError('معرف مدرسة غير صالح');
+
+    $db = getDB();
+
+    // Begin Transaction to prevent partial deletion
+    $db->beginTransaction();
+
+    try {
+        // We delete strictly based on school_id where it matters
+        // 1. Delete deeply nested related data that rely on students, users, matches, etc.
+        $db->query("DELETE match_media FROM match_media INNER JOIN matches ON match_media.match_id = matches.id INNER JOIN tournaments ON matches.tournament_id = tournaments.id WHERE tournaments.school_id = $id");
+        $db->query("DELETE match_events FROM match_events INNER JOIN matches ON match_events.match_id = matches.id INNER JOIN tournaments ON matches.tournament_id = tournaments.id WHERE tournaments.school_id = $id");
+        $db->query("DELETE student_team_members FROM student_team_members INNER JOIN students ON student_team_members.student_id = students.id WHERE students.school_id = $id");
+        $db->query("DELETE tournament_player_stats FROM tournament_player_stats INNER JOIN tournaments ON tournament_player_stats.tournament_id = tournaments.id WHERE tournaments.school_id = $id");
+        
+        // 2. Delete main modules data
+        $tablesWithSchoolId = [
+            'activity_log', 'attendance', 'badges', 'class_points', 'classes', 'fitness_criteria',
+            'fitness_tests', 'grades', 'matches', 'notifications', 'parent_students', 'parents', 
+            'password_resets', 'sports_calendar', 'sports_teams', 'standings', 'student_badges', 
+            'student_fitness', 'student_health', 'student_measurements', 'student_teams', 'students', 
+            'teacher_classes', 'team_members', 'tournament_teams', 'tournaments', 
+            'training_attendance', 'training_sessions', 'users' 
+        ];
+
+        foreach ($tablesWithSchoolId as $table) {
+            // Check if column school_id actually exists in that table to avoid SQL error via try-catch or safe query
+            try {
+                $db->exec("DELETE FROM `$table` WHERE school_id = $id");
+            } catch (PDOException $e) {
+                // If the table doesn't have school_id, it will fail but we silently ignore since not all tables might have it explicitly
+            }
+        }
+
+        // 3. Delete the School Row itself
+        $stmt = $db->prepare("DELETE FROM schools WHERE id = ?");
+        $stmt->execute([$id]);
+
+        $db->commit();
+        jsonSuccess(null, 'تم مسح مدرسة وبياناتها بالكامل من النظام');
+    } catch (Exception $e) {
+        $db->rollBack();
+        jsonError('فشل مسح المدرسة: ' . $e->getMessage());
+    }
+}
+
+// ============================================================
 function getPlatformStats() {
     requirePlatformAdmin();
     $db = getDB();
@@ -241,6 +295,7 @@ try {
         case 'schools':           getSchools(); break;
         case 'school_save':       saveSchool(); break;
         case 'school_toggle':     toggleSchool(); break;
+        case 'school_delete':     deleteSchool(); break;
         case 'school_subscription': updateSchoolSubscription(); break;
         case 'plans':             getPlans(); break;
         case 'plan_save':         savePlan(); break;

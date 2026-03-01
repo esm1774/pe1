@@ -287,8 +287,9 @@ function getParam($key, $default = null) {
 function logActivity($action, $entityType = null, $entityId = null, $details = null) {
     try {
         $db = getDB();
-        $stmt = $db->prepare("INSERT INTO activity_log (user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt = $db->prepare("INSERT INTO activity_log (school_id, user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
+            schoolId() ?? null,
             $_SESSION['user_id'] ?? null,
             $action,
             $entityType,

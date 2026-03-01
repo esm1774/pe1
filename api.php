@@ -240,6 +240,7 @@ require_once 'api/badges.php';
 require_once 'api/calendar.php';
 require_once 'api/analytics.php';
 require_once 'api/reports_mail.php';
+require_once 'api/audit_log.php';
 
 // ============================================================
 // ROUTE REQUESTS
@@ -277,6 +278,7 @@ try {
         case 'dashboard':       getDashboard(); break;
         case 'student_dashboard_summary': getStudentDashboardSummary(); break;
         case 'analytics_dashboard': getAnalyticsDashboard(); break;
+        case 'audit_logs':      getAuditLogs(); break;
 
         // GRADES
         case 'grades':          getGrades(); break;
