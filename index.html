@@ -532,9 +532,13 @@
             <div class="flex items-center justify-between px-6 py-3">
                 <div class="flex items-center gap-3">
                     <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 text-2xl cursor-pointer">☰</button>
-                    <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('dashboard')">
-                        <span class="text-2xl">🏃</span>
-                        <h1 class="text-lg font-bold text-gray-800 hidden sm:block">PE Smart School</h1>
+                    <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('dashboard')">
+                        <div id="school-logo-display" class="school-logo-display flex items-center">
+                            <span class="text-2xl">🏃</span>
+                        </div>
+                        <h1 id="school-name-display"
+                            class="school-name-display text-lg font-black text-gray-800 hidden md:block">PE Smart School
+                        </h1>
                     </div>
                 </div>
 
@@ -592,6 +596,11 @@
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="admin,teacher,supervisor,viewer">
                         <span class="text-xl">📊</span><span>لوحة التحكم</span>
+                    </a>
+                    <a onclick="navigateTo('school_settings')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin">
+                        <span class="text-xl">⚙️</span><span>إعدادات المدرسة</span>
                     </a>
                     <a onclick="navigateTo('analytics')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
@@ -780,6 +789,7 @@
     <script src="js/analytics.js?v=3.2.0"></script>
     <script src="js/audit_log.js?v=3.2.0"></script>
     <script src="js/timetable.js?v=3.2.0"></script>
+    <script src="js/school_settings.js?v=3.0.0"></script>
 
     <!-- Initialize app AFTER all scripts are loaded -->
     <script>

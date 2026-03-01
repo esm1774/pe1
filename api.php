@@ -242,6 +242,7 @@ require_once 'api/analytics.php';
 require_once 'api/reports_mail.php';
 require_once 'api/audit_log.php';
 require_once 'api/timetable.php';
+require_once 'api/schools.php';
 
 // ============================================================
 // ROUTE REQUESTS
@@ -296,6 +297,11 @@ try {
         case 'classes':         getClasses(); break;
         case 'class_save':      saveClass(); break;
         case 'class_delete':    deleteClass(); break;
+
+        // SCHOOL SETTINGS
+        case 'get_school_info': getSchoolInfo(); break;
+        case 'save_school_info': saveSchoolInfo(); break;
+        case 'upload_logo':     uploadSchoolLogo(); break;
 
         // STUDENTS
         case 'students':        getStudents(); break;

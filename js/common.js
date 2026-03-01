@@ -60,7 +60,8 @@ const PAGE_MAP = {
     sportsCalendar: 'renderSportsCalendar',
     analytics: 'renderAnalytics',
     audit_logs: 'renderAuditLog',
-    timetable: 'renderTimetablePage'
+    timetable: 'renderTimetablePage',
+    school_settings: 'renderSchoolSettings'
 };
 
 // ============================================================
@@ -230,11 +231,9 @@ function showApp() {
     const roleNames = { admin: 'مدير', teacher: 'معلم', viewer: 'مشاهد', supervisor: 'مشرف/موجه', student: 'طالب', parent: 'ولي أمر' };
     if (roleEl) roleEl.textContent = roleNames[currentUser.role] || currentUser.role;
 
-    // SaaS: Display school name + plan in header
-    const schoolNameEl = document.getElementById('schoolNameDisplay');
-    if (schoolNameEl && currentSchool && currentSchool.name) {
-        schoolNameEl.textContent = currentSchool.name;
-        schoolNameEl.classList.remove('hidden');
+    // SaaS: Display school name + branding
+    if (typeof refreshBranding === 'function') {
+        refreshBranding();
     }
 
     // Show/hide menu items based on role
@@ -286,6 +285,14 @@ function isParent() {
 
 function isStudent() {
     return currentUser && currentUser.role === 'student';
+}
+
+function isSupervisor() {
+    return currentUser && (currentUser.role === 'supervisor' || currentUser.role === 'موجه' || currentUser.role === 'مشرف');
+}
+
+function isTeacher() {
+    return currentUser && currentUser.role === 'teacher';
 }
 
 // ============================================================
@@ -543,3 +550,47 @@ async function handleResetPassword() {
 // NOTE: checkAuth() is called from index.html AFTER all JS files load
 // ============================================================
 console.log('✅ common.js loaded');
+
+/**
+ * Professional Triple Header for Reports
+ * Right: Ministry Info | Middle: School Name & Report Title | Left: School Logo
+ */
+function getReportHeaderHTML(title = 'تقرير رياضي شامل') {
+    const schoolName = (currentSchool && currentSchool.name) ? currentSchool.name : 'مدرستنا الذكية';
+    const logoUrl = (currentSchool && currentSchool.logo) ? currentSchool.logo : '';
+
+    return `
+    <div class="print-only mb-10 pb-8 border-b-4 border-double border-gray-300">
+        <div class="flex items-center justify-between text-gray-900">
+            <!-- Right: Official Ministry Info -->
+            <div class="w-1/3 text-right">
+                <div class="font-black text-[11px] leading-relaxed">
+                    المملكة العربية السعودية<br>
+                    وزارة التعليم<br>
+                    إدارة التربية والتعليم بمحافظتكم
+                </div>
+            </div>
+            
+            <!-- Middle: School Identity & Report Title -->
+            <div class="w-1/3 text-center">
+                <div class="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center mx-auto mb-2 text-xl">🏃</div>
+                <h1 class="text-xl font-black mb-1">${esc(schoolName)}</h1>
+                <div class="inline-block border-2 border-gray-900 px-4 py-1 rounded-lg text-xs font-black uppercase tracking-widest">${title}</div>
+            </div>
+            
+            <!-- Left: School Logo -->
+            <div class="w-1/3 flex justify-end">
+                ${logoUrl ? `<img src="${logoUrl}" class="h-24 w-auto object-contain">` : `
+                    <div class="w-24 h-24 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center text-center p-2">
+                        <span class="text-[10px] font-black text-gray-300">ختم / شعار المدرسة</span>
+                    </div>
+                `}
+            </div>
+        </div>
+        <div class="mt-4 flex justify-between items-center text-[10px] font-bold text-gray-400">
+            <span>التاريخ: ${new Date().toLocaleDateString('ar-SA')}</span>
+            <span>نظام التربية البدنية الذكي - PE Smart School</span>
+        </div>
+    </div>
+    `;
+}

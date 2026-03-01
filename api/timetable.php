@@ -50,12 +50,22 @@ function getTimetable() {
 // SAVE TIMETABLE
 // ============================================================
 function saveTimetable() {
-    requireRole(['teacher']); // Only teachers build their own timetables
+    requireRole(['teacher', 'admin', 'supervisor']);
     $db = getDB();
     $schoolId = schoolId();
     $teacherId = $_SESSION['user_id'];
 
     $data = getPostData();
+    
+    // If admin is saving for someone else
+    if (in_array($_SESSION['user_role'], ['admin', 'supervisor']) && isset($data['teacher_id'])) {
+        $teacherId = (int)$data['teacher_id'];
+        // Double check this teacher belongs to the school
+        $chk = $db->prepare("SELECT id FROM users WHERE id = ? AND school_id = ?");
+        $chk->execute([$teacherId, $schoolId]);
+        if (!$chk->fetch()) jsonError('غير مسموح بحفظ جدول لهذا المعلم');
+    }
+
     if (!isset($data['timetable']) || !is_array($data['timetable'])) {
         jsonError('بيانات الجدول غير صالحة.');
     }
@@ -78,7 +88,7 @@ function saveTimetable() {
             $dayOfWeek = (int)$entry['day_of_week'];
             $periodNum = (int)$entry['period_number'];
 
-            if ($classId > 0 && $dayOfWeek >= 1 && $dayOfWeek <= 5 && $periodNum >= 1 && $periodNum <= 10) {
+            if ($classId > 0 && $dayOfWeek >= 1 && $dayOfWeek <= 7 && $periodNum >= 1 && $periodNum <= 12) {
                 // Ensure class belongs to the school
                 $stmtCheck = $db->prepare("SELECT id FROM classes WHERE id = ? AND school_id = ?");
                 $stmtCheck->execute([$classId, $schoolId]);
@@ -89,7 +99,7 @@ function saveTimetable() {
         }
 
         $db->commit();
-        logActivity('update', 'Timetable', $teacherId, 'تم تحديث جدول الحصص الخاص بالمعلم.');
+        logActivity('update', 'Timetable', $teacherId, 'تم تحديث جدول الحصص للمعلم ID: ' . $teacherId);
         jsonSuccess(['message' => 'تم حفظ الجدول بنجاح.']);
 
     } catch (Exception $e) {

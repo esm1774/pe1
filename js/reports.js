@@ -218,10 +218,7 @@ function renderStudentReportHTML(d, container) {
         <div class="absolute top-0 right-0 w-64 h-64 bg-green-50 rounded-full -mr-32 -mt-32 opacity-40 animate-pulse"></div>
         
         <div class="relative z-10">
-            <div class="print-only text-center mb-10 border-b-2 border-gray-100 pb-6">
-                <h1 class="text-3xl font-black text-gray-900">🏃 PE Smart School System</h1>
-                <p class="text-gray-500 font-bold uppercase tracking-widest mt-2">تقرير اللياقة البدنية الشامل</p>
-            </div>
+            ${getReportHeaderHTML('تقرير اللياقة البدنية الشامل')}
 
             <div class="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 mb-10 pb-10 border-b border-gray-50">
                 <div class="flex flex-col md:flex-row items-center gap-6 text-center md:text-right">
@@ -451,10 +448,7 @@ async function generateClassReport() {
 
     document.getElementById('reportOutput').innerHTML = `
     <div class="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 p-6 md:p-12 fade-in">
-        <div class="print-only text-center mb-6 border-b pb-4">
-            <h1 class="text-2xl font-black">🏃 PE Smart School System</h1>
-            <p class="text-gray-400 font-bold uppercase tracking-widest text-[10px] mt-1">تقرير تحليل أداء الفصل الدراسي</p>
-        </div>
+        ${getReportHeaderHTML('تقرير تحليل أداء الفصل الدراسي')}
 
         <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-10 pb-8 border-b border-gray-50">
             <div class="text-center md:text-right">
