@@ -419,7 +419,7 @@ async function showImportModal() {
             
             <!-- File Upload -->
             <div class="mb-4">
-                <label class="block text-sm font-semibold text-gray-700 mb-1">اختر ملف CSV</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">اختر الملف (Excel أو CSV)</label>
                 <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-green-400 hover:bg-green-50 transition cursor-pointer"
                      onclick="document.getElementById('importFile').click()"
                      ondragover="event.preventDefault();this.classList.add('border-green-500','bg-green-50')"
@@ -430,7 +430,7 @@ async function showImportModal() {
                     <p class="text-gray-400 text-sm mt-1">Excel (xlsx), CSV أو TXT</p>
                     <p id="selectedFileName" class="text-green-600 font-bold mt-2 hidden"></p>
                 </div>
-                <input type="file" id="importFile" accept=".csv,.txt,.xlsx" class="hidden" onchange="handleFileSelect(this)">
+                <input type="file" id="importFile" accept=".csv,.xlsx,.xls,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain" class="hidden" onchange="handleFileSelect(this)">
             </div>
             
             <!-- Import Result -->
@@ -480,7 +480,7 @@ function showSelectedFile(file) {
     const btn = document.getElementById('importBtn');
     const ext = file.name.split('.').pop().toLowerCase();
 
-    if (!['csv', 'txt', 'xlsx'].includes(ext)) {
+    if (!['csv', 'txt', 'xlsx', 'xls'].includes(ext)) {
         nameEl.textContent = '❌ صيغة غير مدعومة! استخدم XLSX أو CSV';
         nameEl.className = 'text-red-600 font-bold mt-2';
         nameEl.classList.remove('hidden');

@@ -68,7 +68,11 @@ const PAGE_MAP = {
 // API HELPER
 // ============================================================
 const API = {
-    base: 'api.php',
+    // Ensure we always point to the root api.php regardless of current path slug
+    get base() {
+        // Return absolute path to avoid confusion with sub-paths
+        return '/api.php';
+    },
 
     async request(action, method = 'GET', data = null, params = {}) {
         try {
@@ -153,7 +157,13 @@ async function handleLogin() {
             };
         }
         errorEl.classList.add('hidden');
-        showApp();
+
+        // Redirect to slug-based URL if school context exists
+        if (r.data.school_slug) {
+            window.location.href = `/${r.data.school_slug}/`;
+        } else {
+            showApp();
+        }
     } else {
         errorEl.textContent = r.error || 'بيانات غير صحيحة';
         errorEl.classList.remove('hidden');
@@ -234,6 +244,20 @@ function showApp() {
     // SaaS: Display school name + branding
     if (typeof refreshBranding === 'function') {
         refreshBranding();
+    } else {
+        const schoolNameEl = document.getElementById('school-name-display');
+        if (schoolNameEl && currentSchool) {
+            schoolNameEl.textContent = currentSchool.name;
+        }
+    }
+
+    // Ensure URL has school slug if we are logged in with a school context
+    if (currentSchool && currentSchool.slug) {
+        const path = window.location.pathname;
+        if (!path.includes(`/${currentSchool.slug}`)) {
+            // Optional: pushState to update URL without reload if needed
+            // history.replaceState(null, '', `/pe1/${currentSchool.slug}/#${page}`);
+        }
     }
 
     // Show/hide menu items based on role

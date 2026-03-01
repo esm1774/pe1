@@ -195,8 +195,8 @@ function importStudents() {
     $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     
     // Validate extension
-    if (!in_array($ext, ['csv', 'txt', 'xlsx'])) {
-        jsonError('يجب رفع ملف CSV أو XLSX. يمكنك حفظ ملف Excel كـ XLSX أو CSV');
+    if (!in_array($ext, ['csv', 'txt', 'xlsx', 'xls'])) {
+        jsonError('يجب رفع ملف CSV أو Excel (xlsx, xls).');
     }
 
     $sid = schoolId(); // Ensure school context is set early
@@ -204,7 +204,7 @@ function importStudents() {
     $handle = null; // Used for CSV
     
     // --- بداية التعديل: قراءة الملف ---
-    if ($ext === 'xlsx') {
+    if ($ext === 'xlsx' || $ext === 'xls') {
         if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
             jsonError('مكتبة PhpSpreadsheet غير مثبتة بشكل صحيح. تأكد من وجود المجلد vendor');
         }
@@ -311,7 +311,7 @@ function importStudents() {
     // --- بداية التعديل: حلقة القراءة الموحدة ---
     $rowId = 0;
     while (true) {
-        if ($ext === 'xlsx') {
+        if ($ext === 'xlsx' || $ext === 'xls') {
             if ($rowId >= count($allRows)) break;
             $cols = $allRows[$rowId++];
         } else {

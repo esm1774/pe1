@@ -81,6 +81,13 @@ function login() {
         $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
         logActivity('login', 'user', $user['id']);
         unset($user['password']);
+        
+        // Include school slug for redirection
+        if ($user['school_id']) {
+            $school = Tenant::school();
+            if ($school) $user['school_slug'] = $school['slug'];
+        }
+        
         jsonSuccess($user, 'تم تسجيل الدخول بنجاح');
         return;
     }
@@ -110,6 +117,13 @@ function login() {
             'class_id' => $student['class_id'],
             'school_id' => $student['school_id']
         ];
+        
+        // Include school slug for redirection
+        if ($student['school_id']) {
+            $school = Tenant::school();
+            if ($school) $response['school_slug'] = $school['slug'];
+        }
+        
         jsonSuccess($response, 'مرحباً بك في بوابة الطالب');
         return;
     }
@@ -131,6 +145,13 @@ function login() {
         logActivity('parent_login', 'parent', $parent['id']);
         unset($parent['password']);
         $parent['role'] = 'parent';
+        
+        // Include school slug for redirection
+        if ($parent['school_id']) {
+            $school = Tenant::school();
+            if ($school) $parent['school_slug'] = $school['slug'];
+        }
+        
         jsonSuccess($parent, 'مرحباً بك في بوابة ولي الأمر');
         return;
     }

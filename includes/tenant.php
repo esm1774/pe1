@@ -24,12 +24,33 @@ class Tenant {
             return;
         }
 
-        // Priority 2: Subdomain (e.g., school1.pesmart.com)
+        // Priority 2: URL Slug (e.g., example.com/school1)
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $basePath = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+        // Strip base path from URI
+        $relativeUri = ltrim(substr($uri, strlen($basePath)), '/');
+        $uriParts = explode('/', $relativeUri);
+        
+        if (!empty($uriParts[0])) {
+            $slug = strtolower($uriParts[0]);
+            // Skip common paths that are NOT school slugs
+            if (!in_array($slug, ['api', 'admin', 'assets', 'css', 'js', 'api.php', 'index.html', 'install.php', 'register.html', 'welcome.html'])) {
+                $school = self::findBySlug($slug);
+                if ($school) {
+                    self::$schoolId = (int)$school['id'];
+                    self::$school = $school;
+                    // Store in session for consistency
+                    $_SESSION['school_id'] = self::$schoolId;
+                    return;
+                }
+            }
+        }
+
+        // Priority 3: Subdomain (e.g., school1.pesmart.com)
         $host = $_SERVER['HTTP_HOST'] ?? '';
         $parts = explode('.', $host);
         if (count($parts) >= 3) {
             $slug = strtolower($parts[0]);
-            // Skip common subdomains
             if (!in_array($slug, ['www', 'api', 'admin', 'mail', 'ftp'])) {
                 $school = self::findBySlug($slug);
                 if ($school) {
