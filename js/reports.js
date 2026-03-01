@@ -96,8 +96,11 @@ async function renderReports() {
 
 function renderStudentReportDirect(data) {
     document.getElementById('reportContent').innerHTML = `
-    <div class="flex justify-end mb-4 no-print">
-        <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-blue-700 cursor-pointer flex items-center gap-2">
+    <div class="flex flex-col md:flex-row justify-end gap-3 mb-4 no-print px-1">
+        <button onclick="sendReportEmail('reportOutput', 'تقرير الطالب')" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 cursor-pointer flex items-center justify-center gap-2">
+            <span>📧 إرسال التقرير كـ PDF بالبريد</span>
+        </button>
+        <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-blue-700 cursor-pointer flex items-center justify-center gap-2">
             <span>🖨️ طباعة التقرير</span>
         </button>
     </div>`;
@@ -132,9 +135,12 @@ async function renderStudentReport() {
                         <span class="text-xl">📄</span> عرض التقرير
                     </button>
                 </div>
-                <div class="pt-1">
-                    <button onclick="window.print()" class="w-full bg-gray-900 text-white px-6 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-black transition shadow-lg shadow-gray-200 flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
-                        <span class="text-xl">🖨️</span> طباعة فورية
+                <div class="pt-1 flex gap-2">
+                    <button onclick="window.print()" class="w-1/2 bg-gray-900 text-white px-2 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-black transition shadow-lg shadow-gray-200 flex items-center justify-center gap-2 active:scale-95 text-xs md:text-sm">
+                        <span class="text-lg">🖨️</span> طباعة
+                    </button>
+                    <button onclick="sendReportEmail('reportOutput', 'تقرير الطالب')" class="w-1/2 bg-indigo-600 text-white px-2 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 text-xs md:text-sm auto-export-btn">
+                        <span class="text-lg">📧</span> PDF بالبريد
                     </button>
                 </div>
             </div>
@@ -408,12 +414,15 @@ async function renderClassReport() {
                 </div>
                 <div class="pt-1">
                     <button onclick="generateClassReport()" class="w-full bg-green-600 text-white px-6 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-green-700 transition shadow-lg shadow-green-100 flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
-                        <span class="text-xl">🏫</span> عرض تقرير الفصل
+                        <span class="text-xl">🏫</span> عرض التقرير
                     </button>
                 </div>
-                <div class="pt-1">
-                    <button onclick="window.print()" class="w-full bg-gray-900 text-white px-6 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-black transition shadow-lg shadow-gray-200 flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
-                        <span class="text-xl">🖨️</span> طباعة القائمة
+                <div class="pt-1 flex gap-2">
+                    <button onclick="window.print()" class="w-1/2 bg-gray-900 text-white px-2 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-black transition shadow-lg shadow-gray-200 flex items-center justify-center gap-2 active:scale-95 text-xs md:text-sm">
+                        <span class="text-lg">🖨️</span> طباعة
+                    </button>
+                    <button onclick="sendReportEmail('reportOutput', 'تقرير الفصل')" class="w-1/2 bg-indigo-600 text-white px-2 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 text-xs md:text-sm">
+                        <span class="text-lg">📧</span> PDF بالبريد
                     </button>
                 </div>
             </div>
@@ -559,8 +568,11 @@ async function renderCompareReport() {
 
     document.getElementById('reportContent').innerHTML = `
     <div class="fade-in px-4 md:px-0">
-        <div class="flex justify-center md:justify-end mb-8 no-print px-1">
-            <button onclick="window.print()" class="w-full md:w-auto bg-gray-900 text-white px-10 py-4 rounded-[1.5rem] font-black hover:bg-black transition shadow-xl flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
+        <div class="flex flex-col md:flex-row justify-center md:justify-end gap-3 mb-8 no-print px-1">
+            <button onclick="sendReportEmail('reportContent', 'لوحة مقارنة الفصول')" class="w-full md:w-auto bg-indigo-600 text-white px-8 py-4 rounded-[1.5rem] font-black hover:bg-indigo-700 transition shadow-xl flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
+                <span class="text-2xl">📧</span> إنشاء PDF وإرسال
+            </button>
+            <button onclick="window.print()" class="w-full md:w-auto bg-gray-900 text-white px-8 py-4 rounded-[1.5rem] font-black hover:bg-black transition shadow-xl flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
                 <span class="text-2xl">🖨️</span> طباعة لوحة المقارنة
             </button>
         </div>
@@ -619,4 +631,62 @@ async function renderCompareReport() {
             PE Smart School Intelligence Report System
         </div>
     </div>`;
+}
+
+// ============================================================
+// PDF GENERATION AND EMAIL DELIVERY
+// ============================================================
+async function sendReportEmail(elementId, title) {
+    if (typeof html2pdf === 'undefined') {
+        showToast('مكتبة تحويل PDF غير متوفرة حالياً، يرجى تحديث الصفحة.', 'error');
+        return;
+    }
+
+    const element = document.getElementById(elementId);
+    if (!element || element.innerText.includes('يرجى اختيار')) {
+        showToast('يرجى توليد التقرير وعرضه أولاً لاختيار البيانات المطلوبة.', 'error');
+        return;
+    }
+
+    const email = prompt("أدخل البريد الإلكتروني الذي ترغب بإرسال تقرير الـ PDF إليه:");
+    if (!email || email.trim() === '') return;
+
+    // Validate email format basic check
+    if (!email.includes('@') || !email.includes('.')) {
+        showToast('البريد الإلكتروني المدخل غير صالح.', 'error');
+        return;
+    }
+
+    showToast('جاري تجهيز التقرير كملف PDF... يرجى الانتظار⏳', 'info');
+
+    // Make sure we have enough time to render
+    const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `${title}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+        const worker = html2pdf().set(opt).from(element);
+        const pdfBase64 = await worker.outputPdf('datauristring');
+
+        showToast('جاري الإرسال عبر البريد الإلكتروني... 📧', 'info');
+
+        const r = await API.post('send_report_email', {
+            email: email.trim(),
+            pdfData: pdfBase64,
+            title: title
+        });
+
+        if (r && r.success) {
+            showToast(r.message || 'تم إرسال التقرير بنجاح! ✅', 'success');
+        } else {
+            showToast(r?.error || 'حدث خطأ أثناء إرسال البريد', 'error');
+        }
+    } catch (e) {
+        showToast('خطأ أثناء توليد الـ PDF', 'error');
+        console.error('PDF Generation Error:', e);
+    }
 }

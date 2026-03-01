@@ -238,6 +238,8 @@ require_once 'api/parents_admin.php';
 require_once 'api/notifications.php';
 require_once 'api/badges.php';
 require_once 'api/calendar.php';
+require_once 'api/analytics.php';
+require_once 'api/reports_mail.php';
 
 // ============================================================
 // ROUTE REQUESTS
@@ -274,6 +276,7 @@ try {
         // DASHBOARD
         case 'dashboard':       getDashboard(); break;
         case 'student_dashboard_summary': getStudentDashboardSummary(); break;
+        case 'analytics_dashboard': getAnalyticsDashboard(); break;
 
         // GRADES
         case 'grades':          getGrades(); break;
@@ -334,6 +337,7 @@ try {
         case 'report_student':  getStudentReport(); break;
         case 'report_class':    getClassReport(); break;
         case 'report_compare':  getCompareReport(); break;
+        case 'send_report_email': sendReportEmail(); break;
 
         // USERS
         case 'users':           getUsers(); break;

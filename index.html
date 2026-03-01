@@ -593,6 +593,11 @@
                         data-role="admin,teacher,supervisor,viewer">
                         <span class="text-xl">📊</span><span>لوحة التحكم</span>
                     </a>
+                    <a onclick="navigateTo('analytics')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,supervisor">
+                        <span class="text-xl">📈</span><span>تحليلات متقدمة</span>
+                    </a>
                     <a onclick="navigateTo('dashboard')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="parent">
@@ -736,6 +741,7 @@
     <!-- ============================================================ -->
     <!-- JAVASCRIPT FILES -->
     <!-- ============================================================ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/common.js?v=3.1.0"></script>
     <script src="js/dashboard.js?v=3.1.0"></script>
     <script src="js/grades.js?v=3.1.0"></script>
@@ -744,6 +750,7 @@
     <script src="js/attendance.js?v=3.1.0"></script>
     <script src="js/fitness.js?v=3.1.0"></script>
     <script src="js/competition.js?v=3.1.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="js/reports.js?v=3.1.0"></script>
     <script src="js/users.js?v=3.1.0"></script>
     <script src="js/user_profile.js?v=3.1.0"></script>
@@ -755,6 +762,7 @@
     <script src="js/notifications.js?v=3.1.0"></script>
     <script src="js/badges_admin.js?v=3.1.0"></script>
     <script src="js/calendar.js?v=3.1.0"></script>
+    <script src="js/analytics.js?v=3.1.0"></script>
 
     <!-- Initialize app AFTER all scripts are loaded -->
     <script>
