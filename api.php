@@ -241,6 +241,7 @@ require_once 'api/calendar.php';
 require_once 'api/analytics.php';
 require_once 'api/reports_mail.php';
 require_once 'api/audit_log.php';
+require_once 'api/timetable.php';
 
 // ============================================================
 // ROUTE REQUESTS
@@ -279,6 +280,12 @@ try {
         case 'student_dashboard_summary': getStudentDashboardSummary(); break;
         case 'analytics_dashboard': getAnalyticsDashboard(); break;
         case 'audit_logs':      getAuditLogs(); break;
+        
+        // TIMETABLE
+        case 'timetable':           getTimetable(); break;
+        case 'save_timetable':      saveTimetable(); break;
+        case 'period_times':        getPeriodTimes(); break;
+        case 'save_period_times':   savePeriodTimes(); break;
 
         // GRADES
         case 'grades':          getGrades(); break;

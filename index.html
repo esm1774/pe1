@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PE Smart School System v3.0</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PE Smart">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -604,6 +604,16 @@
                         <span class="text-xl">🛡️</span><span>سجل الأنشطة</span>
                     </a>
                     <a onclick="navigateTo('dashboard')"
+                        class="sidebar-link active flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="teacher">
+                        <span class="text-xl">🏠</span><span>الرئيسية</span>
+                    </a>
+                    <a onclick="navigateTo('timetable')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="teacher,admin">
+                        <span class="text-xl">📅</span><span>جدول الحصص</span>
+                    </a>
+                    <a onclick="navigateTo('dashboard')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="parent">
                         <span class="text-xl">👨‍👩‍👦‍👦</span><span>أبنائي</span>
@@ -766,9 +776,10 @@
     <script src="js/parents.js?v=3.1.0"></script>
     <script src="js/notifications.js?v=3.1.0"></script>
     <script src="js/badges_admin.js?v=3.1.0"></script>
-    <script src="js/calendar.js?v=3.1.0"></script>
-    <script src="js/analytics.js?v=3.1.0"></script>
-    <script src="js/audit_log.js?v=3.1.0"></script>
+    <script src="js/calendar.js?v=3.2.0"></script>
+    <script src="js/analytics.js?v=3.2.0"></script>
+    <script src="js/audit_log.js?v=3.2.0"></script>
+    <script src="js/timetable.js?v=3.2.0"></script>
 
     <!-- Initialize app AFTER all scripts are loaded -->
     <script>

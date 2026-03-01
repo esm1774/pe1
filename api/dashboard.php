@@ -159,6 +159,26 @@ function getDashboard() {
         $topStudent = $stmt->fetch();
     }
 
+    // ── Today's Timetable (Only for Teachers) ──────────────────────────
+    $todayTimetable = [];
+    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'teacher') {
+        // PHP date('w'): 0 (Sun) to 6 (Sat). Our DB: 1=Sun .. 5=Thu
+        $dayOfWeek = (int)date('w') + 1; 
+        
+        $stmt = $db->prepare("
+            SELECT t.period_number, t.class_id, CONCAT(g.name, ' - ', c.name) as class_name,
+                   pt.start_time, pt.end_time
+            FROM teacher_timetables t
+            JOIN classes c ON t.class_id = c.id
+            JOIN grades g ON c.grade_id = g.id
+            LEFT JOIN school_period_times pt ON pt.school_id = t.school_id AND pt.period_number = t.period_number
+            WHERE t.teacher_id = ? AND t.school_id = ? AND t.day_of_week = ?
+            ORDER BY t.period_number ASC
+        ");
+        $stmt->execute([$_SESSION['user_id'], $sid, $dayOfWeek]);
+        $todayTimetable = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     jsonSuccess([
         'stats' => [
             'totalStudents' => (int)$totalStudents,
@@ -168,7 +188,9 @@ function getDashboard() {
             'healthAlerts'  => (int)$healthAlerts
         ],
         'ranking'    => $ranking,
-        'topStudent' => $topStudent
+        'topStudent' => $topStudent,
+        'todayTimetable' => $todayTimetable,
+        'serverTime' => date('H:i')
     ]);
 }
 

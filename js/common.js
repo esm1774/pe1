@@ -59,7 +59,8 @@ const PAGE_MAP = {
     parentDashboard: 'renderParentDashboard',
     sportsCalendar: 'renderSportsCalendar',
     analytics: 'renderAnalytics',
-    audit_logs: 'renderAuditLog'
+    audit_logs: 'renderAuditLog',
+    timetable: 'renderTimetablePage'
 };
 
 // ============================================================

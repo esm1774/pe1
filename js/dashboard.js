@@ -103,13 +103,62 @@ async function renderDashboard() {
 
             <!-- Right Column -->
             <div class="space-y-6">
+                <!-- Today's Timetable (Teachers Only) -->
+                ${d.todayTimetable ? (d.todayTimetable.length > 0 ? `
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-2 h-full bg-indigo-500"></div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">📅 حصصك اليوم</h3>
+                        <span class="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider">${d.serverTime}</span>
+                    </div>
+                    <div class="space-y-3">
+                        ${d.todayTimetable.map(t => {
+        // Check if active: serverTime is between start_time and end_time
+        const now = d.serverTime;
+        const start = t.start_time ? t.start_time.substring(0, 5) : null;
+        const end = t.end_time ? t.end_time.substring(0, 5) : null;
+        const isActive = (start && end && now >= start && now <= end);
+
+        return `
+                            <div class="flex items-center justify-between p-3 rounded-xl border transition-all ${isActive ? 'bg-indigo-50 border-indigo-200 ring-2 ring-indigo-500/10 shadow-md scale-[1.02]' : 'bg-gray-50 border-gray-100 opacity-80'}">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border ${isActive ? 'bg-indigo-600 text-white border-indigo-600 animate-pulse' : 'bg-white text-indigo-600 border-indigo-100'}">
+                                        ${t.period_number}
+                                    </div>
+                                    <div>
+                                        <span class="block font-bold text-gray-800 text-sm">${esc(t.class_name)}</span>
+                                        ${start ? `<span class="text-[10px] font-bold ${isActive ? 'text-indigo-600' : 'text-gray-400'}">${start} - ${end}</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    ${isActive ? '<span class="flex h-2 w-2 rounded-full bg-indigo-600 animate-ping"></span> <span class="text-[10px] font-black text-indigo-600 ml-1">الآن</span>' : ''}
+                                    <button onclick="navigateTo('attendance')" title="الانتقال لشاشة التحضير" class="text-xs ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-500 border border-gray-200'} px-3 py-2 rounded-lg font-bold hover:opacity-90 transition">
+                                        تحضير
+                                    </button>
+                                </div>
+                            </div>
+                            `;
+    }).join('')}
+                    </div>
+                </div>
+                ` : `
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center">
+                    <span class="text-4xl mb-3 block opacity-50">🏖️</span>
+                    <h3 class="text-sm font-bold text-gray-800 mb-1">جدول حصصك فارغ اليوم</h3>
+                    <p class="text-xs text-gray-500 mb-4">لم تقم بجدولة أي حصص لهذا اليوم في كشكول التحضير.</p>
+                    <button onclick="navigateTo('timetable')" class="text-xs font-bold bg-indigo-50 text-indigo-600 px-5 py-2 rounded-xl hover:bg-indigo-100 transition shadow-sm border border-indigo-100">إدارة جدولي الأسبوعي</button>
+                </div>
+                `) : ''}
+
                 <!-- Top Student -->
                 ${top ? `
-                <div class="bg-gradient-to-l from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
-                    <h3 class="font-bold text-lg mb-2">⭐ أفضل طالب</h3>
-                    <p class="text-2xl font-bold">${esc(top.name)}</p>
-                    <p class="opacity-80 mt-1">${esc(top.class_name)}</p>
-                    <p class="text-3xl font-bold mt-2">${top.avg_score} <span class="text-sm opacity-80">/ 10</span></p>
+                <div class="bg-gradient-to-l from-green-500 to-emerald-600 rounded-2xl p-6 text-white text-center shadow-lg shadow-green-100">
+                    <h3 class="font-bold text-lg mb-2 flex items-center justify-center gap-2">⭐ أفضل طالب في فصولك</h3>
+                    <p class="text-2xl font-black mt-2">${esc(top.name)}</p>
+                    <p class="opacity-80 mt-1 text-sm font-bold bg-white/20 inline-block px-3 py-1 rounded-full">${esc(top.class_name)}</p>
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                        <span class="text-4xl font-black">${top.avg_score}</span> <span class="text-lg font-bold opacity-80 pt-2">/ 10</span>
+                    </div>
                 </div>
                 ` : ''}
 
