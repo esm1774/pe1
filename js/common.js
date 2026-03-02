@@ -254,6 +254,10 @@ async function handleLogin() {
 }
 
 async function handleLogout() {
+    // Fix #9: Stop notification polling before clearing session
+    if (typeof stopNotificationPolling === 'function') {
+        stopNotificationPolling();
+    }
     await API.post('logout');
     currentUser = null;
     currentSchool = null;
@@ -517,15 +521,18 @@ function navigateTo(page) {
 // ============================================================
 function showToast(msg, type = 'success') {
     const container = document.getElementById('toastContainer');
+    // Fix #15: Added 'warning' as a valid toast type (yellow)
     const colors = {
         success: 'bg-green-500',
         error: 'bg-red-500',
-        info: 'bg-blue-500'
+        info: 'bg-blue-500',
+        warning: 'bg-amber-500'
     };
     const icons = {
         success: '✅',
         error: '❌',
-        info: 'ℹ️'
+        info: 'ℹ️',
+        warning: '⚠️'
     };
 
     const toast = document.createElement('div');
@@ -598,9 +605,8 @@ document.addEventListener('keydown', e => {
             handleResetPassword();
         } else if (document.getElementById('loginFormContainer') && !document.getElementById('loginFormContainer').classList.contains('hidden')) {
             handleLogin();
-        } else {
-            handleLogin(); // fallback
         }
+        // Fix #6: Removed duplicate fallback handleLogin() call that fired for any unmatched case
     }
     if (e.key === 'Escape') closeModal();
 });
@@ -692,7 +698,8 @@ function getReportHeaderHTML(title = 'تقرير رياضي شامل') {
             <div class="w-1/3 text-center">
                 <div class="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center mx-auto mb-2 text-xl">🏃</div>
                 <h1 class="text-xl font-black mb-1">${esc(schoolName)}</h1>
-                <div class="inline-block border-2 border-gray-900 px-4 py-1 rounded-lg text-xs font-black uppercase tracking-widest">${title}</div>
+                <!-- Fix #13: Title is escaped to prevent XSS via user-controlled report titles -->
+                <div class="inline-block border-2 border-gray-900 px-4 py-1 rounded-lg text-xs font-black uppercase tracking-widest">${esc(title)}</div>
             </div>
             
             <!-- Left: School Logo -->

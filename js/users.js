@@ -66,7 +66,14 @@ async function renderUsers() {
                                 ${u.role === 'teacher' ? `
                                     <button onclick="showTeacherAssignments(${u.id})" class="w-10 h-10 flex items-center justify-center bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition" title="توزيع الفصول">📚</button>
                                 ` : ''}
-                                <button onclick="showUserForm(${u.id},'${esc(u.name)}','${esc(u.username)}','${u.role}')" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition" title="تعديل">✏️</button>
+                                <!-- Fix #4: Use data-* attributes instead of raw string interpolation in onclick (XSS safe) -->
+                                <button
+                                    data-uid="${u.id}"
+                                    data-uname="${esc(u.name)}"
+                                    data-uusername="${esc(u.username)}"
+                                    data-urole="${u.role}"
+                                    onclick="showUserFormFromBtn(this)"
+                                    class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition" title="تعديل">✏️</button>
                                 ${u.id != 1 ? `<button onclick="deleteUser(${u.id})" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition" title="حذف">🗑️</button>` : ''}
                             </div>
                         </td>
@@ -99,7 +106,14 @@ async function renderUsers() {
                             <span>📚</span> الفصول
                         </button>
                     ` : ''}
-                    <button onclick="showUserForm(${u.id},'${esc(u.name)}','${esc(u.username)}','${u.role}')" class="${u.role === 'teacher' ? 'w-14' : 'flex-1'} h-14 flex items-center justify-center bg-gray-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition">✏️</button>
+                    <!-- Fix #4: Mobile card also uses data-* attributes for XSS safety -->
+                    <button
+                        data-uid="${u.id}"
+                        data-uname="${esc(u.name)}"
+                        data-uusername="${esc(u.username)}"
+                        data-urole="${u.role}"
+                        onclick="showUserFormFromBtn(this)"
+                        class="${u.role === 'teacher' ? 'w-14' : 'flex-1'} h-14 flex items-center justify-center bg-gray-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition">✏️</button>
                     ${u.id != 1 ? `
                         <button onclick="deleteUser(${u.id})" class="w-14 h-14 flex items-center justify-center bg-gray-50 text-red-600 rounded-2xl hover:bg-red-600 hover:text-white transition">🗑️</button>
                     ` : ''}
@@ -246,6 +260,18 @@ async function unassignClass(teacherId, classId) {
     }
 }
 
+
+/**
+ * Fix #4: Safe wrapper that reads edit data from data-* attributes
+ * Prevents XSS from names/usernames containing quotes or HTML
+ */
+function showUserFormFromBtn(btn) {
+    const id = parseInt(btn.dataset.uid) || null;
+    const name = btn.dataset.uname || '';
+    const username = btn.dataset.uusername || '';
+    const role = btn.dataset.urole || 'teacher';
+    showUserForm(id, name, username, role);
+}
 
 function showUserForm(id = null, name = '', username = '', role = 'teacher') {
     showModal(`

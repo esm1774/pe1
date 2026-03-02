@@ -361,6 +361,13 @@ async function loadFitnessEntry() {
         }
     };
 
+    // Fix #7: Guard against undefined test (find() may return undefined if test_id doesn't match)
+    if (!test) {
+        document.getElementById('fitnessEntryList').innerHTML =
+            `<div class="p-10 text-center text-red-500 font-bold">لم يتم العثور على بيانات الاختبار المحدد</div>`;
+        return;
+    }
+
     document.getElementById('fitnessEntryList').innerHTML = `
     <div class="fade-in">
         <!-- Dashboard Header Info -->
@@ -613,7 +620,8 @@ async function loadFitnessView(classId) {
         return `
             <div class="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/30 border border-gray-100 overflow-hidden relative group">
                 <div class="bg-gradient-to-br from-emerald-950 via-green-900 to-emerald-900 p-6 text-white relative">
-                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+                    <!-- Fix #8: Removed external CDN texture URL - use CSS instead -->
+                    <div class="absolute inset-0 opacity-5" style="background-image:repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%);background-size:8px 8px;"></div>
                     <div class="relative z-10 flex items-center justify-between">
                         <div>
                             <h6 class="font-black text-xl tracking-tight">${esc(s.name)}</h6>

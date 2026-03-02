@@ -50,7 +50,11 @@ function platformCheckAuth() {
 }
 
 function platformLogout() {
-    unset($_SESSION['platform_admin'], $_SESSION['platform_admin_id'], $_SESSION['platform_admin_name']);
+    // Fix: Properly destroy the entire session, not just unset keys
+    unset($_SESSION['platform_admin'], $_SESSION['platform_admin_id'], $_SESSION['platform_admin_name'], $_SESSION['platform_admin_role']);
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
     jsonSuccess(null, 'تم تسجيل الخروج');
 }
 
@@ -213,14 +217,14 @@ function deleteSchool() {
     $db->beginTransaction();
 
     try {
-        // We delete strictly based on school_id where it matters
-        // 1. Delete deeply nested related data that rely on students, users, matches, etc.
-        $db->query("DELETE match_media FROM match_media INNER JOIN matches ON match_media.match_id = matches.id INNER JOIN tournaments ON matches.tournament_id = tournaments.id WHERE tournaments.school_id = $id");
-        $db->query("DELETE match_events FROM match_events INNER JOIN matches ON match_events.match_id = matches.id INNER JOIN tournaments ON matches.tournament_id = tournaments.id WHERE tournaments.school_id = $id");
-        $db->query("DELETE student_team_members FROM student_team_members INNER JOIN students ON student_team_members.student_id = students.id WHERE students.school_id = $id");
-        $db->query("DELETE tournament_player_stats FROM tournament_player_stats INNER JOIN tournaments ON tournament_player_stats.tournament_id = tournaments.id WHERE tournaments.school_id = $id");
+        // Fix: Use prepared statements instead of $id interpolation in SQL
+        // 1. Delete deeply nested related data
+        $db->prepare("DELETE mm FROM match_media mm INNER JOIN matches m ON mm.match_id = m.id INNER JOIN tournaments t ON m.tournament_id = t.id WHERE t.school_id = ?")->execute([$id]);
+        $db->prepare("DELETE me FROM match_events me INNER JOIN matches m ON me.match_id = m.id INNER JOIN tournaments t ON m.tournament_id = t.id WHERE t.school_id = ?")->execute([$id]);
+        $db->prepare("DELETE stm FROM student_team_members stm INNER JOIN students s ON stm.student_id = s.id WHERE s.school_id = ?")->execute([$id]);
+        $db->prepare("DELETE tps FROM tournament_player_stats tps INNER JOIN tournaments t ON tps.tournament_id = t.id WHERE t.school_id = ?")->execute([$id]);
         
-        // 2. Delete main modules data
+        // 2. Delete main modules data using prepared statements
         $tablesWithSchoolId = [
             'activity_log', 'attendance', 'badges', 'class_points', 'classes', 'fitness_criteria',
             'fitness_tests', 'grades', 'matches', 'notifications', 'parent_students', 'parents', 
@@ -231,17 +235,16 @@ function deleteSchool() {
         ];
 
         foreach ($tablesWithSchoolId as $table) {
-            // Check if column school_id actually exists in that table to avoid SQL error via try-catch or safe query
+            // Fix: Use prepared statement for each table delete
             try {
-                $db->exec("DELETE FROM `$table` WHERE school_id = $id");
+                $db->prepare("DELETE FROM `$table` WHERE school_id = ?")->execute([$id]);
             } catch (PDOException $e) {
-                // If the table doesn't have school_id, it will fail but we silently ignore since not all tables might have it explicitly
+                // Some tables may not have school_id column - silently skip
             }
         }
 
         // 3. Delete the School Row itself
-        $stmt = $db->prepare("DELETE FROM schools WHERE id = ?");
-        $stmt->execute([$id]);
+        $db->prepare("DELETE FROM schools WHERE id = ?")->execute([$id]);
 
         $db->commit();
         jsonSuccess(null, 'تم مسح مدرسة وبياناتها بالكامل من النظام');

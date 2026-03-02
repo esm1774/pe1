@@ -208,8 +208,9 @@ async function generateParentStudentReport(sid) {
 
 function renderStudentReportHTML(d, container) {
     const s = d.student;
-    const m = d.measurement;
-    const h = d.health || [];
+    // Fix #5: API returns 'latestMeasurement' not 'measurement'
+    const m = d.latestMeasurement || d.measurement || null;
+    const h = d.health || d.healthConditions || [];
     const att = d.attendance;
 
     container.innerHTML = `
@@ -642,18 +643,60 @@ async function sendReportEmail(elementId, title) {
         return;
     }
 
-    const email = prompt("أدخل البريد الإلكتروني الذي ترغب بإرسال تقرير الـ PDF إليه:");
-    if (!email || email.trim() === '') return;
+    // Fix #17: Replace browser prompt() with a proper in-app modal
+    showModal(`
+        <div class="p-8 md:p-10">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-16 h-16 rounded-[1.5rem] bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl">📧</div>
+                <div>
+                    <h3 class="text-2xl font-black text-gray-800">إرسال التقرير عبر البريد</h3>
+                    <p class="text-gray-400 font-bold text-sm">${esc(title)}</p>
+                </div>
+            </div>
+            <div class="space-y-2 mb-8">
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">البريد الإلكتروني للمستلم</label>
+                <input type="email" id="reportEmailInput"
+                    class="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 focus:outline-none transition-all font-bold text-gray-700 text-sm"
+                    placeholder="example@school.edu.sa"
+                    onkeydown="if(event.key==='Enter') _doSendReport('${esc(elementId)}','${esc(title)}')"
+                >
+            </div>
+            <div class="flex gap-4">
+                <button onclick="_doSendReport('${esc(elementId)}','${esc(title)}')" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-3">
+                    <span class="text-xl">📧</span> إرسال PDF
+                </button>
+                <button onclick="closeModal()" class="w-32 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black hover:bg-gray-200 transition">إلغاء</button>
+            </div>
+        </div>
+    `);
+    // Auto-focus the email input
+    setTimeout(() => {
+        const inp = document.getElementById('reportEmailInput');
+        if (inp) inp.focus();
+    }, 100);
+}
 
-    // Validate email format basic check
+/**
+ * Internal: performs the actual PDF generation and email send
+ * Called from the email modal above
+ */
+async function _doSendReport(elementId, title) {
+    const emailInput = document.getElementById('reportEmailInput');
+    const email = emailInput ? emailInput.value.trim() : '';
+
+    if (!email) {
+        showToast('الرجاء إدخال البريد الإلكتروني', 'error');
+        return;
+    }
     if (!email.includes('@') || !email.includes('.')) {
-        showToast('البريد الإلكتروني المدخل غير صالح.', 'error');
+        showToast('البريد الإلكتروني غير صالح', 'error');
         return;
     }
 
+    const element = document.getElementById(elementId);
+    closeModal();
     showToast('جاري تجهيز التقرير كملف PDF... يرجى الانتظار⏳', 'info');
 
-    // Make sure we have enough time to render
     const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
         filename: `${title}.pdf`,
@@ -669,7 +712,7 @@ async function sendReportEmail(elementId, title) {
         showToast('جاري الإرسال عبر البريد الإلكتروني... 📧', 'info');
 
         const r = await API.post('send_report_email', {
-            email: email.trim(),
+            email: email,
             pdfData: pdfBase64,
             title: title
         });

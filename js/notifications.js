@@ -28,8 +28,13 @@ async function renderNotifications() {
 
         <div class="space-y-4">
             ${notifications.map(n => `
-            <div class="relative bg-white p-5 rounded-2xl shadow-sm border ${n.is_read ? 'border-gray-100 opacity-75' : 'border-blue-200 bg-blue-50/30'} transition-all hover:shadow-md cursor-pointer" 
-                 onclick="handleNotificationClick(${n.id}, ${n.is_read}, '${n.type}', ${n.student_id || 'null'})">
+            <!-- Fix #3: Use data-* attributes instead of raw data in onclick to prevent XSS -->
+            <div class="relative bg-white p-5 rounded-2xl shadow-sm border ${n.is_read ? 'border-gray-100 opacity-75' : 'border-blue-200 bg-blue-50/30'} transition-all hover:shadow-md cursor-pointer notif-item"
+                 data-id="${n.id}"
+                 data-read="${n.is_read ? '1' : '0'}"
+                 data-type="${esc(n.type)}"
+                 data-student="${n.student_id || ''}"
+                 onclick="handleNotificationItemClick(this)">
                 <div class="flex items-start gap-4">
                     <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-2xl ${getNotifColor(n.type)}">
                         ${getNotifIcon(n.type)}
@@ -72,6 +77,15 @@ function getNotifColor(type) {
         case 'health': return 'bg-red-100 text-red-600';
         default: return 'bg-blue-100 text-blue-600';
     }
+}
+
+// Fix #3: New handler reads from data-* attributes safely
+function handleNotificationItemClick(el) {
+    const id = parseInt(el.dataset.id);
+    const isRead = el.dataset.read === '1';
+    const type = el.dataset.type;
+    const studentId = el.dataset.student ? parseInt(el.dataset.student) : null;
+    handleNotificationClick(id, isRead, type, studentId);
 }
 
 async function handleNotificationClick(id, isRead, type, studentId) {
@@ -123,6 +137,14 @@ function startNotificationPolling() {
     notifPollInterval = setInterval(updateNotificationBadge, 30000); // Every 30 seconds
 }
 
+// Fix #9: Stop polling on logout to prevent requests after session ends
+function stopNotificationPolling() {
+    if (notifPollInterval) {
+        clearInterval(notifPollInterval);
+        notifPollInterval = null;
+    }
+}
+
 async function updateNotificationBadge() {
     if (!isParent()) return;
     const r = await API.get('notification_unread_count');
@@ -140,6 +162,7 @@ async function updateNotificationBadge() {
     }
 }
 
+// Fix #14: Extended to show weeks/months instead of jumping to full date after 7 days
 function formatRelativeTime(dateStr) {
     const date = new Date(dateStr.replace(/-/g, '/'));
     const now = new Date();
@@ -149,6 +172,8 @@ function formatRelativeTime(dateStr) {
     if (diff < 3600) return `${Math.floor(diff / 60)} دقيقة`;
     if (diff < 86400) return `${Math.floor(diff / 3600)} ساعة`;
     if (diff < 604800) return `${Math.floor(diff / 86400)} يوم`;
+    if (diff < 2592000) return `${Math.floor(diff / 604800)} أسبوع`;
+    if (diff < 31536000) return `${Math.floor(diff / 2592000)} شهر`;
 
     return date.toLocaleDateString('ar-SA');
 }

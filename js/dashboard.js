@@ -88,13 +88,14 @@ async function renderDashboard() {
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 ترتيب الفصول</h3>
                 <div class="space-y-3">
-                    ${ranking.map((r, i) => `
+                    ${/* Fix #11: Renamed 'r' → 'rank' to avoid shadowing outer API result variable */
+        ranking.map((rank, i) => `
                         <div class="flex items-center gap-3 p-3 rounded-xl ${i === 0 ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'}">
                             <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'bg-gray-300 text-white'}">${i + 1}</span>
                             <div class="flex-1">
-                                <p class="font-semibold text-gray-800">${esc(r.class_name)}</p>
+                                <p class="font-semibold text-gray-800">${esc(rank.class_name)}</p>
                             </div>
-                            <span class="font-bold text-lg ${i === 0 ? 'text-yellow-600' : 'text-gray-600'}">${r.avg_score}</span>
+                            <span class="font-bold text-lg ${i === 0 ? 'text-yellow-600' : 'text-gray-600'}">${rank.avg_score}</span>
                         </div>
                     `).join('')}
                     ${ranking.length === 0 ? '<p class="text-gray-400 text-center py-4">لا توجد بيانات</p>' : ''}
@@ -113,13 +114,13 @@ async function renderDashboard() {
                     </div>
                     <div class="space-y-3">
                         ${d.todayTimetable.map(t => {
-        // Check if active: serverTime is between start_time and end_time
-        const now = d.serverTime;
-        const start = t.start_time ? t.start_time.substring(0, 5) : null;
-        const end = t.end_time ? t.end_time.substring(0, 5) : null;
-        const isActive = (start && end && now >= start && now <= end);
+            // Check if active: serverTime is between start_time and end_time
+            const now = d.serverTime;
+            const start = t.start_time ? t.start_time.substring(0, 5) : null;
+            const end = t.end_time ? t.end_time.substring(0, 5) : null;
+            const isActive = (start && end && now >= start && now <= end);
 
-        return `
+            return `
                             <div class="flex items-center justify-between p-3 rounded-xl border transition-all ${isActive ? 'bg-indigo-50 border-indigo-200 ring-2 ring-indigo-500/10 shadow-md scale-[1.02]' : 'bg-gray-50 border-gray-100 opacity-80'}">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border ${isActive ? 'bg-indigo-600 text-white border-indigo-600 animate-pulse' : 'bg-white text-indigo-600 border-indigo-100'}">
@@ -138,7 +139,7 @@ async function renderDashboard() {
                                 </div>
                             </div>
                             `;
-    }).join('')}
+        }).join('')}
                     </div>
                 </div>
                 ` : `

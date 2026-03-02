@@ -75,8 +75,14 @@ function uploadSchoolLogo() {
 
     $file = $_FILES['logo'];
     $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!in_array($file['type'], $allowed)) {
-        jsonError('نوع الملف غير مدعوم. يرجى اختيار صورة (JPG, PNG, WEBP).');
+
+    // Fix: Use finfo to detect the REAL content type (MIME from browser is spoofable)
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $realMime = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+
+    if (!in_array($realMime, $allowed)) {
+        jsonError('نوع الملف غير مدعوم. يرجى اختيار صورة (جيبيج, PNG, WEBP).');
     }
 
     // Limit size to 2MB

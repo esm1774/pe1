@@ -18,13 +18,18 @@ function sendReportEmail() {
     
     $pdfData = $data['pdfData'];
     $title = isset($data['title']) ? sanitize($data['title']) : 'تقرير الأداء البدني والرياضي';
-    
+
+    // Fix: Limit PDF size (max 5MB base64 = ~6.8MB raw)
+    if (strlen($pdfData) > 7 * 1024 * 1024) {
+        jsonError('حجم التقرير كبير جداً. الحد الأقصى 5 ميجابايت');
+    }
+
     // Clean base64 string
     // Format expected: "data:application/pdf;base64,JVBERi..."
     if (strpos($pdfData, 'data:application/pdf;base64,') === 0) {
         $pdfData = substr($pdfData, strpos($pdfData, ',') + 1);
     }
-    
+
     $decodedPdf = base64_decode($pdfData);
     if ($decodedPdf === false) {
         jsonError('بيانات الملف التقرير (PDF) تالفة أو غير صالحة');

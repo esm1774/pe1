@@ -120,11 +120,22 @@ function deleteGrade() {
     if (!$id) jsonError('معرّف غير صالح');
     $db = getDB();
     $sid = schoolId();
+
+    // Fix #4: Cascade-deactivate students in classes belonging to this grade
+    // This prevents orphaned active students after grade deletion
+    $sql = "UPDATE students SET active = 0 WHERE class_id IN (SELECT id FROM classes WHERE grade_id = ?)";
+    $params = [$id];
+    $db->prepare($sql)->execute($params);
+
+    // Deactivate all classes in this grade
+    $db->prepare("UPDATE classes SET active = 0 WHERE grade_id = ?")->execute([$id]);
+
+    // Deactivate the grade itself
     $sql = "UPDATE grades SET active = 0 WHERE id = ?";
     $params = [$id];
     if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
     $db->prepare($sql)->execute($params);
-    $db->prepare("UPDATE classes SET active = 0 WHERE grade_id = ?")->execute([$id]);
+
     logActivity('delete', 'grade', $id);
     jsonSuccess(null, 'تم حذف الصف');
 }

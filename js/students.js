@@ -75,7 +75,8 @@ async function renderStudents() {
                     <label class="block text-[8px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mr-1 mb-1.5">البحث الذكي</label>
                     <div class="relative group">
                         <span class="absolute right-4 top-1/2 -translate-y-1/2 text-lg group-focus-within:scale-110 transition-transform">🔍</span>
-                        <input type="text" onkeyup="studentFilter.search=this.value;clearTimeout(window._st);window._st=setTimeout(()=>renderStudents(),400)" value="${studentFilter.search}" class="w-full bg-gray-50 pr-12 pl-4 py-3.5 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:outline-none font-bold rounded-xl text-sm transition-all shadow-inner" placeholder="ابحث باسم الطالب، رقم القيد...">
+                        <!-- Fix #12: Renamed _st → _studentSearchTimer to avoid global naming collision -->
+                        <input type="text" onkeyup="studentFilter.search=this.value;clearTimeout(window._studentSearchTimer);window._studentSearchTimer=setTimeout(()=>renderStudents(),400)" value="${studentFilter.search}" class="w-full bg-gray-50 pr-12 pl-4 py-3.5 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:outline-none font-bold rounded-xl text-sm transition-all shadow-inner" placeholder="ابحث باسم الطالب، رقم القيد...">
                     </div>
                 </div>
             </div>

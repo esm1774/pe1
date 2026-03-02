@@ -63,31 +63,46 @@ function getCompetition() {
         $classId = $student ? $student['class_id'] : null;
 
         if ($classId) {
-            // Student's school-wide rank
-            $schoolRanking = $db->query("
-                SELECT s.id, ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score
-                FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
-                WHERE s.active = 1 $studentSchoolFilter GROUP BY s.id ORDER BY avg_score DESC
-            ")->fetchAll();
-            
-            $schoolRank = 0;
-            foreach ($schoolRanking as $index => $r) {
-                if ($r['id'] == $targetStudentId) { $schoolRank = $index + 1; break; }
-            }
-
-            // Student's class rank
-            $classRankingList = $db->prepare("
-                SELECT s.id, ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score
-                FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
-                WHERE s.class_id = ? AND s.active = 1 GROUP BY s.id ORDER BY avg_score DESC
+            // Fix #8: Calculate school rank with a single efficient SQL query instead of PHP loop
+            $rankStmt = $db->prepare("
+                SELECT COUNT(*) + 1 as school_rank,
+                       (SELECT COUNT(*) FROM students WHERE active = 1" . ($sid ? " AND school_id = ?" : "") . ") as total_in_school
+                FROM (
+                    SELECT s.id, COALESCE(AVG(sf.score), 0) as avg_score
+                    FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
+                    WHERE s.active = 1" . ($sid ? " AND s.school_id = ?" : "") . "
+                    GROUP BY s.id
+                ) ranked
+                WHERE avg_score > (
+                    SELECT COALESCE(AVG(sf2.score), 0)
+                    FROM student_fitness sf2 WHERE sf2.student_id = ?
+                )
             ");
-            $classRankingList->execute([$classId]);
-            $classStudents = $classRankingList->fetchAll();
+            $rankParams = $sid ? [$sid, $sid, $targetStudentId] : [$targetStudentId];
+            $rankStmt->execute($rankParams);
+            $rankData = $rankStmt->fetch();
+            $schoolRank = (int)($rankData['school_rank'] ?? 0);
+            $totalInSchool = (int)($rankData['total_in_school'] ?? 0);
 
-            $classRank = 0;
-            foreach ($classStudents as $index => $r) {
-                if ($r['id'] == $targetStudentId) { $classRank = $index + 1; break; }
-            }
+            // Fix #8: Calculate class rank efficiently
+            $classRankStmt = $db->prepare("
+                SELECT COUNT(*) + 1 as class_rank,
+                       (SELECT COUNT(*) FROM students WHERE class_id = ? AND active = 1) as total_in_class
+                FROM (
+                    SELECT s.id, COALESCE(AVG(sf.score), 0) as avg_score
+                    FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
+                    WHERE s.class_id = ? AND s.active = 1
+                    GROUP BY s.id
+                ) ranked
+                WHERE avg_score > (
+                    SELECT COALESCE(AVG(sf2.score), 0)
+                    FROM student_fitness sf2 WHERE sf2.student_id = ?
+                )
+            ");
+            $classRankStmt->execute([$classId, $classId, $targetStudentId]);
+            $classRankData = $classRankStmt->fetch();
+            $classRank = (int)($classRankData['class_rank'] ?? 0);
+            $totalInClass = (int)($classRankData['total_in_class'] ?? 0);
 
             // Top 3 in student's class
             $stmt = $db->prepare("
@@ -99,13 +114,13 @@ function getCompetition() {
             $classTop3 = $stmt->fetchAll();
 
             $studentData = [
-                'studentId' => $targetStudentId,
-                'schoolRank' => $schoolRank,
-                'classRank' => $classRank,
-                'classId' => $classId,
-                'classTop3' => $classTop3,
-                'totalInSchool' => count($schoolRanking),
-                'totalInClass' => count($classStudents)
+                'studentId'    => $targetStudentId,
+                'schoolRank'   => $schoolRank,
+                'classRank'    => $classRank,
+                'classId'      => $classId,
+                'classTop3'    => $classTop3,
+                'totalInSchool'=> $totalInSchool,
+                'totalInClass' => $totalInClass
             ];
         }
     }

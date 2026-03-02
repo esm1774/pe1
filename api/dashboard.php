@@ -23,8 +23,9 @@ function getDashboard() {
         $classParams  = [];
         $cFilterWhere = 'WHERE c.active = 1';
         if ($sid) {
-            $classFilter  = "AND s.school_id = $sid";
-            $cFilterWhere = "WHERE c.active = 1 AND c.school_id = $sid";
+            // Fix: Store sid for parameterized use, not raw interpolation
+            $classFilter  = "AND s.school_id = ?";
+            $cFilterWhere = "WHERE c.active = 1 AND c.school_id = ?";
         }
     } elseif (empty($teacherClassIds)) {
         // Teacher with no assigned classes → return empty dashboard
@@ -43,13 +44,18 @@ function getDashboard() {
 
     // ── Total Students ─────────────────────────────────────────────────
     if ($teacherClassIds === null) {
+        // Fix: Use prepared statements for school_id filters
         $sql = "SELECT COUNT(*) FROM students WHERE active = 1";
-        if ($sid) $sql .= " AND school_id = $sid";
-        $totalStudents = $db->query($sql)->fetchColumn();
+        $countParams = [];
+        if ($sid) { $sql .= " AND school_id = ?"; $countParams[] = $sid; }
+        $s = $db->prepare($sql); $s->execute($countParams);
+        $totalStudents = $s->fetchColumn();
 
         $sql = "SELECT COUNT(*) FROM classes WHERE active = 1";
-        if ($sid) $sql .= " AND school_id = $sid";
-        $totalClasses = $db->query($sql)->fetchColumn();
+        $countParams2 = [];
+        if ($sid) { $sql .= " AND school_id = ?"; $countParams2[] = $sid; }
+        $s = $db->prepare($sql); $s->execute($countParams2);
+        $totalClasses = $s->fetchColumn();
     } else {
         $ph = implode(',', array_fill(0, count($teacherClassIds), '?'));
         $stmt = $db->prepare("SELECT COUNT(*) FROM students WHERE active = 1 AND class_id IN ($ph)");
@@ -108,17 +114,22 @@ function getDashboard() {
     } catch (Exception $e) {}
 
     // ── Class ranking ──────────────────────────────────────────────────
-    $schoolFilter = $sid ? "AND c.school_id = $sid" : "";
+    // Fix: Use parameterized query for school filter
     if ($teacherClassIds === null) {
-        $ranking = $db->query("
+        $rankSql = "
             SELECT c.id as class_id, CONCAT(g.name, ' - ', c.name) as class_name,
                    COUNT(DISTINCT s.id) as students_count,
                    ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score
             FROM classes c JOIN grades g ON c.grade_id = g.id
             LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
             LEFT JOIN student_fitness sf ON sf.student_id = s.id
-            WHERE c.active = 1 $schoolFilter GROUP BY c.id ORDER BY avg_score DESC LIMIT 5
-        ")->fetchAll();
+            WHERE c.active = 1";
+        $rankParams = [];
+        if ($sid) { $rankSql .= " AND c.school_id = ?"; $rankParams[] = $sid; }
+        $rankSql .= " GROUP BY c.id ORDER BY avg_score DESC LIMIT 5";
+        $rankStmt = $db->prepare($rankSql);
+        $rankStmt->execute($rankParams);
+        $ranking = $rankStmt->fetchAll();
     } else {
         $ph      = implode(',', array_fill(0, count($teacherClassIds), '?'));
         $stmt    = $db->prepare("
@@ -136,15 +147,20 @@ function getDashboard() {
     }
 
     // ── Top student ────────────────────────────────────────────────────
+    // Fix: Use parameterized query for school filter
     if ($teacherClassIds === null) {
-        $topStudent = $db->query("
+        $topSql = "
             SELECT s.id, s.name, CONCAT(g.name, ' - ', c.name) as class_name,
                    ROUND(AVG(sf.score), 2) as avg_score
             FROM students s JOIN student_fitness sf ON sf.student_id = s.id
             JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
-            WHERE s.active = 1 " . ($sid ? "AND s.school_id = $sid" : "") . "
-            GROUP BY s.id ORDER BY avg_score DESC LIMIT 1
-        ")->fetch();
+            WHERE s.active = 1";
+        $topParams = [];
+        if ($sid) { $topSql .= " AND s.school_id = ?"; $topParams[] = $sid; }
+        $topSql .= " GROUP BY s.id ORDER BY avg_score DESC LIMIT 1";
+        $topStmt = $db->prepare($topSql);
+        $topStmt->execute($topParams);
+        $topStudent = $topStmt->fetch();
     } else {
         $ph   = implode(',', array_fill(0, count($teacherClassIds), '?'));
         $stmt = $db->prepare("

@@ -10,10 +10,14 @@ function getParents() {
     requireRole(['admin']);
     $db = getDB();
     $sid = schoolId();
+    // Fix: Use prepared statement instead of string interpolation
     $sql = "SELECT id, username, name, email, phone, active, last_login, created_at FROM parents WHERE 1=1";
-    if ($sid) $sql .= " AND school_id = $sid";
+    $params = [];
+    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
     $sql .= " ORDER BY created_at DESC";
-    $parents = $db->query($sql)->fetchAll();
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $parents = $stmt->fetchAll();
     
     // For each parent, get count of linked students
     foreach ($parents as &$p) {
@@ -128,11 +132,13 @@ function searchStudentsForLinking() {
         JOIN classes c ON s.class_id = c.id
         JOIN grades g ON c.grade_id = g.id
         WHERE (s.name LIKE ? OR s.student_number LIKE ?) AND s.active = 1";
-    if ($sid) $sql .= " AND s.school_id = $sid";
-    $sql .= " LIMIT 10";
     $searchTerm = "%$query%";
+    $sqlParams = [$searchTerm, $searchTerm];
+    // Fix: Use prepared statement instead of string interpolation
+    if ($sid) { $sql .= " AND s.school_id = ?"; $sqlParams[] = $sid; }
+    $sql .= " LIMIT 10";
     $stmt = $db->prepare($sql);
-    $stmt->execute([$searchTerm, $searchTerm]);
+    $stmt->execute($sqlParams);
     jsonSuccess($stmt->fetchAll());
 }
 

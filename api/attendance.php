@@ -61,11 +61,18 @@ function saveAttendance() {
     $stmt = $db->prepare("INSERT INTO attendance (student_id, attendance_date, status, recorded_by)
         VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status = VALUES(status), recorded_by = VALUES(recorded_by), updated_at = NOW()");
 
+    // Fix #6: Whitelist valid status values to prevent data corruption
+    $validStatuses = ['present', 'absent', 'late', 'excused'];
+
     $db->beginTransaction();
     try {
         foreach ($records as $record) {
             $studentId = (int)$record['student_id'];
             $status = sanitize($record['status']);
+
+            // Skip invalid status values
+            if (!in_array($status, $validStatuses)) continue;
+
             $stmt->execute([$studentId, $date, $status, $_SESSION['user_id']]);
 
             // Trigger Notifications for Absent/Late
@@ -98,15 +105,17 @@ function getAbsenceReport() {
     $sid = schoolId();
 
     if ($teacherClassIds === null) {
-        // Admin: all students (scoped to school)
+        // Fix #10: Use prepared statements for school_id filter
         $sql = "
             SELECT s.id, s.name, CONCAT(g.name, ' - ', c.name) as class_name, COUNT(a.id) as absent_count
             FROM students s JOIN attendance a ON a.student_id = s.id AND a.status = 'absent'
             JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
             WHERE s.active = 1";
-        if ($sid) $sql .= " AND s.school_id = $sid";
+        $params = [];
+        if ($sid) { $sql .= " AND s.school_id = ?"; $params[] = $sid; }
         $sql .= " GROUP BY s.id ORDER BY absent_count DESC LIMIT 20";
-        $stmt = $db->query($sql);
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
     } elseif (empty($teacherClassIds)) {
         jsonSuccess([]);
         return;

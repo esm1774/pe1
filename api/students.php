@@ -174,7 +174,6 @@ function deleteStudent() {
 }
 
 /**
-/**
  * Import Students from CSV/Excel - VERSION CORRIGEE (Memory-Efficient)
  */
 function importStudents() {
@@ -264,11 +263,11 @@ function importStudents() {
     
     // Validate required fields
     if (!isset($fieldIndex['name'])) {
-        fclose($handle);
+        if ($handle) fclose($handle); // Fix #2: only fclose if it's a CSV handle
         jsonError('عمود "اسم الطالب" مطلوب في الملف. الأعمدة الموجودة: ' . implode(', ', $header));
     }
     if (!isset($fieldIndex['student_number'])) {
-        fclose($handle);
+        if ($handle) fclose($handle); // Fix #2: only fclose if it's a CSV handle
         jsonError('عمود "رقم الطالب" مطلوب في الملف. الأعمدة الموجودة: ' . implode(', ', $header));
     }
     

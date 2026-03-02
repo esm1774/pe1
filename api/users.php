@@ -7,10 +7,14 @@
 function getUsers() {
     requireRole(['admin']);
     $sid = schoolId();
+    // Fix #10: Use prepared statement instead of direct interpolation
     $sql = "SELECT id, username, name, role, active, last_login, created_at FROM users WHERE active = 1";
-    if ($sid) $sql .= " AND school_id = $sid";
+    $params = [];
+    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
     $sql .= " ORDER BY id";
-    jsonSuccess(getDB()->query($sql)->fetchAll());
+    $stmt = getDB()->prepare($sql);
+    $stmt->execute($params);
+    jsonSuccess($stmt->fetchAll());
 }
 
 function saveUser() {
@@ -25,6 +29,11 @@ function saveUser() {
     $password = $data['password'] ?? '';
     $sid      = schoolId();
     if (!in_array($role, ['admin', 'teacher', 'viewer', 'supervisor'])) jsonError('دور غير صالح');
+
+    // Fix #5: Prevent role privilege escalation - only the first admin (id=1) can assign admin role
+    if ($role === 'admin' && ($_SESSION['user_id'] ?? 0) != 1) {
+        jsonError('لا تملك صلاحية إنشاء مستخدم بدور مدير');
+    }
 
     // Duplicate check scoped to school
     $dupSql = "SELECT id FROM users WHERE username = ? AND id != ?";

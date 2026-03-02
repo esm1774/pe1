@@ -119,8 +119,24 @@ function getStudentProfile() {
 // ============================================================
 function getMeasurements() {
     requireLogin();
-    $studentId = getParam('student_id');
+    $studentId = (int)getParam('student_id');
     if (!$studentId) jsonError('يجب تحديد الطالب');
+    
+    $role = $_SESSION['user_role'] ?? '';
+    $uid  = $_SESSION['user_id'] ?? 0;
+    
+    // Fix: Enforce authorization — students can only see their own measurements
+    if ($role === 'student' && $uid != $studentId) {
+        jsonError('غير مصرح لك بمشاهدة هذه البيانات', 403);
+    }
+    // Fix: Parents can only see their linked children
+    if ($role === 'parent') {
+        $db = getDB();
+        $chk = $db->prepare("SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?");
+        $chk->execute([$uid, $studentId]);
+        if (!$chk->fetch()) jsonError('غير مصرح لك بمشاهدة بيانات هذا الطالب', 403);
+    }
+    
     $db = getDB();
     $stmt = $db->prepare("SELECT * FROM student_measurements WHERE student_id = ? ORDER BY measurement_date DESC");
     $stmt->execute([$studentId]);

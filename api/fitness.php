@@ -60,6 +60,10 @@ function deleteFitnessTest() {
 // ============================================================
 function getFitnessResults() {
     requireLogin();
+    // Fix #1: Retrieve parameters before using them (were undefined before)
+    $classId = (int)getParam('class_id');
+    $testId  = (int)getParam('test_id');
+
     if (!$classId || !$testId) jsonError('يجب تحديد الفصل والاختبار');
     
     // SaaS Isolation
@@ -138,9 +142,9 @@ function saveFitnessResults() {
             $msg = "تم رصد نتيجة الطالب ({$studentName}) في اختبار ({$testName}) بقيمة ({$r['value']}) ودرجة ({$r['score']}).";
             notifyStudentParents($studentId, 'fitness', $title, $msg);
 
-            // Trigger Auto-Badges check
+            // Fix #9: Corrected path using __DIR__
             try {
-                include_once 'api/badges.php';
+                include_once __DIR__ . '/badges.php';
                 checkAutoBadges($studentId);
             } catch (Exception $e) {}
         }

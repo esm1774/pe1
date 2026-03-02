@@ -80,7 +80,7 @@ async function loadAttendanceList() {
                     <th class="px-8 py-6 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">الطالب</th>
                     <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الصحة</th>
                     <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الحالة</th>
-                    <th class="px-8 py-6 text-center text-[10px) font-black text-gray-400 uppercase tracking-widest w-72">التحضير الرسمي</th>
+                    <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-72">التحضير الرسمي</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -204,7 +204,8 @@ async function saveAttendance() {
     });
 
     if (records.length === 0) {
-        showToast('يرجى تحضير الطلاب أولاً', 'warning');
+        // Fix #2: 'warning' is not a valid toast type; use 'info' instead
+        showToast('يرجى تحضير الطلاب أولاً', 'info');
         return;
     }
 

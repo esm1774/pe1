@@ -215,7 +215,10 @@ function ensureSchema() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     } catch (Exception $e) {
-        // Silent fail
+        // Fix: Log schema errors instead of silently ignoring them
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            error_log('[ensureSchema Error] ' . $e->getMessage());
+        }
     }
 }
 
@@ -413,13 +416,15 @@ try {
     if (DEBUG_MODE) jsonError('Logic Error (' . ($action ?? 'none') . '): ' . $e->getMessage(), 500);
     jsonError($e->getMessage(), 500);
 }
+
 /**
  * Public Plans List for Registration
  */
 function getPublicPlans() {
     $db = getDB();
-    $plans = $db->query("SELECT id, name, slug, price_monthly, max_students, max_teachers, max_classes FROM plans ORDER BY sort_order")->fetchAll();
-    jsonSuccess($plans);
+    $plans = $db->prepare("SELECT id, name, slug, price_monthly, max_students, max_teachers, max_classes FROM plans ORDER BY sort_order");
+    $plans->execute();
+    jsonSuccess($plans->fetchAll());
 }
 
 /**
@@ -429,19 +434,24 @@ function registerSchool() {
     $data = getPostData();
     validateRequired($data, ['name', 'slug', 'admin_username', 'admin_password']);
     
+    // Fix: Enforce minimum password strength
+    $adminPass = $data['admin_password'];
+    if (strlen($adminPass) < 8) {
+        jsonError('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+    }
+
     $db = getDB();
     $name = sanitize($data['name']);
     $slug = strtolower(sanitize($data['slug']));
     $adminName = sanitize($data['admin_name'] ?? ('مدير ' . $name));
     $adminEmail = sanitize($data['admin_email'] ?? '');
     $adminUser = sanitize($data['admin_username']);
-    $adminPass = $data['admin_password'];
     $planId = !empty($data['plan_id']) ? (int)$data['plan_id'] : null;
 
     // Check slug uniqueness
     $stmt = $db->prepare("SELECT id FROM schools WHERE slug = ?");
     $stmt->execute([$slug]);
-    if ($stmt->fetch()) jsonError('المعرف الفريد (slug) مستخدم بالفعل، اختر اسماً آخر');
+    if ($stmt->fetch()) jsonError('المعرّف الفريد (slug) مستخدم بالفعل، اختر اسماً آخر');
 
     $db->beginTransaction();
     try {
@@ -477,4 +487,4 @@ function registerSchool() {
         jsonError('خطأ أثناء الإنشاء: ' . $e->getMessage());
     }
 }
-?>
+

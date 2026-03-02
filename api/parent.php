@@ -81,15 +81,16 @@ function linkChildrenByPhone() {
     
     if (!$phone) return jsonError('رقم الجوال غير مسجل في ملفك الشخصي');
 
-    // Find students with matching guardian phone (same school)
+    // Fix: Use prepared statement + parameterized school_id
     $sid = schoolId();
     $sql = "
         SELECT id FROM students 
         WHERE guardian_phone = ? 
         AND id NOT IN (SELECT student_id FROM parent_students WHERE parent_id = ?)";
-    if ($sid) $sql .= " AND school_id = $sid";
+    $sqlParams = [$phone, $parentId];
+    if ($sid) { $sql .= " AND school_id = ?"; $sqlParams[] = $sid; }
     $stmt = $db->prepare($sql);
-    $stmt->execute([$phone, $parentId]);
+    $stmt->execute($sqlParams);
     $studentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     if (empty($studentIds)) {
@@ -99,8 +100,9 @@ function linkChildrenByPhone() {
     $db->beginTransaction();
     try {
         $stmtInsert = $db->prepare("INSERT INTO parent_students (parent_id, student_id) VALUES (?, ?)");
-        foreach ($studentIds as $sid) {
-            $stmtInsert->execute([$parentId, $sid]);
+        // Fix: renamed loop variable from $sid to $studentId to avoid overwriting schoolId()
+        foreach ($studentIds as $studentId) {
+            $stmtInsert->execute([$parentId, $studentId]);
         }
         $db->commit();
         jsonSuccess(['linked_count' => count($studentIds)], 'تم ربط الأبناء بنجاح بناءً على رقم الجوال');

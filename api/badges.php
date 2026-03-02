@@ -8,11 +8,14 @@ function getBadges() {
     Subscription::requireFeature('badges');
     $db = getDB();
     $sid = schoolId();
+    // Fix: Use prepared statement instead of string interpolation
     $sql = "SELECT * FROM badges WHERE 1=1";
-    if ($sid) $sql .= " AND school_id = $sid";
+    $params = [];
+    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
     $sql .= " ORDER BY id ASC";
-    $badges = $db->query($sql)->fetchAll();
-    jsonSuccess($badges);
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    jsonSuccess($stmt->fetchAll());
 }
 
 function getStudentBadges() {
@@ -63,10 +66,12 @@ function awardBadge() {
         sanitize($data['notes'] ?? '')
     ]);
 
-    // Create notification for student/parent
+    // Fix: Correct include path using __DIR__
     try {
-        include_once 'api/notifications.php';
-        $badgeName = $db->query("SELECT name FROM badges WHERE id = " . (int)$data['badge_id'])->fetchColumn();
+        include_once __DIR__ . '/notifications.php';
+        $badgeName = $db->prepare("SELECT name FROM badges WHERE id = ?");
+        $badgeName->execute([(int)$data['badge_id']]);
+        $badgeName = $badgeName->fetchColumn();
         notifyStudentParents($data['student_id'], 'general', '🎉 وسام جديد!', "حصل ابنكم على وسام: $badgeName");
     } catch (Exception $e) {}
 
@@ -105,8 +110,12 @@ function saveBadge() {
     $sid = schoolId();
 
     if ($id) {
-        $stmt = $db->prepare("UPDATE badges SET name = ?, description = ?, icon = ?, color = ?, badge_type = ?, criteria_value = ? WHERE id = ?" . ($sid ? " AND school_id = $sid" : ""));
-        $stmt->execute([$name, $description, $icon, $color, $type, $criteriaValue, $id]);
+        // Fix: Use prepared statement — avoid appending $sid directly to SQL string
+        $sql = "UPDATE badges SET name = ?, description = ?, icon = ?, color = ?, badge_type = ?, criteria_value = ? WHERE id = ?";
+        $params = [$name, $description, $icon, $color, $type, $criteriaValue, $id];
+        if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
     } else {
         $stmt = $db->prepare("INSERT INTO badges (school_id, name, description, icon, color, badge_type, criteria_value) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([$sid, $name, $description, $icon, $color, $type, $criteriaValue]);
@@ -245,10 +254,12 @@ function awardBadgeInternal($studentId, $badgeId, $notes = '') {
     $stmt = $db->prepare("INSERT IGNORE INTO student_badges (student_id, badge_id, awarded_by, notes) VALUES (?, ?, ?, ?)");
     $stmt->execute([$studentId, $badgeId, null, $notes]);
 
-    // Notification
+    // Fix: Correct include path using __DIR__
     try {
-        include_once 'api/notifications.php';
-        $badgeName = $db->query("SELECT name FROM badges WHERE id = " . (int)$badgeId)->fetchColumn();
+        include_once __DIR__ . '/notifications.php';
+        $badgeNameStmt = $db->prepare("SELECT name FROM badges WHERE id = ?");
+        $badgeNameStmt->execute([(int)$badgeId]);
+        $badgeName = $badgeNameStmt->fetchColumn();
         notifyStudentParents($studentId, 'general', '🎊 وسام تلقائي جديد!', "ابنكم استحق وسام جديد: $badgeName ($notes)");
     } catch (Exception $e) {}
 }
