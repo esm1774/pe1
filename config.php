@@ -230,6 +230,10 @@ function requireRole($roles) {
         if ($sid && $user['school_id'] != $sid) {
             jsonError('محاولة وصول غير مصرح بها (تضارب في بيانات المدرسة)', 403);
         }
+
+        // NEW: Subscription enforcement
+        // This blocks all actions (POST/DELETE/Complex Views) if subscription is expired
+        Subscription::requireActive();
     }
 
     $roles = (array) $roles;

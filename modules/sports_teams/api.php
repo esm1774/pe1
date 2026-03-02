@@ -21,6 +21,9 @@ $action = getParam('action', '');
 // Resolve current tenant (school) context
 Tenant::resolve();
 
+// SaaS Check: Sports teams feature
+Subscription::requireFeature('sports_teams');
+
 try {
     // التأكد من وجود الجداول
     ensureSportsTeamsTables();

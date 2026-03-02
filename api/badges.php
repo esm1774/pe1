@@ -5,6 +5,7 @@
 
 function getBadges() {
     requireLogin();
+    Subscription::requireFeature('badges');
     $db = getDB();
     $sid = schoolId();
     $sql = "SELECT * FROM badges WHERE 1=1";

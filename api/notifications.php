@@ -8,6 +8,7 @@
  */
 function getNotifications() {
     $user = requireRole(['parent']);
+    Subscription::requireFeature('notifications');
     $db = getDB();
     
     $stmt = $db->prepare("

@@ -15,6 +15,9 @@ $action = getParam('action', $_POST['action'] ?? '');
 // Resolve current tenant (school) context
 Tenant::resolve();
 
+// SaaS Check: Tournaments feature
+Subscription::requireFeature('tournaments');
+
 // Ensure tournament tables exist
 ensureTournamentTables();
 

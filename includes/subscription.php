@@ -213,6 +213,21 @@ class Subscription {
             $info['current_classes'] = (int)$classes->fetchColumn();
             $info['is_active'] = self::isActive($schoolId);
 
+            // Calculate days left
+            $info['days_left'] = null;
+            $endDate = $info['subscription_status'] === 'trial' ? $info['trial_ends_at'] : $info['subscription_ends_at'];
+            if ($endDate) {
+                $diff = strtotime($endDate) - time();
+                $info['days_left'] = max(0, ceil($diff / (60 * 60 * 24)));
+            }
+            
+            // Decode features
+            if (!empty($info['plan_features'])) {
+                $info['features'] = json_decode($info['plan_features'], true);
+            } else {
+                $info['features'] = [];
+            }
+
             return $info;
         } catch (Exception $e) {
             return [];

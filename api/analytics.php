@@ -7,6 +7,7 @@
 
 function getAnalyticsDashboard() {
     requireLogin();
+    Subscription::requireFeature('reports');
     // Allow only managerial roles
     requireRole(['admin', 'supervisor']);
 
