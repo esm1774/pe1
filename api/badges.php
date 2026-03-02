@@ -18,6 +18,9 @@ function getStudentBadges() {
     requireLogin();
     $studentId = getParam('student_id');
     if (!$studentId) jsonError('يجب تحديد الطالب');
+    
+    // SaaS Isolation
+    requireOwnership('students', $studentId);
 
     $db = getDB();
     $stmt = $db->prepare("
@@ -36,6 +39,10 @@ function awardBadge() {
     requireRole(['admin', 'teacher', 'supervisor']);
     $data = getPostData();
     validateRequired($data, ['student_id', 'badge_id']);
+
+    // SaaS Isolation
+    requireOwnership('students', $data['student_id']);
+    requireOwnership('badges', $data['badge_id']);
 
     $db = getDB();
     
@@ -70,6 +77,9 @@ function revokeBadge() {
     requireRole(['admin', 'teacher']);
     $id = getParam('id');
     if (!$id) jsonError('يجب تحديد المعرف');
+    
+    // SaaS Isolation
+    requireOwnership('student_badges', $id);
 
     $db = getDB();
     $stmt = $db->prepare("DELETE FROM student_badges WHERE id = ?");
@@ -108,6 +118,9 @@ function deleteBadge() {
     requireRole(['admin']);
     $id = getParam('id');
     if (!$id) jsonError('يجب تحديد المعرف');
+
+    // SaaS Isolation
+    requireOwnership('badges', $id);
 
     $db = getDB();
     

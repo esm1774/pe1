@@ -60,10 +60,10 @@ function deleteFitnessTest() {
 // ============================================================
 function getFitnessResults() {
     requireLogin();
-    $classId = (int)getParam('class_id');
-    $testId  = (int)getParam('test_id');
-
     if (!$classId || !$testId) jsonError('يجب تحديد الفصل والاختبار');
+    
+    // SaaS Isolation
+    requireOwnership('fitness_tests', $testId);
     if (!canAccessClass($classId)) jsonError('لا تملك صلاحية الوصول لهذا الفصل', 403);
 
     $db = getDB();
@@ -103,6 +103,9 @@ function saveFitnessResults() {
     $records = $data['records'] ?? [];
 
     if (!$testId || empty($records)) jsonError('بيانات غير مكتملة');
+    
+    // SaaS Isolation
+    requireOwnership('fitness_tests', $testId);
     if ($classId && !canAccessClass($classId)) jsonError('لا تملك صلاحية تسجيل نتائج هذا الفصل', 403);
 
     $db   = getDB();
@@ -120,6 +123,10 @@ function saveFitnessResults() {
         foreach ($records as $r) {
             if (!isset($r['value']) || $r['value'] === '' || $r['value'] === null) continue;
             $studentId = (int)$r['student_id'];
+            
+            // Security: verify student belongs to school
+            if (!verifyOwnership('students', $studentId)) continue;
+
             $stmt->execute([$studentId, $testId, (float)$r['value'], (int)$r['score'], $today, $_SESSION['user_id']]);
 
             // Notify Parents
@@ -180,6 +187,9 @@ function getFitnessCriteria() {
     $testId = (int)getParam('test_id');
     if (!$testId) jsonError('يجب تحديد الاختبار');
     
+    // SaaS Isolation
+    requireOwnership('fitness_tests', $testId);
+
     $db = getDB();
     $stmt = $db->prepare("SELECT * FROM fitness_criteria WHERE test_id = ? ORDER BY min_value ASC");
     $stmt->execute([$testId]);
@@ -194,6 +204,9 @@ function saveFitnessCriteria() {
 
     if (!$testId) jsonError('بيانات غير مكتملة');
     
+    // SaaS Isolation
+    requireOwnership('fitness_tests', $testId);
+
     $db = getDB();
     $db->beginTransaction();
     try {

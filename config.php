@@ -223,6 +223,15 @@ function requireLogin() {
  */
 function requireRole($roles) {
     $user = requireLogin();
+    
+    // SaaS: Security check - ensure user's school matches the current tenant
+    if (Tenant::isSaasMode() && !Tenant::isPlatformAdmin()) {
+        $sid = schoolId();
+        if ($sid && $user['school_id'] != $sid) {
+            jsonError('محاولة وصول غير مصرح بها (تضارب في بيانات المدرسة)', 403);
+        }
+    }
+
     $roles = (array) $roles;
     if (!in_array($user['role'], $roles)) {
         jsonError('لا تملك صلاحية لهذا الإجراء', 403);
@@ -238,6 +247,8 @@ function canEdit() {
 }
 
 function isAdmin() {
+    // In SaaS mode, "admin" means school admin. 
+    // Super admins use Tenant::isPlatformAdmin()
     return isLoggedIn() && $_SESSION['user_role'] === 'admin';
 }
 
@@ -328,21 +339,25 @@ function validateRequired($data, $fields) {
 function getTeacherClassIds(): ?array {
     if (!isLoggedIn()) return [];
 
-    // Admin and Supervisor see everything
+    $sid = schoolId();
+    // Admin and Supervisor see everything in THEIR school
     if (isAdmin() || isSupervisor()) return null;
 
     try {
         $db = getDB();
-        $stmt = $db->prepare("
+        $sql = "
             SELECT tc.class_id
             FROM teacher_classes tc
+            INNER JOIN classes c ON tc.class_id = c.id
             WHERE tc.teacher_id = ?
               AND (tc.expires_at IS NULL OR tc.expires_at >= CURDATE())
-        ");
+        ";
+        if ($sid) $sql .= " AND c.school_id = $sid";
+        
+        $stmt = $db->prepare($sql);
         $stmt->execute([$_SESSION['user_id']]);
         return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
     } catch (Exception $e) {
-        // Table may not exist yet (before migration) - return null = no restriction
         return null;
     }
 }
@@ -357,10 +372,22 @@ function getTeacherClassIds(): ?array {
  */
 function canAccessClass(int $classId): bool {
     if (!isLoggedIn()) return false;
-    if (isAdmin()) return true;
+    
+    $sid = schoolId();
+    $db = getDB();
+
+    // 1. First, verify the class belongs to the current school
+    if ($sid) {
+        $stmt = $db->prepare("SELECT id FROM classes WHERE id = ? AND school_id = ? AND active = 1");
+        $stmt->execute([$classId, $sid]);
+        if (!$stmt->fetch()) return false;
+    }
+
+    // 2. Then check role-based access
+    if (isAdmin() || isSupervisor()) return true;
 
     $allowed = getTeacherClassIds();
-    if ($allowed === null) return true; // no restriction (legacy mode)
+    if ($allowed === null) return true; // session role fallback
     return in_array($classId, $allowed);
 }
 

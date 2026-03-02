@@ -156,6 +156,10 @@ function deleteStudent() {
     requireRole(['admin', 'teacher']);
     $id = getParam('id');
     if (!$id) jsonError('معرّف غير صالح');
+    
+    // SaaS Isolation
+    requireOwnership('students', $id);
+
     $db = getDB();
     // Validate the student belongs to an accessible class
     $student = $db->prepare("SELECT class_id FROM students WHERE id = ? AND active = 1");
