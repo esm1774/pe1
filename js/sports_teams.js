@@ -799,8 +799,6 @@ async function showTeamForm(id = null) {
     const classesR = await STAPI.get('available_classes');
     const classes = classesR?.data || [];
 
-    const usersR = await STAPI.get('available_students', { limit: 0 }).catch(() => ({ data: [] }));
-
     showModal(`
     <div class="p-6">
         <h3 class="text-xl font-bold mb-4">${team ? 'تعديل' : 'إنشاء'} فريق رياضي</h3>
@@ -883,25 +881,25 @@ async function showTeamForm(id = null) {
                           placeholder="وصف اختياري...">${team?.description || ''}</textarea>
             </div>
 
-            <div class="flex gap-3 pt-2">
-                <button onclick="saveTeam(${id || 'null'})" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 cursor-pointer">حفظ</button>
-                <button onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 cursor-pointer">إلغاء</button>
-            </div>
-        </div>
     </div>`);
+
+    // Ensure initial visibility state is correct
+    stToggleClassSelect();
 }
 
 function stToggleClassSelect() {
     const type = document.getElementById('tfType').value;
-    const isNew = !document.getElementById('tfTeamId')?.value; // Check hidden ID field
+    const isNew = !document.getElementById('tfTeamId')?.value;
 
-    document.getElementById('tfClassWrapper').classList.toggle('hidden', type !== 'class');
+    const classWrapper = document.getElementById('tfClassWrapper');
+    if (classWrapper) classWrapper.classList.toggle('hidden', type !== 'class');
 
-    // Only show student list during creation
+    // Only show manual student selection for 'class' or 'school' teams during creation
     const studentsWrapper = document.getElementById('tfStudentsWrapper');
     if (studentsWrapper) {
-        studentsWrapper.classList.toggle('hidden', type === 'mixed' || !isNew);
-        if (type !== 'mixed' && isNew) {
+        const shouldShow = isNew && (type === 'class' || type === 'school');
+        studentsWrapper.classList.toggle('hidden', !shouldShow);
+        if (shouldShow) {
             stLoadStudentsList();
         }
     }
@@ -922,12 +920,19 @@ async function stLoadStudentsList() {
     const params = {};
     if (type === 'class') params.class_id = classId;
 
+    console.log('Fetching students for', params, 'at', STAPI.base);
     const r = await STAPI.get('available_students', params);
+    console.log('Students Response:', r);
+
     const students = r?.data || [];
     window._stAvailableInForm = students;
 
     if (students.length === 0) {
-        list.innerHTML = '<p class="text-center text-gray-400 py-4 text-sm">لا يوجد طلاب متاحون</p>';
+        list.innerHTML = `
+            <div class="text-center py-4">
+                <p class="text-gray-400 text-sm">لا يوجد طلاب متاحون في هذا الفصل</p>
+                ${r?.debug ? `<p class="text-[8px] text-gray-300 mt-2">Debug: ${esc(JSON.stringify(r.debug))}</p>` : ''}
+            </div>`;
         return;
     }
 
@@ -962,6 +967,8 @@ function stUpdateSelCount() {
 }
 
 async function saveTeam(id) {
+    const studentIds = Array.from(document.querySelectorAll('.tf-student-cb:checked')).map(cb => cb.value);
+
     const data = {
         name: document.getElementById('tfName').value.trim(),
         sport_type: document.getElementById('tfSport').value,
@@ -970,9 +977,15 @@ async function saveTeam(id) {
         color: document.getElementById('tfColor').value,
         logo_emoji: document.getElementById('tfEmoji').value,
         description: document.getElementById('tfDesc').value.trim(),
-        student_ids: Array.from(document.querySelectorAll('.tf-student-cb:checked')).map(cb => cb.value)
+        student_ids: studentIds,
+        manual_selection: true // Flag to tell backend WE explicitly chose (even if 0)
     };
     if (!data.name) { showToast('أدخل اسم الفريق', 'error'); return; }
+
+    const wrapper = document.getElementById('tfStudentsWrapper');
+    if (!wrapper.classList.contains('hidden') && studentIds.length === 0) {
+        if (!confirm('لم يتم اختيار أي لاعب. هل تريد إنشاء فريق فارغ؟')) return;
+    }
 
     let r;
     if (id) { data.id = id; r = await STAPI.post('team_update', data); }

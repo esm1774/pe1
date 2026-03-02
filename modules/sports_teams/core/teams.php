@@ -140,8 +140,8 @@ function createTeam() {
         foreach ($studentIds as $sId) {
             $insert->execute([$teamId, $sId]);
         }
-    } elseif ($data['team_type'] === 'class' && !empty($data['class_id'])) {
-        // لو لم يتم تحديد طلاب يدوياً، وكان منتخب فصل، أضف طلاب الفصل تلقائياً (سلوك افتراضي قديم)
+    } elseif ($data['team_type'] === 'class' && !empty($data['class_id']) && empty($data['manual_selection'])) {
+        // لو لم يتم تحديد طلاب يدوياً، ولم يكن هناك علم manual_selection، أضف طلاب الفصل تلقائياً
         _autoAddClassStudents($teamId, $data['class_id']);
     }
 
@@ -347,7 +347,19 @@ function availableStudentsST() {
         LIMIT 100
     ");
     $stmt->execute($params);
-    jsonSuccess($stmt->fetchAll());
+    $results = $stmt->fetchAll();
+    
+    $response = ['success' => true, 'data' => $results];
+    if (defined('DEBUG_MODE') && DEBUG_MODE) {
+        $response['debug'] = [
+            'school_id' => schoolId(),
+            'class_id' => $classId,
+            'count' => count($results),
+            'session_school' => $_SESSION['school_id'] ?? null
+        ];
+    }
+    echo json_encode($response);
+    exit;
 }
 
 function getTeamStats() {

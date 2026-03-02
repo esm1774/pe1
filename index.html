@@ -12,52 +12,45 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#10b981">
     <script>
-        // Dynamic Base Path Detection for SPA Routing in Subfolders
+        // Universal Base Path Detection (Works for Localhost Subfolders & Live Root)
         (function () {
-            const path = window.location.pathname;
-            // The project root is everything before the first 'slug' or entry point
-            // However, a safer way in index.html is to see where WE are.
-            // If we are in /pe1/index.html, root is /pe1/
-            // If we are in /pe1/default/, we can't easily know if 'default' is a dir or a slug without a list.
-
-            // BUT, we can use the current script execution context if it's the first thing.
-            // Or better: Use the logic that matches the directory of this file.
-            let root = path;
-            if (root.includes('index.html')) root = root.replace('index.html', '');
-            if (root.includes('login.html')) root = root.replace('login.html', '');
-
-            // If the path ends with something that looks like a slug (not ending in / and has no .), 
-            // the .htaccess has already rewritten us here.
-            // This is tricky. Let's use the most reliable signal: the script's OWN directory.
-            // Since this script is inline, we'll fallback to a simpler logic:
-            // Assuming the project structure is flat at the root.
-
-            // Let's use a cleaner approach: The user is at /pe1/ or /pe1/default/
-            // If we detect we are in a subfolder, we set the base.
+            let path = window.location.pathname;
+            // Get the directory of index.html by looking at the location
+            // and assuming standard slugs come AFTER the root directory
             let basePath = '/';
-            const parts = path.split('/');
-            // If we are at /pe1/default/ -> ["", "pe1", "default", ""]
-            // The first part is always "". The second is "pe1".
-            // Since we know the project is usually 1 level deep on localhost (like /pe1/)
-            // We can check if parts[1] is NOT a known school slug? No.
+            // If the URL has more than one part, let's see where index.html really is
+            // A simple way: use common knowledge of common entry points
+            if (path.includes('/api/')) path = path.split('/api/')[0] + '/';
+            if (path.includes('/js/')) path = path.split('/js/')[0] + '/';
 
-            // Let's use the location of common.js as the source of truth for the ROOT.
-            // But common.js isn't loaded yet. 
-            // THE SOLUTION: The user knows they are in 'pe1' on localhost. 
-            // Let's try to detect it by looking at the URL and seeing if it contains 'default' or similar.
+            // On hosting root, path is /
+            // On subfolders, we detect it
+            const scripts = document.getElementsByTagName('script');
+            // This script is inline, but we can detect based on current pathname
+            // removing known school slugs (arbitrary list of common words)
+            const parts = window.location.pathname.split('/');
+            // If we have [/pe1/default/], parts are ["", "pe1", "default", ""]
+            // If index.html is in pe1, then APP ROOT is pe1.
 
-            // Actually, the most robust way is to NOT use <base> but fix the scripts.
-            // But <base> is easier. Let's try to detect 'pe1' from the path.
+            // Better logic: Assume the APP ROOT is where the URL rewrite started.
+            // But browsers don't know about server-side rewrites. 
+            // So we'll use a safer heuristic for common setups.
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                if (parts.length > 1 && parts[1] !== '' && !['default', 'school1'].includes(parts[1])) {
+                if (parts.length > 1 && parts[1] !== '' && !['default', 'school1', 'test'].includes(parts[1])) {
                     basePath = '/' + parts[1] + '/';
                 }
+            } else {
+                // Live Hosting: Detect if in subfolder
+                // If the URL is mydomain.com/pe1/ we need /pe1/
+                // If it's mydomain.com/ we need /
+                // Let's check for the first segment if it's NOT a slug
+                // This is risky, but let's assume root for hosting if not specified
+                basePath = '/';
             }
 
             const base = document.createElement('base');
             base.href = basePath;
             document.head.appendChild(base);
-            console.log('Dynamic Base Set:', basePath);
         })();
     </script>
 
@@ -815,25 +808,26 @@
     <!-- JAVASCRIPT FILES -->
     <!-- ============================================================ -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="js/common.js?v=3.1.0"></script>
-    <script src="js/dashboard.js?v=3.1.0"></script>
-    <script src="js/grades.js?v=3.1.0"></script>
-    <script src="js/students.js?v=3.1.0"></script>
-    <script src="js/profile.js?v=3.1.0"></script>
-    <script src="js/attendance.js?v=3.1.0"></script>
-    <script src="js/fitness.js?v=3.1.0"></script>
-    <script src="js/competition.js?v=3.1.0"></script>
+    <script src="js/common.js?v=3.2.0"></script>
+    <script src="js/api.js?v=3.2.0"></script>
+    <script src="js/auth.js?v=3.2.0"></script>
+    <script src="js/ui.js?v=3.2.0"></script>
+    <script src="js/dashboard.js?v=3.2.0"></script>
+    <script src="js/classes.js?v=3.2.0"></script>
+    <script src="js/students.js?v=3.2.0"></script>
+    <script src="js/inventory.js?v=3.2.0"></script>
+    <script src="js/attendance.js?v=3.2.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="js/reports.js?v=3.1.0"></script>
-    <script src="js/users.js?v=3.1.0"></script>
-    <script src="js/user_profile.js?v=3.1.0"></script>
-    <script src="js/tournaments.js?v=3.1.0"></script>
-    <script src="js/sports_teams.js?v=3.1.0"></script>
-    <script src="js/student_dashboard.js?v=3.1.0"></script>
-    <script src="js/parent_dashboard.js?v=3.1.0"></script>
-    <script src="js/parents.js?v=3.1.0"></script>
-    <script src="js/notifications.js?v=3.1.0"></script>
-    <script src="js/badges_admin.js?v=3.1.0"></script>
+    <script src="js/reports.js?v=3.2.0"></script>
+    <script src="js/users.js?v=3.2.0"></script>
+    <script src="js/user_profile.js?v=3.2.0"></script>
+    <script src="js/tournaments.js?v=3.2.0"></script>
+    <script src="js/sports_teams.js?v=3.2.0"></script>
+    <script src="js/student_dashboard.js?v=3.2.0"></script>
+    <script src="js/parent_dashboard.js?v=3.2.0"></script>
+    <script src="js/parents.js?v=3.2.0"></script>
+    <script src="js/notifications.js?v=3.2.0"></script>
+    <script src="js/badges_admin.js?v=3.2.0"></script>
     <script src="js/calendar.js?v=3.2.0"></script>
     <script src="js/analytics.js?v=3.2.0"></script>
     <script src="js/audit_log.js?v=3.2.0"></script>

@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PE Smart School System v3.0</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PE Smart">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="theme-color" content="#10b981">
+    <script>
+        // Universal Base Path Detection (Works for Localhost Subfolders & Live Root)
+        (function () {
+            let path = window.location.pathname;
+            // Get the directory of index.html by looking at the location
+            // and assuming standard slugs come AFTER the root directory
+            let basePath = '/';
+            // If the URL has more than one part, let's see where index.html really is
+            // A simple way: use common knowledge of common entry points
+            if (path.includes('/api/')) path = path.split('/api/')[0] + '/';
+            if (path.includes('/js/')) path = path.split('/js/')[0] + '/';
+
+            // On hosting root, path is /
+            // On subfolders, we detect it
+            const scripts = document.getElementsByTagName('script');
+            // This script is inline, but we can detect based on current pathname
+            // removing known school slugs (arbitrary list of common words)
+            const parts = window.location.pathname.split('/');
+            // If we have [/pe1/default/], parts are ["", "pe1", "default", ""]
+            // If index.html is in pe1, then APP ROOT is pe1.
+
+            // Better logic: Assume the APP ROOT is where the URL rewrite started.
+            // But browsers don't know about server-side rewrites. 
+            // So we'll use a safer heuristic for common setups.
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                if (parts.length > 1 && parts[1] !== '' && !['default', 'school1', 'test'].includes(parts[1])) {
+                    basePath = '/' + parts[1] + '/';
+                }
+            } else {
+                // Live Hosting: Detect if in subfolder
+                // If the URL is mydomain.com/pe1/ we need /pe1/
+                // If it's mydomain.com/ we need /
+                // Let's check for the first segment if it's NOT a slug
+                // This is risky, but let's assume root for hosting if not specified
+                basePath = '/';
+            }
+
+            const base = document.createElement('base');
+            base.href = basePath;
+            document.head.appendChild(base);
+        })();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => {
+                        console.log('SW Registered!', reg);
+
+                        // Listen for updates
+                        reg.onupdatefound = () => {
+                            const newWorker = reg.installing;
+                            newWorker.onstatechange = () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New update found and active, we could show a prompt
+                                    // But since we use skipWaiting(), we can just refresh
+                                }
+                            };
+                        };
+                    })
+                    .catch(err => console.log('SW Registration Failed', err));
+            });
+
+            // Logic to force reload when the new service worker takes control
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap');
+
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: #f0fdf4;
+        }
+
+        .sidebar-link {
+            transition: all 0.3s;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-right: 4px solid #4ade80;
+        }
+
+        .card-hover {
+            transition: all 0.3s;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .rank-1 {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #fff;
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #9ca3af, #6b7280);
+            color: #fff;
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            color: #fff;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .toast {
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        @keyframes pulse-slow {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        .animate-pulse-slow {
+            animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .bmi-underweight {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .bmi-normal {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .bmi-overweight {
+            background-color: #ffedd5;
+            color: #9a3412;
+        }
+
+        .bmi-obese {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            body {
+                background: #fff !important;
+            }
+
+            #sidebar,
+            #sidebarOverlay,
+            header,
+            .no-print {
+                display: none !important;
+            }
+
+            #mainContent {
+                padding: 0 !important;
+            }
+
+            #mainApp {
+                display: block !important;
+            }
+
+            .flex {
+                display: block !important;
+            }
+
+            main {
+                min-height: auto !important;
+            }
+
+            .card-hover:hover {
+                transform: none !important;
+                box-shadow: none !important;
+            }
+
+            .bg-gradient-to-l {
+                background: #4f46e5 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            table {
+                page-break-inside: auto;
+            }
+
+            tr {
+                page-break-inside: avoid;
+            }
+
+            .bracket-container {
+                overflow: visible !important;
+            }
+
+            @page {
+                size: landscape;
+                margin: 1cm;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        .bracket-match {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            min-width: 180px;
+        }
+
+        .bracket-match.completed {
+            border-color: #10b981;
+        }
+
+        .bracket-team {
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bracket-team.winner {
+            background: #ecfdf5;
+        }
+
+        .bracket-team.loser {
+            opacity: 0.5;
+        }
+
+        .bracket-connector {
+            position: relative;
+        }
+
+        .bracket-round {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            min-width: 200px;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 24px;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button {
+            opacity: 1;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #10b981;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .bmi-underweight {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .bmi-normal {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .bmi-overweight {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .bmi-obese {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .severity-mild {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .severity-moderate {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+
+        .severity-severe {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .health-alert {
+            border-right: 4px solid #ef4444;
+            background: #fef2f2;
+        }
+
+        .tab-btn {
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            border-bottom: 3px solid #10b981;
+            color: #10b981;
+            font-weight: 700;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+
+    <!-- ============================================================ -->
+    <!-- LOGIN PAGE -->
+    <!-- ============================================================ -->
+    <div id="loginPage"
+        class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-600 via-emerald-700 to-teal-800 p-4 overflow-x-hidden">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div
+                    class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <span class="text-4xl">🏃</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">PE Smart School</h1>
+                <p class="text-gray-500 mt-1">نظام التربية البدنية الذكي v2.1</p>
+            </div>
+            <div id="loginError"
+                class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm"></div>
+            <div id="loginFormContainer" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">اسم المستخدم</label>
+                    <input type="text" id="loginUsername"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                        placeholder="أدخل اسم المستخدم">
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-semibold text-gray-700">كلمة المرور</label>
+                        <button onclick="toggleForgotPassword(true)"
+                            class="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline">نسيت كلمة
+                            المرور؟</button>
+                    </div>
+                    <input type="password" id="loginPassword"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                        placeholder="أدخل كلمة المرور">
+                </div>
+                <button onclick="handleLogin()"
+                    class="w-full bg-gradient-to-l from-green-600 to-emerald-600 text-white py-3 rounded-xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg cursor-pointer">تسجيل
+                    الدخول</button>
+
+                <div class="pt-6 border-t border-gray-100 flex flex-col gap-3">
+                    <a href="register.html"
+                        class="w-full flex items-center justify-center gap-2 text-emerald-700 bg-emerald-50 py-3 rounded-xl font-bold hover:bg-emerald-100 transition">
+                        <span>🏫</span> تسجيل مدرسة جديدة (تجربة مجانية)
+                    </a>
+                    <a href="welcome.html"
+                        class="text-center text-sm font-semibold text-gray-500 hover:text-emerald-600 transition underline underline-offset-4">
+                        التعرف على مميزات المنصة
+                    </a>
+                </div>
+            </div>
+
+            <!-- Forgot Password Container -->
+            <div id="forgotPasswordContainer" class="hidden space-y-4">
+                <div class="text-center mb-4">
+                    <p class="text-sm font-bold text-gray-600">أدخل بريدك الإلكتروني المسجل في النظام وسنرسل لك رمزاً
+                        للاستعادة</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
+                    <input type="email" id="forgotEmail"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                        placeholder="example@domain.com" dir="ltr">
+                </div>
+                <button onclick="handleForgotPassword()"
+                    class="w-full bg-gradient-to-l from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-lg cursor-pointer">إرسال
+                    رمز الاستعادة</button>
+                <div class="pt-4 text-center">
+                    <button onclick="toggleForgotPassword(false)"
+                        class="text-sm font-bold text-gray-500 hover:text-gray-700 transition">العودة لتسجيل
+                        الدخول</button>
+                </div>
+            </div>
+
+            <!-- Reset Password Container -->
+            <div id="resetPasswordContainer" class="hidden space-y-4">
+                <div class="text-center mb-4">
+                    <p class="text-sm font-bold text-gray-600">لقد أرسلنا رمز الاستعادة إلى بريدك الإلكتروني.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
+                    <input type="email" id="resetEmail" disabled
+                        class="w-full px-4 py-3 bg-gray-50 text-gray-500 border-2 border-gray-200 rounded-xl focus:outline-none"
+                        dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">رمز الاستعادة (OTP)</label>
+                    <input type="text" id="resetOTP"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none text-center text-xl tracking-widest font-black"
+                        placeholder="000000" maxlength="6" dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">كلمة المرور الجديدة</label>
+                    <input type="password" id="resetNewPassword"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                        placeholder="أدخل كلمة المرور الجديدة">
+                </div>
+                <button onclick="handleResetPassword()"
+                    class="w-full bg-gradient-to-l from-green-600 to-emerald-600 text-white py-3 rounded-xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg cursor-pointer">تعيين
+                    كلمة المرور الجديدة</button>
+                <div class="pt-4 text-center">
+                    <button onclick="toggleForgotPassword(false)"
+                        class="text-sm font-bold text-gray-500 hover:text-gray-700 transition">العودة لتسجيل
+                        الدخول</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MAIN APP -->
+    <!-- ============================================================ -->
+    <div id="mainApp" class="hidden min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-100 no-print sticky top-0 z-40">
+            <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 text-2xl cursor-pointer">☰</button>
+                    <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('dashboard')">
+                        <div id="school-logo-display" class="school-logo-display flex items-center">
+                            <span class="text-2xl">🏃</span>
+                        </div>
+                        <h1 id="school-name-display"
+                            class="school-name-display text-lg font-black text-gray-800 hidden md:block">PE Smart School
+                        </h1>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 relative">
+                    <!-- Notifications -->
+                    <button onclick="navigateTo('notifications')"
+                        class="relative p-2 text-gray-400 hover:text-green-600 transition cursor-pointer"
+                        data-role="parent">
+                        <span class="text-2xl">🔔</span>
+                        <span
+                            class="notification-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full border-2 border-white animate-pulse px-1">0</span>
+                    </button>
+
+                    <!-- User Profile -->
+                    <button onclick="toggleUserDropdown()" class="flex items-center gap-2 group cursor-pointer">
+                        <div class="w-10 h-10 bg-green-100 text-green-700 rounded-2xl flex items-center justify-center font-bold"
+                            id="userInitialDisplay">?</div>
+                        <div class="hidden sm:block text-right">
+                            <p class="text-sm font-bold text-gray-800" id="currentUserDisplay">جاري التحميل...</p>
+                            <p class="text-[10px] text-green-600 font-bold uppercase" id="userRoleBadge">-</p>
+                        </div>
+                        <span class="text-gray-400 transition group-hover:text-gray-600">▾</span>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="userDropdown"
+                        class="hidden absolute left-0 mt-5 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 fade-in top-full origin-top-left">
+                        <div class="px-4 py-2 border-b border-gray-50 mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">إعدادات الحساب
+                            </p>
+                        </div>
+                        <a href="javascript:void(0)" onclick="navigateTo('user_profile');toggleUserDropdown()"
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition">
+                            <span class="text-lg">👤</span> ملفي الشخصي (CV)
+                        </a>
+                        <div class="border-t border-gray-50 my-1"></div>
+                        <a href="javascript:void(0)" onclick="handleLogout()"
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition font-bold">
+                            <span class="text-lg">🚪</span> تسجيل الخروج
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex">
+            <!-- Sidebar -->
+            <aside id="sidebar"
+                class="w-64 bg-gradient-to-b from-gray-800 to-gray-900 min-h-[calc(100vh-56px)] fixed lg:sticky top-[56px] z-30 transition-all duration-300 -right-64 lg:right-0 no-print">
+                <nav class="py-4">
+                    <div class="px-4 mb-4">
+                        <p class="text-gray-400 text-xs font-semibold uppercase tracking-wider">القائمة الرئيسية</p>
+                    </div>
+                    <a onclick="navigateTo('dashboard')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor,viewer">
+                        <span class="text-xl">📊</span><span>لوحة التحكم</span>
+                    </a>
+                    <a onclick="navigateTo('school_settings')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin">
+                        <span class="text-xl">⚙️</span><span>إعدادات المدرسة</span>
+                    </a>
+                    <a onclick="navigateTo('analytics')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,supervisor">
+                        <span class="text-xl">📈</span><span>تحليلات متقدمة</span>
+                    </a>
+                    <a onclick="navigateTo('audit_logs')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,supervisor">
+                        <span class="text-xl">🛡️</span><span>سجل الأنشطة</span>
+                    </a>
+                    <a onclick="navigateTo('dashboard')"
+                        class="sidebar-link active flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="teacher">
+                        <span class="text-xl">🏠</span><span>الرئيسية</span>
+                    </a>
+                    <a onclick="navigateTo('timetable')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="teacher,admin">
+                        <span class="text-xl">📅</span><span>جدول الحصص</span>
+                    </a>
+                    <a onclick="navigateTo('dashboard')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="parent">
+                        <span class="text-xl">👨‍👩‍👦‍👦</span><span>أبنائي</span>
+                    </a>
+                    <a onclick="navigateTo('grades')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">🏫</span><span>الصفوف والفصول</span>
+                    </a>
+                    <a onclick="navigateTo('students')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">👨‍🎓</span><span>الطلاب</span>
+                    </a>
+                    <a onclick="navigateTo('attendance')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">📋</span><span>الحضور</span>
+                    </a>
+                    <a onclick="navigateTo('fitness')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">💪</span><span>اختبارات اللياقة</span>
+                    </a>
+                    <a onclick="navigateTo('competition')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor,parent,student">
+                        <span class="text-xl">🏆</span><span>التنافس</span>
+                    </a>
+                    <a onclick="navigateTo('tournaments')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">⚽</span><span>البطولات</span>
+                    </a>
+                    <a onclick="navigateTo('sportsTeams')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">🏅</span><span>الفرق الرياضية</span>
+                    </a>
+                    <a onclick="navigateTo('sportsCalendar')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">📅</span><span>التقويم الرياضي</span>
+                    </a>
+                    <a onclick="navigateTo('reports')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor,parent,student">
+                        <span class="text-xl">📈</span><span>التقارير</span>
+                    </a>
+                    <div class="px-4 my-4 border-t border-gray-700"></div>
+                    <a onclick="navigateTo('users')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin">
+                        <span class="text-xl">👥</span><span>المستخدمون</span>
+                    </a>
+                    <a onclick="navigateTo('parents')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin">
+                        <span class="text-xl">👨‍👩‍👦</span><span>أولياء الأمور</span>
+                    </a>
+                    <a onclick="navigateTo('badgesAdmin')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin">
+                        <span class="text-xl">🏅</span><span>إدارة الأوسمة</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main id="mainContent" class="flex-1 p-4 lg:p-6 min-h-[calc(100vh-56px)] overflow-x-auto"></main>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- OVERLAYS & CONTAINERS -->
+    <!-- ============================================================ -->
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PWA UPDATE BANNER -->
+    <!-- ============================================================ -->
+    <div id="updateBanner" style="
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: white;
+        padding: 1rem 1.25rem;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        box-shadow: 0 -4px 20px rgba(5, 150, 105, 0.3);
+        font-family: 'Cairo', sans-serif;
+    ">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+            <span style="font-size:1.4rem;">🔄</span>
+            <div>
+                <div style="font-weight:900; font-size:0.95rem;">يوجد تحديث جديد!</div>
+                <div style="font-size:0.75rem; opacity:0.85;">أعِد التحميل للحصول على أحدث نسخة</div>
+            </div>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-shrink:0;">
+            <button onclick="document.getElementById('updateBanner').style.display='none'" style="
+                background: rgba(255,255,255,0.15);
+                border: 1px solid rgba(255,255,255,0.3);
+                color: white;
+                padding: 0.45rem 0.85rem;
+                border-radius: 0.6rem;
+                font-weight:700;
+                font-size:0.8rem;
+                cursor:pointer;
+                font-family:'Cairo',sans-serif;
+            ">لاحقاً</button>
+            <button onclick="window.location.reload(true)" style="
+                background: white;
+                border: none;
+                color: #059669;
+                padding: 0.45rem 1rem;
+                border-radius: 0.6rem;
+                font-weight:900;
+                font-size:0.85rem;
+                cursor:pointer;
+                font-family:'Cairo',sans-serif;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            ">تحديث الآن ✓</button>
+        </div>
+    </div>
+
+    <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/50 z-20 lg:hidden" onclick="toggleSidebar()"></div>
+    <div id="toastContainer" class="fixed top-20 left-4 z-50 space-y-2"></div>
+    <div id="modalContainer" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+        <div id="modalContent"
+            class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto fade-in"></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- JAVASCRIPT FILES -->
+    <!-- ============================================================ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/common.js?v=3.2.0"></script>
+    <script src="js/api.js?v=3.2.0"></script>
+    <script src="js/auth.js?v=3.2.0"></script>
+    <script src="js/ui.js?v=3.2.0"></script>
+    <script src="js/dashboard.js?v=3.2.0"></script>
+    <script src="js/classes.js?v=3.2.0"></script>
+    <script src="js/students.js?v=3.2.0"></script>
+    <script src="js/inventory.js?v=3.2.0"></script>
+    <script src="js/attendance.js?v=3.2.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="js/reports.js?v=3.2.0"></script>
+    <script src="js/users.js?v=3.2.0"></script>
+    <script src="js/user_profile.js?v=3.2.0"></script>
+    <script src="js/tournaments.js?v=3.2.0"></script>
+    <script src="js/sports_teams.js?v=3.2.0"></script>
+    <script src="js/student_dashboard.js?v=3.2.0"></script>
+    <script src="js/parent_dashboard.js?v=3.2.0"></script>
+    <script src="js/parents.js?v=3.2.0"></script>
+    <script src="js/notifications.js?v=3.2.0"></script>
+    <script src="js/badges_admin.js?v=3.2.0"></script>
+    <script src="js/calendar.js?v=3.2.0"></script>
+    <script src="js/analytics.js?v=3.2.0"></script>
+    <script src="js/audit_log.js?v=3.2.0"></script>
+    <script src="js/timetable.js?v=3.2.0"></script>
+    <script src="js/school_settings.js?v=3.0.0"></script>
+
+    <!-- Initialize app AFTER all scripts are loaded -->
+    <script>
+        console.log('📁 All JS files loaded — v3.1.0');
+        checkAuth().catch(e => {
+            console.error('Auth check failed:', e);
+            document.getElementById('loginPage').classList.remove('hidden');
+        });
+
+        // ============================================================
+        // PWA Service Worker — Auto Update Detection
+        // ============================================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                // Check for updates every 60 seconds while page is open
+                setInterval(() => reg.update(), 60000);
+
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdateBanner();
+                        }
+                    });
+                });
+            });
+
+            // Listen for SW_UPDATED message from service worker
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data && event.data.type === 'SW_UPDATED') {
+                    showUpdateBanner();
+                }
+            });
+        }
+
+        function showUpdateBanner() {
+            const banner = document.getElementById('updateBanner');
+            if (banner) banner.style.display = 'flex';
+        }
+    </script>
+    <script>
+        // هنا تضع JS الخاص بالsidebar
+        function toggleSidebar() {
+            const s = document.getElementById('sidebar'), o = document.getElementById('sidebarOverlay');
+            s.classList.toggle('-right-64'); s.classList.toggle('right-0'); o.classList.toggle('hidden');
+        }
+
+        function toggleUserDropdown() {
+            const d = document.getElementById('userDropdown');
+            d.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const d = document.getElementById('userDropdown');
+            const b = e.target.closest('button');
+            if (d && !d.classList.contains('hidden') && (!b || !b.contains(document.getElementById('userDropdown').previousElementSibling))) {
+                if (!e.target.closest('#userDropdown')) d.classList.add('hidden');
+            }
+        });
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth >= 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('sidebarOverlay').classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        });
+    </script>
+
+</body>
+
+</html>

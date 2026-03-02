@@ -1,0 +1,13 @@
+{
+    "require": {
+        "phpoffice/phpspreadsheet": "1.28.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "phpoffice/phpspreadsheet": true
+        },
+        "audit": {
+            "block-insecure": false
+        }
+    }
+}
