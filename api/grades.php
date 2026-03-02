@@ -13,27 +13,38 @@ function getGrades() {
     $teacherClassIds = getTeacherClassIds(); // null = admin
     $sid = schoolId();
 
-    // Build school filter
-    $schoolWhere = $sid ? " AND g.school_id = $sid" : "";
-    $schoolWhereC = $sid ? " AND c.school_id = $sid" : "";
-
     if ($teacherClassIds === null) {
-        // Admin: sees all grades with all classes
-        $stmt = $db->query("
+        // Admin: sees all grades with all classes for their school
+        $sql = "
             SELECT g.*, COUNT(DISTINCT c.id) as class_count, COUNT(DISTINCT s.id) as student_count
             FROM grades g
             LEFT JOIN classes c ON c.grade_id = g.id AND c.active = 1
             LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-            WHERE g.active = 1 $schoolWhere GROUP BY g.id ORDER BY g.sort_order, g.id
-        ");
+            WHERE g.active = 1";
+        
+        $params = [];
+        if ($sid) {
+            $sql .= " AND g.school_id = ?";
+            $params[] = $sid;
+        }
+        
+        $sql .= " GROUP BY g.id ORDER BY g.sort_order, g.id";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $grades = $stmt->fetchAll();
+
         foreach ($grades as &$grade) {
-            $stmt2 = $db->prepare("
-                SELECT c.*, COUNT(s.id) as student_count FROM classes c
-                LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-                WHERE c.grade_id = ? AND c.active = 1 $schoolWhereC GROUP BY c.id ORDER BY c.section
-            ");
-            $stmt2->execute([$grade['id']]);
+            $sqlC = "SELECT c.*, COUNT(s.id) as student_count FROM classes c
+                     LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
+                     WHERE c.grade_id = ? AND c.active = 1";
+            $paramsC = [$grade['id']];
+            if ($sid) {
+                $sqlC .= " AND c.school_id = ?";
+                $paramsC[] = $sid;
+            }
+            $sqlC .= " GROUP BY c.id ORDER BY c.section";
+            $stmt2 = $db->prepare($sqlC);
+            $stmt2->execute($paramsC);
             $grade['classes'] = $stmt2->fetchAll();
         }
     } else {
@@ -43,23 +54,36 @@ function getGrades() {
             return;
         }
         $placeholders = implode(',', array_fill(0, count($teacherClassIds), '?'));
-        $stmt = $db->prepare("
+        $sql = "
             SELECT DISTINCT g.*, COUNT(DISTINCT c.id) as class_count, COUNT(DISTINCT s.id) as student_count
             FROM grades g
             JOIN classes c ON c.grade_id = g.id AND c.active = 1 AND c.id IN ($placeholders)
             LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-            WHERE g.active = 1 $schoolWhere GROUP BY g.id ORDER BY g.sort_order, g.id
-        ");
-        $stmt->execute($teacherClassIds);
+            WHERE g.active = 1";
+        
+        $params = $teacherClassIds;
+        if ($sid) {
+            $sql .= " AND g.school_id = ?";
+            $params[] = $sid;
+        }
+        
+        $sql .= " GROUP BY g.id ORDER BY g.sort_order, g.id";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $grades = $stmt->fetchAll();
+
         foreach ($grades as &$grade) {
-            $stmt2 = $db->prepare("
-                SELECT c.*, COUNT(s.id) as student_count FROM classes c
-                LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-                WHERE c.grade_id = ? AND c.active = 1 AND c.id IN ($placeholders) $schoolWhereC
-                GROUP BY c.id ORDER BY c.section
-            ");
-            $stmt2->execute(array_merge([$grade['id']], $teacherClassIds));
+            $sqlC = "SELECT c.*, COUNT(s.id) as student_count FROM classes c
+                     LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
+                     WHERE c.grade_id = ? AND c.active = 1 AND c.id IN ($placeholders)";
+            $paramsC = array_merge([$grade['id']], $teacherClassIds);
+            if ($sid) {
+                $sqlC .= " AND c.school_id = ?";
+                $paramsC[] = $sid;
+            }
+            $sqlC .= " GROUP BY c.id ORDER BY c.section";
+            $stmt2 = $db->prepare($sqlC);
+            $stmt2->execute($paramsC);
             $grade['classes'] = $stmt2->fetchAll();
         }
     }

@@ -21,6 +21,8 @@ class Tenant {
         // Priority 1: Session (already logged in)
         if (isset($_SESSION['school_id'])) {
             self::$schoolId = (int)$_SESSION['school_id'];
+            // Pre-load school object if needed
+            self::school();
             return;
         }
 
@@ -94,6 +96,7 @@ class Tenant {
      * Get the current school ID (null if not resolved)
      */
     public static function id(): ?int {
+        if (!self::$resolved) self::resolve();
         return self::$schoolId;
     }
 

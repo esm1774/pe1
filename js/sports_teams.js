@@ -880,7 +880,11 @@ async function showTeamForm(id = null) {
                 <textarea id="tfDesc" rows="2" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
                           placeholder="وصف اختياري...">${team?.description || ''}</textarea>
             </div>
-
+            <div class="flex gap-3 pt-6 border-t border-gray-100">
+                <button onclick="saveTeam(${id || 'null'})" class="flex-1 bg-green-600 text-white py-4 rounded-2xl font-bold hover:bg-green-700 shadow-xl shadow-green-100 transform active:scale-95 transition-all cursor-pointer">حفظ الفريق</button>
+                <button onclick="closeModal()" class="flex-1 bg-gray-100 text-gray-400 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all cursor-pointer text-sm">إلغاء</button>
+            </div>
+        </div>
     </div>`);
 
     // Ensure initial visibility state is correct

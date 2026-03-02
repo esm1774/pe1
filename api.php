@@ -407,9 +407,10 @@ try {
             jsonError('إجراء غير معروف', 404);
     }
 } catch (PDOException $e) {
-    if (DEBUG_MODE) jsonError('DB Error: ' . $e->getMessage(), 500);
+    if (DEBUG_MODE) jsonError('DB Error (' . ($action ?? 'none') . '): ' . $e->getMessage(), 500);
     jsonError('حدث خطأ في قاعدة البيانات', 500);
 } catch (Exception $e) {
+    if (DEBUG_MODE) jsonError('Logic Error (' . ($action ?? 'none') . '): ' . $e->getMessage(), 500);
     jsonError($e->getMessage(), 500);
 }
 /**

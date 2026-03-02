@@ -7,7 +7,16 @@ async function renderGrades() {
     mc.innerHTML = showLoading();
 
     const r = await API.get('grades');
-    if (!r || !r.success) return;
+    if (!r || !r.success) {
+        mc.innerHTML = `
+            <div class="text-center py-12">
+                <p class="text-5xl mb-4">⚠️</p>
+                <p class="text-xl font-bold text-red-600 mb-2">فشل تحميل الصفوف</p>
+                <p class="text-gray-500">${r?.error || 'خطأ في الاتصال بالخدمة'}</p>
+                <button onclick="renderGrades()" class="mt-4 bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold cursor-pointer">🔄 جرب مرة أخرى</button>
+            </div>`;
+        return;
+    }
 
     const grades = r.data;
 
