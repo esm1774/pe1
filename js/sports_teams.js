@@ -8,7 +8,9 @@
 // ============================================================
 const STAPI = {
     // Ensure we always point to the module root regardless of current path slug
-    base: '/modules/sports_teams/api.php',
+    get base() {
+        return (window.APP_BASE || '/') + 'modules/sports_teams/api.php';
+    },
     async request(action, method = 'GET', data = null, params = {}) {
         try {
             let url = `${this.base}?action=${action}`;
@@ -802,6 +804,7 @@ async function showTeamForm(id = null) {
     showModal(`
     <div class="p-6">
         <h3 class="text-xl font-bold mb-4">${team ? 'تعديل' : 'إنشاء'} فريق رياضي</h3>
+        <input type="hidden" id="tfTeamId" value="${team?.id || ''}">
         <div class="space-y-4">
             <div>
                 <label class="block font-semibold text-gray-700 mb-1">اسم الفريق *</label>
@@ -830,10 +833,24 @@ async function showTeamForm(id = null) {
 
             <div id="tfClassWrapper" class="${!team || team?.team_type !== 'class' ? 'hidden' : ''}">
                 <label class="block font-semibold text-gray-700 mb-1">الفصل</label>
-                <select id="tfClass" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                <select id="tfClass" onchange="stLoadStudentsList()" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
                     <option value="">— اختر فصلاً —</option>
                     ${classes.map(c => `<option value="${c.id}" ${team?.class_id == c.id ? 'selected' : ''}>${esc(c.full_name)}</option>`).join('')}
                 </select>
+            </div>
+
+            <div id="tfStudentsWrapper" class="hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block font-semibold text-gray-700">اختر اللاعبين *</label>
+                    <span id="tfSelCount" class="text-xs font-black bg-green-100 text-green-700 px-2 py-1 rounded-lg">0 محدد</span>
+                </div>
+                <div class="relative mb-2">
+                    <input type="text" id="tfStudentSearch" oninput="stFilterStudents()" placeholder="بحث عن طالب..." 
+                           class="w-full px-4 py-2 border-2 border-gray-100 rounded-xl text-sm focus:border-green-400 focus:outline-none">
+                </div>
+                <div id="tfStudentList" class="max-h-48 overflow-y-auto border-2 border-gray-100 rounded-xl p-2 space-y-1 bg-gray-50/30">
+                    <p class="text-center text-gray-400 py-4 text-sm">حدد الفصل أولاً...</p>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -876,7 +893,72 @@ async function showTeamForm(id = null) {
 
 function stToggleClassSelect() {
     const type = document.getElementById('tfType').value;
+    const isNew = !document.getElementById('tfTeamId')?.value; // Check hidden ID field
+
     document.getElementById('tfClassWrapper').classList.toggle('hidden', type !== 'class');
+
+    // Only show student list during creation
+    const studentsWrapper = document.getElementById('tfStudentsWrapper');
+    if (studentsWrapper) {
+        studentsWrapper.classList.toggle('hidden', type === 'mixed' || !isNew);
+        if (type !== 'mixed' && isNew) {
+            stLoadStudentsList();
+        }
+    }
+}
+
+async function stLoadStudentsList() {
+    const type = document.getElementById('tfType').value;
+    const classId = document.getElementById('tfClass')?.value;
+    const list = document.getElementById('tfStudentList');
+
+    if (type === 'class' && !classId) {
+        list.innerHTML = '<p class="text-center text-gray-400 py-4 text-sm">حدد الفصل أولاً...</p>';
+        return;
+    }
+
+    list.innerHTML = '<div class="flex justify-center py-4"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div></div>';
+
+    const params = {};
+    if (type === 'class') params.class_id = classId;
+
+    const r = await STAPI.get('available_students', params);
+    const students = r?.data || [];
+    window._stAvailableInForm = students;
+
+    if (students.length === 0) {
+        list.innerHTML = '<p class="text-center text-gray-400 py-4 text-sm">لا يوجد طلاب متاحون</p>';
+        return;
+    }
+
+    stRenderStudentCheckboxes(students);
+}
+
+function stRenderStudentCheckboxes(students) {
+    const list = document.getElementById('tfStudentList');
+    list.innerHTML = students.map(s => `
+        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition border border-transparent hover:border-gray-100 group">
+            <input type="checkbox" value="${s.id}" onchange="stUpdateSelCount()" class="tf-student-cb w-5 h-5 accent-green-600 cursor-pointer">
+            <div class="flex-1">
+                <div class="text-sm font-bold text-gray-700 group-hover:text-green-700 transition">${esc(s.name)}</div>
+                <div class="text-[10px] text-gray-400">${esc(s.class_name)}</div>
+            </div>
+        </label>
+    `).join('');
+    stUpdateSelCount();
+}
+
+function stFilterStudents() {
+    const q = document.getElementById('tfStudentSearch').value.toLowerCase();
+    const students = window._stAvailableInForm || [];
+    const filtered = students.filter(s => s.name.toLowerCase().includes(q));
+    stRenderStudentCheckboxes(filtered);
+}
+
+function stUpdateSelCount() {
+    const count = document.querySelectorAll('.tf-student-cb:checked').length;
+    const badge = document.getElementById('tfSelCount');
+    if (badge) badge.textContent = `${count} محدد`;
 }
 
 async function saveTeam(id) {
@@ -887,7 +969,8 @@ async function saveTeam(id) {
         class_id: document.getElementById('tfClass')?.value || null,
         color: document.getElementById('tfColor').value,
         logo_emoji: document.getElementById('tfEmoji').value,
-        description: document.getElementById('tfDesc').value.trim()
+        description: document.getElementById('tfDesc').value.trim(),
+        student_ids: Array.from(document.querySelectorAll('.tf-student-cb:checked')).map(cb => cb.value)
     };
     if (!data.name) { showToast('أدخل اسم الفريق', 'error'); return; }
 

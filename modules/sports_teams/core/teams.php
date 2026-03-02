@@ -132,9 +132,16 @@ function createTeam() {
     ]);
 
     $teamId = $db->lastInsertId();
+    $studentIds = $data['student_ids'] ?? [];
 
-    // لو كان منتخب فصل، أضف طلاب الفصل تلقائياً
-    if ($data['team_type'] === 'class' && !empty($data['class_id'])) {
+    if (!empty($studentIds)) {
+        // إضافة الطلاب المحددين يدوياً
+        $insert = $db->prepare("INSERT IGNORE INTO team_members (team_id, student_id, joined_at) VALUES (?, ?, CURDATE())");
+        foreach ($studentIds as $sId) {
+            $insert->execute([$teamId, $sId]);
+        }
+    } elseif ($data['team_type'] === 'class' && !empty($data['class_id'])) {
+        // لو لم يتم تحديد طلاب يدوياً، وكان منتخب فصل، أضف طلاب الفصل تلقائياً (سلوك افتراضي قديم)
         _autoAddClassStudents($teamId, $data['class_id']);
     }
 

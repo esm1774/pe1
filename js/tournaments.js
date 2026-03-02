@@ -8,7 +8,9 @@
 // ============================================================
 const TAPI = {
     // Ensure we always point to the module root regardless of current path slug
-    base: '/modules/tournaments/api.php',
+    get base() {
+        return (window.APP_BASE || '/') + 'modules/tournaments/api.php';
+    },
 
     async request(action, method = 'GET', data = null, params = {}) {
         try {

@@ -3,6 +3,40 @@
  * Shared functions: API, Auth, Navigation, Utilities
  */
 
+// SaaS/Localhost: Auto-detect project root
+window.APP_BASE = (function () {
+    // 1. Check for <base> tag (highest priority)
+    const baseTag = document.querySelector('base');
+    if (baseTag && baseTag.href) {
+        try {
+            const url = new URL(baseTag.href);
+            return url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
+        } catch (e) { }
+    }
+
+    // 2. Fallback: Detection via js/common.js script tag
+    const scripts = document.getElementsByTagName('script');
+    for (let i = 0; i < scripts.length; i++) {
+        if (scripts[i].src.includes('js/common.js')) {
+            const src = scripts[i].src;
+            // Clean versioning/query strings
+            const cleanPath = src.split('?')[0].split('#')[0];
+            // Extract path part
+            const match = cleanPath.match(/^(https?:\/\/[^\/]+)?(.*?)(js\/common\.js)$/);
+            if (match && match[2]) {
+                return match[2].endsWith('/') ? match[2] : match[2] + '/';
+            }
+            // Fallback to URL object
+            try {
+                const url = new URL(src);
+                let path = url.pathname.replace('js/common.js', '');
+                return path.endsWith('/') ? path : path + '/';
+            } catch (e) { }
+        }
+    }
+    return '/'; // Final fallback
+})();
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -70,8 +104,7 @@ const PAGE_MAP = {
 const API = {
     // Ensure we always point to the root api.php regardless of current path slug
     get base() {
-        // Return absolute path to avoid confusion with sub-paths
-        return '/api.php';
+        return window.APP_BASE + 'api.php';
     },
 
     async request(action, method = 'GET', data = null, params = {}) {
@@ -143,7 +176,12 @@ async function handleLogin() {
     }
 
     const r = await API.post('login', loginData);
-    if (!r) return;
+    if (!r) {
+        errorEl.textContent = 'تعذر الاتصال بالخادم. تأكد من عمل XAMPP وقاعدة البيانات.';
+        errorEl.classList.remove('hidden');
+        alert('فشل الاتصال بـ: ' + API.base); // Useful for local debugging
+        return;
+    }
 
     if (r.success) {
         currentUser = r.data;
@@ -160,7 +198,7 @@ async function handleLogin() {
 
         // Redirect to slug-based URL if school context exists
         if (r.data.school_slug) {
-            window.location.href = `/${r.data.school_slug}/`;
+            window.location.href = window.APP_BASE + r.data.school_slug + '/';
         } else {
             showApp();
         }

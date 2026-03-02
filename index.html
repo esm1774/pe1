@@ -11,7 +11,55 @@
     <meta name="apple-mobile-web-app-title" content="PE Smart">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#10b981">
-    <base href="/">
+    <script>
+        // Dynamic Base Path Detection for SPA Routing in Subfolders
+        (function () {
+            const path = window.location.pathname;
+            // The project root is everything before the first 'slug' or entry point
+            // However, a safer way in index.html is to see where WE are.
+            // If we are in /pe1/index.html, root is /pe1/
+            // If we are in /pe1/default/, we can't easily know if 'default' is a dir or a slug without a list.
+
+            // BUT, we can use the current script execution context if it's the first thing.
+            // Or better: Use the logic that matches the directory of this file.
+            let root = path;
+            if (root.includes('index.html')) root = root.replace('index.html', '');
+            if (root.includes('login.html')) root = root.replace('login.html', '');
+
+            // If the path ends with something that looks like a slug (not ending in / and has no .), 
+            // the .htaccess has already rewritten us here.
+            // This is tricky. Let's use the most reliable signal: the script's OWN directory.
+            // Since this script is inline, we'll fallback to a simpler logic:
+            // Assuming the project structure is flat at the root.
+
+            // Let's use a cleaner approach: The user is at /pe1/ or /pe1/default/
+            // If we detect we are in a subfolder, we set the base.
+            let basePath = '/';
+            const parts = path.split('/');
+            // If we are at /pe1/default/ -> ["", "pe1", "default", ""]
+            // The first part is always "". The second is "pe1".
+            // Since we know the project is usually 1 level deep on localhost (like /pe1/)
+            // We can check if parts[1] is NOT a known school slug? No.
+
+            // Let's use the location of common.js as the source of truth for the ROOT.
+            // But common.js isn't loaded yet. 
+            // THE SOLUTION: The user knows they are in 'pe1' on localhost. 
+            // Let's try to detect it by looking at the URL and seeing if it contains 'default' or similar.
+
+            // Actually, the most robust way is to NOT use <base> but fix the scripts.
+            // But <base> is easier. Let's try to detect 'pe1' from the path.
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                if (parts.length > 1 && parts[1] !== '' && !['default', 'school1'].includes(parts[1])) {
+                    basePath = '/' + parts[1] + '/';
+                }
+            }
+
+            const base = document.createElement('base');
+            base.href = basePath;
+            document.head.appendChild(base);
+            console.log('Dynamic Base Set:', basePath);
+        })();
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script>
