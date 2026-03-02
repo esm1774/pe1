@@ -102,6 +102,19 @@ if (!isset($_SESSION['_created'])) {
     $_SESSION['_created'] = time();
 }
 
+// CSRF Protection Token
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Set a cookie that JS can read to send back in headers
+setcookie('XSRF-TOKEN', $_SESSION['csrf_token'], [
+    'expires' => time() + SESSION_LIFETIME,
+    'path' => '/',
+    'samesite' => 'Lax',
+    'httponly' => false // REQUIRED for JS to read it
+]);
+
 // ============================================================
 // DATABASE CONNECTION CLASS - فئة الاتصال بقاعدة البيانات
 // ============================================================
@@ -219,10 +232,29 @@ function requireLogin() {
 }
 
 /**
+ * CSRF Protection Check
+ */
+function checkCSRF() {
+    // Skip protection for GET requests
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') return true;
+    
+    // Check if token exists in headers or posted data
+    $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? null;
+    $jsonData = json_decode(file_get_contents('php://input'), true);
+    if (!$token && isset($jsonData['csrf_token'])) $token = $jsonData['csrf_token'];
+
+    if (!$token || $token !== ($_SESSION['csrf_token'] ?? '')) {
+        jsonError('فشل التحقق من أمان الجلسة (CSRF Token Invalid). يرجى تحديث الصفحة.', 419);
+    }
+    return true;
+}
+
+/**
  * Require specific role(s)
  */
 function requireRole($roles) {
     $user = requireLogin();
+    checkCSRF(); // Automatically check CSRF on POST for protected routes
     
     // SaaS: Security check - ensure user's school matches the current tenant
     if (Tenant::isSaasMode() && !Tenant::isPlatformAdmin()) {

@@ -117,6 +117,18 @@ const API = {
             });
 
             const options = { method, headers: {} };
+
+            // Add CSRF Token for state-changing requests
+            if (method !== 'GET') {
+                const csrfToken = document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('XSRF-TOKEN='))
+                    ?.split('=')[1];
+                if (csrfToken) {
+                    options.headers['X-CSRF-TOKEN'] = csrfToken;
+                }
+            }
+
             if (data && method !== 'GET') {
                 options.headers['Content-Type'] = 'application/json';
                 options.body = JSON.stringify(data);
@@ -201,6 +213,11 @@ async function handleLogin() {
             window.location.href = window.APP_BASE + r.data.school_slug + '/';
         } else {
             showApp();
+            if (r.data.weak_password) {
+                setTimeout(() => {
+                    showToast('⚠️ يرجى تغيير كلمة المرور الافتراضية لحماية حسابك', 'info');
+                }, 3000);
+            }
         }
     } else {
         errorEl.textContent = r.error || 'بيانات غير صحيحة';
@@ -246,7 +263,10 @@ async function loadSchoolsList() {
                 container.classList.remove('hidden');
                 select.innerHTML = '<option value="">اختر المدرسة...</option>';
                 r.data.forEach(s => {
-                    select.innerHTML += `<option value="${s.slug}">${s.name}${s.city ? ' - ' + s.city : ''}</option>`;
+                    const option = document.createElement('option');
+                    option.value = s.slug;
+                    option.textContent = s.name + (s.city ? ' - ' + s.city : '');
+                    select.appendChild(option);
                 });
             }
         }
@@ -423,7 +443,7 @@ function navigateTo(page) {
                         <div class="text-center py-12">
                             <p class="text-5xl mb-4">⚠️</p>
                             <p class="text-xl font-bold text-red-600 mb-2">خطأ في تحميل الصفحة</p>
-                            <p class="text-gray-500">${e.message}</p>
+                            <p class="text-gray-500">${esc(e.message)}</p>
                             <button onclick="navigateTo('dashboard')" class="mt-4 bg-green-600 text-white px-6 py-3 rounded-xl font-semibold cursor-pointer">العودة للرئيسية</button>
                         </div>`;
                 });
@@ -482,7 +502,14 @@ function showToast(msg, type = 'success') {
 
     const toast = document.createElement('div');
     toast.className = `toast ${colors[type]} text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-semibold`;
-    toast.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+
+    const iconSpan = document.createElement('span');
+    iconSpan.textContent = icons[type];
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = msg;
+
+    toast.appendChild(iconSpan);
+    toast.appendChild(msgSpan);
     container.appendChild(toast);
 
     setTimeout(() => toast.remove(), 3000);

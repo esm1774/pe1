@@ -102,7 +102,7 @@ function saveStudent() {
     $db      = getDB();
     $id      = $data['id'] ?? null;
     $name    = sanitize($data['name']);
-    $studentNumber = sanitize($data['student_number']);
+    $studentNumber = trim(html_entity_decode($data['student_number'] ?? '', ENT_QUOTES, 'UTF-8'), " '\"`\t\n\r");
     $classId = (int)$data['class_id'];
     $sid     = schoolId();
 
@@ -328,8 +328,11 @@ function importStudents() {
         // Extract fields
         $name = isset($fieldIndex['name']) && isset($cols[$fieldIndex['name']]) 
             ? trim($cols[$fieldIndex['name']]) : '';
-        $studentNumber = isset($fieldIndex['student_number']) && isset($cols[$fieldIndex['student_number']]) 
-            ? trim($cols[$fieldIndex['student_number']]) : '';
+        $studentNumberRaw = isset($fieldIndex['student_number']) && isset($cols[$fieldIndex['student_number']]) 
+            ? (string)$cols[$fieldIndex['student_number']] : '';
+        
+        // Clean student number (remove leading quotes common in Excel and decode entities)
+        $studentNumber = trim(html_entity_decode($studentNumberRaw, ENT_QUOTES, 'UTF-8'), " '\"`\t\n\r");
         
         // Validate required
         if (empty($name)) {
@@ -436,7 +439,7 @@ function importStudents() {
                     $password = password_hash($studentNumber, PASSWORD_DEFAULT);
                 }
                 $db->prepare("INSERT INTO students (school_id, name, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password) VALUES (?,?,?,?,?,?,?,?,?)")
-                   ->execute([$sid, sanitize($name), sanitize($studentNumber), $classId, $dob, $bloodType, $guardianPhone, $medicalNotes ? sanitize($medicalNotes) : null, $password]);
+                   ->execute([$sid, sanitize($name), $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes ? sanitize($medicalNotes) : null, $password]);
                 $imported++;
             }
         } catch (PDOException $e) {

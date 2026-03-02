@@ -1,17 +1,17 @@
 :root {
     --primary: #10b981;
-    --primary-dark: #059669;
-    --primary-light: #ecfdf5;
-    --secondary: #0d9488;
+    --primary-dark: #065f46;
+    --primary-light: #f0fdf4;
+    --secondary: #6366f1;
     --accent: #f59e0b;
     --danger: #ef4444;
-    --bg-main: #f0fdf4;
+    --bg-main: #f8fafc;
     --bg-card: #ffffff;
-    --text-main: #1e293b;
+    --text-main: #0f172a;
     --text-muted: #64748b;
     --border: #e2e8f0;
-    --shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 /* ============================================================
@@ -31,7 +31,7 @@ html {
 }
 
 body {
-    font-family: 'Cairo', 'Outfit', sans-serif;
+    font-family: 'Almarai', 'Outfit', sans-serif;
     background-color: var(--bg-main);
     color: var(--text-main);
     line-height: 1.6;
@@ -56,13 +56,15 @@ body {
 header {
     background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
     color: white;
-    padding: 1.5rem 1rem 2rem;
-    border-radius: 0 0 2rem 2rem;
+    padding: 1.5rem 1rem 3rem;
+    border-radius: 0 0 2.5rem 2.5rem;
     text-align: center;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 8px 24px rgba(5, 150, 105, 0.25);
+    margin-bottom: -1.5rem;
+    /* Overlap with tabs */
+    box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.3);
     position: relative;
     overflow: hidden;
+    z-index: 10;
 }
 
 header::before {
@@ -185,14 +187,17 @@ header p {
    NAVIGATION TABS
    ============================================================ */
 .tabs {
-    background: var(--bg-card);
-    border-radius: 1rem;
-    padding: 0.35rem;
-    margin-bottom: 1.2rem;
-    box-shadow: var(--shadow);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 1.25rem;
+    padding: 0.4rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-premium);
     position: sticky;
-    top: 0.5rem;
+    top: 1rem;
     z-index: 100;
+    border: 1px solid rgba(255, 255, 255, 0.5);
     /* Scrollable tabs on mobile */
     display: flex;
     overflow-x: auto;
@@ -277,7 +282,7 @@ header p {
     align-items: center;
     justify-content: space-between;
     padding: 0.85rem 0;
-    border-bottom: 1px solid #f0fdf4;
+    border-bottom: 1px solid var(--primary-light);
     gap: 0.25rem;
 }
 
@@ -386,8 +391,8 @@ header p {
 .schedule-table th {
     text-align: right;
     padding: 0.65rem 0.75rem;
-    background: #f0fdf4;
-    color: var(--text-muted);
+    background: var(--primary-light);
+    color: var(--primary-dark);
     font-size: 0.75rem;
     font-weight: 900;
     white-space: nowrap;
@@ -395,9 +400,10 @@ header p {
 
 .schedule-table td {
     padding: 0.75rem;
-    border-top: 1px solid #f0fdf4;
+    border-top: 1px solid var(--primary-light);
     font-size: 0.82rem;
     vertical-align: middle;
+    transition: background 0.2s;
 }
 
 .schedule-table tr:hover td {
@@ -424,18 +430,19 @@ header p {
 .standings-table th {
     text-align: right;
     padding: 0.65rem 0.6rem;
-    background: #f0fdf4;
-    color: var(--text-muted);
+    background: var(--primary-light);
+    color: var(--primary-dark);
     font-size: 0.72rem;
     font-weight: 900;
-    border-bottom: 2px solid #d1fae5;
+    border-bottom: 2px solid var(--border);
     white-space: nowrap;
 }
 
 .standings-table td {
     padding: 0.65rem 0.6rem;
-    border-bottom: 1px solid #f0fdf4;
+    border-bottom: 1px solid var(--primary-light);
     font-size: 0.82rem;
+    transition: background 0.2s;
 }
 
 .standings-table tr:last-child td {

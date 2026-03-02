@@ -189,7 +189,7 @@ function renderTournamentCard(t) {
                     <p class="text-xs text-gray-500">مباراة</p>
                 </div>
                 <div class="bg-teal-50 rounded-lg p-2">
-                    <p class="text-xl font-bold text-teal-600">${t.sport_type || '⚽'}</p>
+                    <p class="text-xl font-bold text-teal-600">${esc(t.sport_type || '⚽')}</p>
                     <p class="text-xs text-gray-500">الرياضة</p>
                 </div>
             </div>
@@ -649,7 +649,7 @@ async function renderStandingsTab(id) {
 
         ${groupNames.length > 0 ? groupNames.map(gn => `
         <div class="mb-8">
-            ${gn !== 'الكل' ? `<h5 class="font-bold text-emerald-700 mb-3 bg-emerald-50 p-2 rounded-lg">المجموعة ${gn}</h5>` : ''}
+            ${gn !== 'الكل' ? `<h5 class="font-bold text-emerald-700 mb-3 bg-emerald-50 p-2 rounded-lg">المجموعة ${esc(gn)}</h5>` : ''}
             <div class="overflow-x-auto -mx-3 md:mx-0 rounded-xl">
                 <div class="min-w-[600px]">  
                 <table class="w-full">

@@ -36,6 +36,7 @@ function checkAuth() {
 }
 
 function login() {
+    checkCSRF();
     $data = getPostData();
     $username = sanitize($data['username'] ?? '');
     $password = $data['password'] ?? '';
@@ -115,7 +116,8 @@ function login() {
             'name' => $student['name'],
             'role' => 'student',
             'class_id' => $student['class_id'],
-            'school_id' => $student['school_id']
+            'school_id' => $student['school_id'],
+            'weak_password' => ($password === $student['student_number'])
         ];
         
         // Include school slug for redirection
@@ -250,6 +252,7 @@ function sendOTP($email, $otp, $name) {
  * Handle Forgot Password Request (Generate & Send OTP)
  */
 function forgotPassword() {
+    checkCSRF();
     $data = getPostData();
     $email = sanitize($data['email'] ?? '');
     
@@ -332,6 +335,7 @@ function forgotPassword() {
  * Handle Password Reset via OTP
  */
 function resetPassword() {
+    checkCSRF();
     $data = getPostData();
     $email = sanitize($data['email'] ?? '');
     $otp = sanitize($data['otp'] ?? '');
