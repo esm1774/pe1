@@ -7,7 +7,8 @@
 // TOURNAMENT API HELPER
 // ============================================================
 const TAPI = {
-    base: 'modules/tournaments/api.php',
+    // Ensure we always point to the module root regardless of current path slug
+    base: '/modules/tournaments/api.php',
 
     async request(action, method = 'GET', data = null, params = {}) {
         try {

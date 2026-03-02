@@ -32,9 +32,10 @@ class Tenant {
         $uriParts = explode('/', $relativeUri);
         
         if (!empty($uriParts[0])) {
-            $slug = strtolower($uriParts[0]);
+            $slug = explode('?', $uriParts[0])[0];
+            $slug = strtolower($slug);
             // Skip common paths that are NOT school slugs
-            if (!in_array($slug, ['api', 'admin', 'assets', 'css', 'js', 'api.php', 'index.html', 'install.php', 'register.html', 'welcome.html'])) {
+            if (!in_array($slug, ['api', 'admin', 'assets', 'css', 'js', 'modules', 'api.php', 'index.html', 'install.php', 'register.html', 'welcome.html', 'favicon.ico'])) {
                 $school = self::findBySlug($slug);
                 if ($school) {
                     self::$schoolId = (int)$school['id'];

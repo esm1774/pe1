@@ -34,7 +34,7 @@ Options -Indexes
     RewriteRule ^ - [L]
 
     # 2. Skip common root assets and entry points
-    RewriteCond %{REQUEST_URI} ^/(api\.php|index\.html|sw\.js|manifest\.json|assets|css|js|icons|vendor|welcome\.html|register\.html|login\.html) [NC]
+    RewriteCond %{REQUEST_URI} ^/(api\.php|index\.html|sw\.js|manifest\.json|assets|css|js|icons|vendor|modules|welcome\.html|register\.html|login\.html) [NC]
     RewriteRule ^ - [L]
 
     # 3. Rewrite all other requests to index.html (SPA routing)

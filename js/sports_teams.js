@@ -7,7 +7,8 @@
 // API HELPER
 // ============================================================
 const STAPI = {
-    base: 'modules/sports_teams/api.php',
+    // Ensure we always point to the module root regardless of current path slug
+    base: '/modules/sports_teams/api.php',
     async request(action, method = 'GET', data = null, params = {}) {
         try {
             let url = `${this.base}?action=${action}`;
@@ -20,9 +21,16 @@ const STAPI = {
                 opts.body = JSON.stringify(data);
             }
             const r = await fetch(url, opts);
-            return await r.json();
+            const text = await r.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('STAPI Parse Error:', text.substring(0, 500));
+                showToast('خطأ في استجابة النظام', 'error');
+                return null;
+            }
         } catch (e) {
-            console.error('STAPI Error:', e);
+            console.error('STAPI Connection Error:', e);
             showToast('خطأ في الاتصال', 'error');
             return null;
         }
@@ -202,7 +210,10 @@ async function openTeam(id) {
     mc.innerHTML = showLoading();
 
     const r = await STAPI.get('team_get', { id });
-    if (!r?.success) { mc.innerHTML = '<p class="text-red-500">خطأ في تحميل الفريق</p>'; return; }
+    if (!r?.success) {
+        mc.innerHTML = `<p class="text-red-500">خطأ في تحميل الفريق: ${esc(r?.error || 'خطأ مجهول')}</p>`;
+        return;
+    }
 
     const t = r.data;
     const type = TEAM_TYPE_AR[t.team_type] || TEAM_TYPE_AR.mixed;

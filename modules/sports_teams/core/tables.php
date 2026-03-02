@@ -89,7 +89,26 @@ function ensureSportsTeamsTables() {
             CONSTRAINT `fk_ta_student` FOREIGN KEY (`student_id`) REFERENCES `students`(`id`)          ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // Ensure school_id exists in all relevant tables
+        _addColumnST($db, 'sports_teams',      'school_id', 'INT UNSIGNED DEFAULT NULL AFTER id');
+        _addColumnST($db, 'training_sessions', 'school_id', 'INT UNSIGNED DEFAULT NULL AFTER id');
+
     } catch (Exception $e) {
-        // Silent fail — tables may already exist
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            error_log('Sports Teams Table Error: ' . $e->getMessage());
+        }
     }
+}
+
+/**
+ * مساعد لإضافة عمود إذا لم يكن موجوداً
+ */
+function _addColumnST($db, $table, $column, $definition) {
+    try {
+        $cols = array_column($db->query("SHOW COLUMNS FROM `$table`")->fetchAll(), 'Field');
+        if (!in_array($column, $cols)) {
+            $db->exec("ALTER TABLE `$table` ADD COLUMN $column $definition");
+            $db->exec("ALTER TABLE `$table` ADD INDEX (`$column`)");
+        }
+    } catch (Throwable $e) {} // Changed to Throwable for PHP 7+ error handling
 }

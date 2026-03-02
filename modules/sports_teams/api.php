@@ -21,10 +21,9 @@ $action = getParam('action', '');
 // Resolve current tenant (school) context
 Tenant::resolve();
 
-// التأكد من وجود الجداول
-ensureSportsTeamsTables();
-
 try {
+    // التأكد من وجود الجداول
+    ensureSportsTeamsTables();
     switch ($action) {
         // ── الفرق ─────────────────────────────────────────────
         case 'teams_list':          listTeams();         break;
@@ -61,8 +60,10 @@ try {
             jsonError('إجراء غير معروف', 404);
     }
 } catch (PDOException $e) {
-    if (DEBUG_MODE) jsonError('DB Error: ' . $e->getMessage(), 500);
-    jsonError('حدث خطأ في قاعدة البيانات', 500);
-} catch (Exception $e) {
-    jsonError($e->getMessage(), 500);
+    $msg = 'DB Error (' . $action . '): ' . $e->getMessage();
+    if (DEBUG_MODE) jsonError($msg, 400);
+    jsonError('حدث خطأ في قاعدة البيانات', 400);
+} catch (Throwable $e) {
+    if (DEBUG_MODE) jsonError($e->getMessage(), 400);
+    jsonError('حدث خطأ في النظام', 400);
 }
