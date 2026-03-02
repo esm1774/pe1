@@ -86,6 +86,12 @@
                 }
             });
         }
+
+        // Apply theme immediately to prevent flashing
+        (function () {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
     </script>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -96,8 +102,8 @@
     <!-- LOGIN PAGE -->
     <!-- ============================================================ -->
     <div id="loginPage"
-        class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-600 via-emerald-700 to-teal-800 p-4 overflow-x-hidden">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
+        class="min-h-screen flex items-center justify-center bg-main p-4 overflow-x-hidden transition-colors duration-500">
+        <div class="bg-card rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in border border-color">
             <div class="text-center mb-8">
                 <div
                     class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
@@ -202,9 +208,10 @@
     <!-- ============================================================ -->
     <!-- MAIN APP -->
     <!-- ============================================================ -->
-    <div id="mainApp" class="hidden min-h-screen">
+    <div id="mainApp" class="hidden min-h-screen bg-main">
         <!-- Header -->
-        <header class="bg-white shadow-sm border-b border-gray-100 no-print sticky top-0 z-40">
+        <header
+            class="bg-card shadow-sm border-b border-color no-print sticky top-0 z-40 transition-colors duration-300">
             <div class="flex items-center justify-between px-6 py-3">
                 <div class="flex items-center gap-3">
                     <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 text-2xl cursor-pointer">☰</button>
@@ -228,6 +235,13 @@
                             class="notification-badge hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full border-2 border-white animate-pulse px-1">0</span>
                     </button>
 
+                    <!-- Theme Toggle -->
+                    <button id="themeToggleBtn" onclick="toggleTheme()"
+                        class="w-10 h-10 flex items-center justify-center rounded-2xl bg-gray-100 dark:bg-slate-800 text-xl hover:scale-110 transition-transform cursor-pointer"
+                        title="تبديل الوضع">
+                        🌙
+                    </button>
+
                     <!-- User Profile -->
                     <button onclick="toggleUserDropdown()" class="flex items-center gap-2 group cursor-pointer">
                         <div class="w-10 h-10 bg-green-100 text-green-700 rounded-2xl flex items-center justify-center font-bold"
@@ -241,16 +255,16 @@
 
                     <!-- Dropdown Menu -->
                     <div id="userDropdown"
-                        class="hidden absolute left-0 mt-5 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 fade-in top-full origin-top-left">
-                        <div class="px-4 py-2 border-b border-gray-50 mb-1">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">إعدادات الحساب
+                        class="hidden absolute left-0 mt-5 w-56 bg-card rounded-2xl shadow-2xl border border-color py-2 z-50 fade-in top-full origin-top-left transition-colors duration-300">
+                        <div class="px-4 py-2 border-b border-color mb-1">
+                            <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">إعدادات الحساب
                             </p>
                         </div>
                         <a href="javascript:void(0)" onclick="navigateTo('user_profile');toggleUserDropdown()"
-                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition">
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-main hover:bg-primary-light hover:text-primary transition">
                             <span class="text-lg">👤</span> ملفي الشخصي (CV)
                         </a>
-                        <div class="border-t border-gray-50 my-1"></div>
+                        <div class="border-t border-color my-1"></div>
                         <a href="javascript:void(0)" onclick="handleLogout()"
                             class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition font-bold">
                             <span class="text-lg">🚪</span> تسجيل الخروج
@@ -263,7 +277,7 @@
         <div class="flex">
             <!-- Sidebar -->
             <aside id="sidebar"
-                class="w-64 bg-gradient-to-b from-gray-800 to-gray-900 min-h-[calc(100vh-56px)] fixed lg:sticky top-[56px] z-30 transition-all duration-300 -right-64 lg:right-0 no-print">
+                class="w-64 bg-sidebar min-h-[calc(100vh-56px)] fixed lg:sticky top-[56px] z-30 transition-all duration-300 -right-64 lg:right-0 no-print border-l border-color">
                 <nav class="py-4">
                     <div class="px-4 mb-4">
                         <p class="text-gray-400 text-xs font-semibold uppercase tracking-wider">القائمة الرئيسية</p>

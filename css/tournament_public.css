@@ -11,7 +11,43 @@
     --text-muted: #64748b;
     --border: #e2e8f0;
     --shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+[data-theme="dark"] {
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --primary-light: rgba(16, 185, 129, 0.1);
+    --shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+}
+
+/* Local Component Fixes for Dark Mode */
+[data-theme="dark"] .card {
+    background-color: var(--bg-card) !important;
+    color: var(--text-main);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .scorer-row {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .schedule-table th,
+[data-theme="dark"] .standings-table th {
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+[data-theme="dark"] .bracket-match {
+    background-color: var(--bg-card);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .tabs {
+    border-color: var(--border);
 }
 
 /* ============================================================
@@ -187,7 +223,8 @@ header p {
    NAVIGATION TABS
    ============================================================ */
 .tabs {
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--bg-card);
+    opacity: 0.95;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 1.25rem;

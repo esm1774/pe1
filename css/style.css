@@ -9,39 +9,88 @@
 @import url('https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap');
 
 :root {
-    /* Core Palette - Modern Emerald */
+    /* Base Variables (Light Mode) */
     --primary: #10b981;
     --primary-light: #ecfdf5;
     --primary-dark: #065f46;
     --accent: #f59e0b;
     --secondary: #6366f1;
 
-    /* Semantic Colors */
     --success: #22c55e;
     --warning: #f59e0b;
     --danger: #ef4444;
     --info: #3b82f6;
 
-    /* Neutral Palette - Slate */
+    /* Theme-specific variables */
     --bg-main: #f8fafc;
     --bg-card: #ffffff;
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-200: #e2e8f0;
-    --gray-300: #cbd5e1;
-    --gray-400: #94a3b8;
-    --gray-500: #64748b;
-    --gray-600: #475569;
-    --gray-700: #334155;
-    --gray-800: #1e293b;
-    --gray-900: #0f172a;
+    --bg-sidebar: #065f46;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --input-bg: #ffffff;
 
     /* Shadows & Glass */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
     --glass: rgba(255, 255, 255, 0.75);
+}
+
+/* Dark Mode Overrides */
+[data-theme="dark"] {
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --bg-sidebar: #020617;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+    --input-bg: #334155;
+    --primary-light: rgba(16, 185, 129, 0.1);
+    --shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+    --glass: rgba(15, 23, 42, 0.8);
+}
+
+/* Force Tailwind Overrides in Dark Mode */
+[data-theme="dark"] .bg-white {
+    background-color: var(--bg-card) !important;
+}
+
+[data-theme="dark"] .bg-gray-50 {
+    background-color: var(--bg-main) !important;
+}
+
+[data-theme="dark"] .bg-gray-100 {
+    background-color: var(--input-bg) !important;
+}
+
+[data-theme="dark"] .text-gray-800 {
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .text-gray-700 {
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .text-gray-600 {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .text-gray-500 {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-gray-200 {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .shadow-sm,
+[data-theme="dark"] .shadow-lg,
+[data-theme="dark"] .shadow-2xl {
+    box-shadow: var(--shadow-premium) !important;
+}
+
+[data-theme="dark"] .divide-gray-100>*+* {
+    border-color: var(--border-color) !important;
 }
 
 /* ============================================
@@ -52,13 +101,56 @@
     box-sizing: border-box;
 }
 
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.bg-main {
+    background-color: var(--bg-main) !important;
+}
+
+.bg-card {
+    background-color: var(--bg-card) !important;
+}
+
+.bg-sidebar {
+    background-color: var(--bg-sidebar) !important;
+}
+
+.border-color {
+    border-color: var(--border-color) !important;
+}
+
+.text-main {
+    color: var(--text-main) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Input Styling for Dark Mode */
+input,
+select,
+textarea {
+    background-color: var(--input-bg);
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--primary);
+}
+
 body {
     background: var(--bg-main);
-    color: var(--gray-800);
+    color: var(--text-main);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* ============================================
@@ -109,15 +201,15 @@ body {
    MODAL
    ============================================ */
 .modal-overlay {
-    background: rgba(15, 23, 42, 0.65);
+    background: rgba(15, 23, 42, 0.75);
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
     z-index: 999;
 }
 
 .modal-content {
-    background: var(--glass);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 2.5rem;
     box-shadow: var(--shadow-premium);
 }

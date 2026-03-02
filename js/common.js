@@ -99,6 +99,34 @@ const PAGE_MAP = {
 };
 
 // ============================================================
+// THEME MANAGEMENT (DARK/LIGHT MODE)
+// ============================================================
+function initTheme() {
+    const saved = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    updateThemeIcon(saved);
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const target = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', target);
+    localStorage.setItem('theme', target);
+    updateThemeIcon(target);
+}
+
+function updateThemeIcon(theme) {
+    const btn = document.getElementById('themeToggleBtn');
+    if (btn) {
+        btn.innerHTML = theme === 'dark' ? '☀️' : '🌙';
+        btn.title = theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن';
+    }
+}
+
+// Call on load
+initTheme();
+
+// ============================================================
 // API HELPER
 // ============================================================
 const API = {
