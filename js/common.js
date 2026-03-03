@@ -435,6 +435,17 @@ function isTeacher() {
     return currentUser && currentUser.role === 'teacher';
 }
 
+// Map pages to their required feature key (for subscription-based access control)
+const PAGE_FEATURE_MAP = {
+    'fitness': 'fitness_tests',
+    'timetable': 'timetable',
+    'sportsTeams': 'sports_teams',
+    'tournaments': 'tournaments',
+    'reports': 'reports',
+    'analytics': 'analytics',
+    'badgesAdmin': 'badges',
+};
+
 // ============================================================
 // NAVIGATION
 // ============================================================
@@ -449,6 +460,22 @@ function navigateTo(page) {
     if (page === 'user_profile' && currentUser && currentUser.role === 'student') {
         window._profileStudentId = currentUser.id;
         page = 'studentProfile';
+    }
+
+    // Feature-access guard: show permission-denied page if subscription lacks this feature
+    const requiredFeature = PAGE_FEATURE_MAP[page];
+    if (requiredFeature && typeof hasFeature === 'function' && !hasFeature(requiredFeature)) {
+        const deniedPage = document.getElementById('permissionDeniedPage');
+        const mainContent = document.getElementById('mainContent');
+        if (deniedPage) deniedPage.classList.remove('hidden');
+        if (mainContent) mainContent.innerHTML = ''; // Clear main content
+        return; // Stop navigation
+    }
+
+    // Hide permission-denied page if visible (from a previous denied attempt)
+    const deniedPage = document.getElementById('permissionDeniedPage');
+    if (deniedPage && !deniedPage.classList.contains('hidden')) {
+        deniedPage.classList.add('hidden');
     }
 
     currentPage = page;

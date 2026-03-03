@@ -233,21 +233,105 @@ function getSchoolsList() {
 
 /**
  * Send OTP Email Helper
+ * يدعم SMTP عبر PHPMailer إذا كان مثبتاً، وإلا يستخدم mail() المحلية
  */
 function sendOTP($email, $otp, $name) {
     if (empty($email)) return false;
-    $subject = "رمز استعادة كلمة المرور - PE Smart School";
-    $message = "مرحباً $name،\n\nرمز استعادة كلمة المرور الخاص بك هو: $otp\n" .
-               "هذا الرمز صالح لمدة 15 دقيقة فقط.\n\n" .
-               "إذا لم تطلب استعادة كلمة المرور، يرجى تجاهل هذه الرسالة.";
-    
-    $headers = "From: noreply@pesmart.school.local\r\n" .
-               "Reply-To: noreply@pesmart.school.local\r\n" .
-               "Content-Type: text/plain; charset=utf-8\r\n" .
-               "X-Mailer: PHP/" . phpversion();
 
-    return @mail($email, $subject, $message, $headers);
+    $subject = "رمز استعادة كلمة المرور - " . APP_NAME;
+
+    // HTML Email Template
+    $htmlMessage = "
+    <!DOCTYPE html>
+    <html dir='rtl' lang='ar'>
+    <head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>
+    <body style='margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;direction:rtl;'>
+      <table width='100%' cellpadding='0' cellspacing='0' style='padding:20px 0;'>
+        <tr><td align='center'>
+          <table width='480' cellpadding='0' cellspacing='0' style='background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);'>
+            <!-- Header -->
+            <tr>
+              <td style='background:linear-gradient(135deg,#059669,#10b981);padding:32px 24px;text-align:center;'>
+                <h1 style='color:#fff;margin:0;font-size:22px;font-weight:bold;'>🔐 " . APP_NAME . "</h1>
+                <p style='color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;'>استعادة كلمة المرور</p>
+              </td>
+            </tr>
+            <!-- Body -->
+            <tr>
+              <td style='padding:32px 28px;'>
+                <p style='color:#374151;font-size:16px;margin:0 0 8px;'>مرحباً <strong>" . htmlspecialchars($name) . "</strong>،</p>
+                <p style='color:#6b7280;font-size:14px;margin:0 0 24px;'>تلقّينا طلباً لاستعادة كلمة المرور. رمز التحقق الخاص بك هو:</p>
+                <!-- OTP Box -->
+                <div style='background:#f0fdf4;border:2px dashed #10b981;border-radius:10px;padding:20px;text-align:center;margin:0 0 24px;'>
+                  <span style='font-size:38px;font-weight:900;letter-spacing:12px;color:#065f46;font-family:monospace;'>" . $otp . "</span>
+                </div>
+                <p style='color:#6b7280;font-size:13px;margin:0 0 6px;'>⏱️ هذا الرمز صالح لمدة <strong>15 دقيقة</strong> فقط.</p>
+                <p style='color:#9ca3af;font-size:12px;margin:0;'>إذا لم تطلب استعادة كلمة المرور، يرجى تجاهل هذه الرسالة.</p>
+              </td>
+            </tr>
+            <!-- Footer -->
+            <tr>
+              <td style='background:#f9fafb;padding:16px 28px;text-align:center;border-top:1px solid #e5e7eb;'>
+                <p style='color:#9ca3af;font-size:12px;margin:0;'>" . APP_NAME . " &mdash; نظام إدارة التربية البدنية</p>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+    </body>
+    </html>";
+
+    $plainText = "مرحباً $name،\n\nرمز استعادة كلمة المرور الخاص بك هو: $otp\n\nهذا الرمز صالح لمدة 15 دقيقة فقط.\n\nإذا لم تطلب استعادة كلمة المرور، يرجى تجاهل هذه الرسالة.";
+
+    // ── SMTP via PHPMailer (if enabled and library exists) ──────────────────
+    if (MAIL_USE_SMTP && !empty(MAIL_USERNAME) && !empty(MAIL_PASSWORD)) {
+        $mailerPath = __DIR__ . '/vendor/autoload.php';
+        if (file_exists($mailerPath)) {
+            require_once $mailerPath;
+            try {
+                $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+                $mail->isSMTP();
+                $mail->Host       = MAIL_HOST;
+                $mail->SMTPAuth   = true;
+                $mail->Username   = MAIL_USERNAME;
+                $mail->Password   = MAIL_PASSWORD;
+                $mail->SMTPSecure = MAIL_ENCRYPTION === 'ssl'
+                    ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                    : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port       = MAIL_PORT;
+                $mail->CharSet    = 'UTF-8';
+
+                $fromEmail = !empty(MAIL_FROM_EMAIL) ? MAIL_FROM_EMAIL : MAIL_USERNAME;
+                $mail->setFrom($fromEmail, MAIL_FROM_NAME);
+                $mail->addAddress($email, $name);
+
+                $mail->isHTML(true);
+                $mail->Subject = $subject;
+                $mail->Body    = $htmlMessage;
+                $mail->AltBody = $plainText;
+
+                $mail->send();
+                return true;
+            } catch (\Exception $e) {
+                if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                    error_log('[SMTP Error] ' . $e->getMessage());
+                }
+                // Fall through to mail() fallback
+            }
+        }
+    }
+
+    // ── Fallback: PHP mail() for local/dev environments ────────────────────
+    $fromEmail = !empty(MAIL_FROM_EMAIL) ? MAIL_FROM_EMAIL : 'noreply@pesmart.local';
+    $headers  = "From: " . MAIL_FROM_NAME . " <$fromEmail>\r\n";
+    $headers .= "Reply-To: $fromEmail\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=utf-8\r\n";
+    $headers .= "X-Mailer: PHP/" . phpversion();
+
+    return @mail($email, '=?UTF-8?B?' . base64_encode($subject) . '?=', $htmlMessage, $headers);
 }
+
 
 /**
  * Handle Forgot Password Request (Generate & Send OTP)

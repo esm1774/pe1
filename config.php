@@ -39,6 +39,24 @@ define('BASE_URL', rtrim($rootHome, '/'));
 define('SESSION_LIFETIME', 7200); // ساعتان
 
 // ============================================================
+// EMAIL / SMTP CONFIGURATION - إعدادات البريد الإلكتروني
+// ============================================================
+// اضبط هذه الإعدادات لإرسال رسائل OTP واستعادة كلمة المرور
+// لإيقاف SMTP والاعتماد على mail() المحلية: اضبط MAIL_USE_SMTP = false
+
+define('MAIL_USE_SMTP',    false);            // ← اضبط على true عند الاستضافة
+
+// إعدادات SMTP (Gmail, SendGrid, cPanel, Contabo...)
+define('MAIL_HOST',       'smtp.gmail.com'); // خادم SMTP
+define('MAIL_PORT',        587);             // 587 = TLS | 465 = SSL
+define('MAIL_ENCRYPTION', 'tls');            // 'tls' أو 'ssl'
+define('MAIL_USERNAME',   '');               // بريدك الإلكتروني
+define('MAIL_PASSWORD',   '');               // كلمة مرور التطبيق (App Password)
+define('MAIL_FROM_EMAIL', '');               // البريد المُرسِل (= MAIL_USERNAME عادةً)
+define('MAIL_FROM_NAME',  APP_NAME);         // اسم المُرسِل
+
+
+// ============================================================
 // SECURITY SETTINGS - إعدادات الأمان
 // ============================================================
 define('HASH_COST', 12); // bcrypt cost factor

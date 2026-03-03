@@ -400,6 +400,25 @@
     </div>
 
     <!-- ============================================================ -->
+    <!-- PERMISSION DENIED PAGE                                         -->
+    <!-- ============================================================ -->
+    <div id="permissionDeniedPage" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-main p-4">
+        <div class="bg-card rounded-3xl shadow-2xl p-10 max-w-md w-full text-center fade-in border border-color">
+            <div
+                class="w-24 h-24 bg-gradient-to-br from-red-400 to-rose-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span class="text-5xl">🚫</span>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">غير مصرح بالوصول</h2>
+            <p class="text-gray-500 text-sm mb-1">هذه الميزة غير مدرجة في خطة اشتراك مدرستك الحالية.</p>
+            <p class="text-gray-400 text-xs mb-8">تواصل مع مدير المنصة لتفعيل هذه الميزة.</p>
+            <button onclick="navigateTo('dashboard')"
+                class="w-full bg-gradient-to-l from-emerald-600 to-green-600 text-white py-3 rounded-xl font-bold hover:from-emerald-700 hover:to-green-700 transition shadow-lg">
+                🏠 العودة للرئيسية
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
     <!-- OVERLAYS & CONTAINERS -->
     <!-- ============================================================ -->
     </div>
