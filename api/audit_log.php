@@ -20,13 +20,13 @@ function getAuditLogs() {
     $limit = min(100, max(10, (int)getParam('limit', 50))); // Between 10-100, default 50
     $offset = ($page - 1) * $limit;
 
-    // Security: Only super_admin logic can bypass school_id check, but for SaaS, $sid should be present for regular admins.
+    // Security: Enforce tenant isolation in SaaS mode
     if ($sid) {
         $schoolFilter = "WHERE a.school_id = ?";
         $params[] = $sid;
     } else {
-        // If some entity creates logs without school_id and an admin is checking... typically should not happen for school-level admins.
-        $schoolFilter = "WHERE a.school_id IS NULL";
+        // If no school ID is found, deny access instead of querying NULL (which might expose global or other non-tenant data)
+        jsonError('لا تملك صلاحية الوصول إلى السجلات العامة.');
     }
 
     $stmt = $db->prepare("
@@ -46,10 +46,6 @@ function getAuditLogs() {
     $countStmt->execute($params);
     $total = (int)$countStmt->fetchColumn();
 
-    jsonSuccess([
-        'logs'  => $logs,
-        'total' => $total,
-        'page'  => $page,
-        'pages' => ceil($total / $limit)
-    ]);
+    // Return raw array to match frontend JS expectations which currently does not support pagination
+    jsonSuccess($logs);
 }
