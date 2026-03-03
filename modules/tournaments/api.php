@@ -1117,19 +1117,28 @@ function generateMixedKnockoutStage($tournamentId) {
 }
 
 /**
+ * توليد مصفوفة التوزيع القياسي (Standard Seeding)
+ * لبناء شجرة متوازنة بحجم قوة العدد 2 (2, 4, 8, 16...)
+ */
+function generateStandardSeeding($bracketSize) {
+    if ($bracketSize <= 1) return [1];
+    
+    $seeding = [1, 2];
+    for ($i = 2; $i < $bracketSize; $i *= 2) {
+        $nextSeeding = [];
+        foreach ($seeding as $seed) {
+            $nextSeeding[] = $seed;
+            $nextSeeding[] = (2 * $i + 1) - $seed;
+        }
+        $seeding = $nextSeeding;
+    }
+    return $seeding;
+}
+
+/**
  * Single Elimination - خروج المغلوب من مرة واحدة
  * ================================================
- * المنطق:
- * 1. حساب حجم القوس (أقرب قوة للعدد 2)
- * 2. إنشاء كل المباريات لكل الجولات (فارغة)
- * 3. ربط كل مباراة بالمباراة التالية (next_match_id)
- * 4. وضع الفرق في مباريات الجولة الأولى
- * 5. معالجة BYE: الفريق بدون منافس يتأهل تلقائياً
- * 
- * مثال مع 5 فرق:
- *   الجولة 1: [A vs B] [C vs D] [E vs BYE] [BYE vs BYE]
- *   الجولة 2: [فائز1 vs فائز2] [E vs ...]
- *   النهائي: [فائز vs فائز]
+ * بناء القوس مع التوزيع القياسي (Standard Seeding)
  */
 function generateSingleElimination($tournamentId, $teams, $startRound = 1) {
     $db = getDB();
@@ -1199,17 +1208,22 @@ function generateSingleElimination($tournamentId, $teams, $startRound = 1) {
     }
     
     // ======== المرحلة 3: توزيع الفرق في الجولة الأولى ========
-    // ملء الفراغات بـ null (BYE)
-    $paddedTeams = $teams;
-    while (count($paddedTeams) < $bracketSize) {
-        $paddedTeams[] = null;
+    // ترتيب الفرق بالتوازي مع التوزيع القياسي (Standard Seeding)
+    $seedingPattern = generateStandardSeeding($bracketSize);
+    $paddedTeams = array_fill(0, $bracketSize, null);
+    
+    foreach ($seedingPattern as $idx => $seed) {
+        // seed يبدأ من 1, المصفوفات من 0
+        if ($seed <= $n) {
+            $paddedTeams[$idx] = $teams[$seed - 1];
+        }
     }
     
     foreach ($matchIds[1] as $pos => $matchId) {
         $t1Idx = $pos * 2;
         $t2Idx = $pos * 2 + 1;
-        $team1 = $paddedTeams[$t1Idx] ?? null;
-        $team2 = $paddedTeams[$t2Idx] ?? null;
+        $team1 = $paddedTeams[$t1Idx];
+        $team2 = $paddedTeams[$t2Idx];
         $team1Id = $team1 ? ($team1['id'] ?? null) : null;
         $team2Id = $team2 ? ($team2['id'] ?? null) : null;
         
