@@ -156,13 +156,17 @@ function getStudentReport() {
     }
 
     $db = getDB();
+    $sid = schoolId();
 
     $stmt = $db->prepare("SELECT s.*, CONCAT(g.name, ' - ', c.name) as full_class_name, g.name as grade_name, c.name as class_name,
         TIMESTAMPDIFF(YEAR, s.date_of_birth, CURDATE()) AS age
-        FROM students s JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id WHERE s.id = ?");
-    $stmt->execute([$studentId]);
+        FROM students s JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id WHERE s.id = ?"
+        . ($sid ? " AND s.school_id = ?" : ""));
+    $stmtParams = [$studentId];
+    if ($sid) $stmtParams[] = $sid;
+    $stmt->execute($stmtParams);
     $student = $stmt->fetch();
-    if (!$student) jsonError('الطالب غير موجود');
+    if (!$student) jsonError('الطالب غير موجود أو ليس ضمن صلاحياتك');
 
     $measurement = null;
     try {
@@ -178,10 +182,15 @@ function getStudentReport() {
         $health = $stmt->fetchAll();
     } catch (Exception $e) {}
 
-    $stmt = $db->prepare("SELECT ft.id, ft.name as test_name, ft.unit, ft.type, ft.max_score, sf.value, sf.score, sf.test_date
+    // Fix: Filter fitness_tests by school_id to prevent cross-school data leakage
+    $fitnessTestsSql = "SELECT ft.id, ft.name as test_name, ft.unit, ft.type, ft.max_score, sf.value, sf.score, sf.test_date
         FROM fitness_tests ft LEFT JOIN student_fitness sf ON sf.test_id = ft.id AND sf.student_id = ?
-        WHERE ft.active = 1 ORDER BY ft.id");
-    $stmt->execute([$studentId]);
+        WHERE ft.active = 1";
+    $fitnessParams = [$studentId];
+    if ($sid) { $fitnessTestsSql .= " AND ft.school_id = ?"; $fitnessParams[] = $sid; }
+    $fitnessTestsSql .= " ORDER BY ft.id";
+    $stmt = $db->prepare($fitnessTestsSql);
+    $stmt->execute($fitnessParams);
     $fitnessResults = $stmt->fetchAll();
 
     $totalScore = 0; $totalMax = 0;
@@ -212,12 +221,17 @@ function getClassReport() {
     $classId = getParam('class_id');
     if (!$classId) jsonError('يجب تحديد الفصل');
     $db = getDB();
+    $sid = schoolId();
 
-    $stmt = $db->prepare("SELECT c.*, g.name as grade_name, CONCAT(g.name, ' - ', c.name) as full_name
-        FROM classes c JOIN grades g ON c.grade_id = g.id WHERE c.id = ?");
-    $stmt->execute([$classId]);
+    // Fix: Ensure the class belongs to the current school before fetching data
+    $classSql = "SELECT c.*, g.name as grade_name, CONCAT(g.name, ' - ', c.name) as full_name
+        FROM classes c JOIN grades g ON c.grade_id = g.id WHERE c.id = ?";
+    $classParams = [$classId];
+    if ($sid) { $classSql .= " AND c.school_id = ?"; $classParams[] = $sid; }
+    $stmt = $db->prepare($classSql);
+    $stmt->execute($classParams);
     $class = $stmt->fetch();
-    if (!$class) jsonError('الفصل غير موجود');
+    if (!$class) jsonError('الفصل غير موجود أو ليس ضمن صلاحياتك');
 
     // Try with measurements & health, fallback without
     $queries = [

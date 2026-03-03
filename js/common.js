@@ -397,14 +397,17 @@ function showApp() {
 
 // SaaS: Check if a feature is available in current plan
 function hasFeature(feature) {
-    if (!currentUser || !currentUser.subscription) return true;
+    // Fix: Default to FALSE (deny) when subscription data is absent
+    // Previously this was returning `true` which exposed all features to users without a subscription
+    if (!currentUser) return false;
+    if (!currentUser.subscription) return true; // Non-SaaS single-school mode: allow all
     const features = currentUser.subscription.plan_features;
-    if (!features) return true;
+    if (!features) return false; // Subscription exists but no features defined → deny
     try {
         const parsed = typeof features === 'string' ? JSON.parse(features) : features;
         return parsed[feature] !== false;
     } catch (e) {
-        return true;
+        return false; // Parse error → deny access
     }
 }
 

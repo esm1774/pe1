@@ -104,6 +104,15 @@ function getParentLinkedStudents() {
     if (!$parentId) jsonError('معرّف ولي الأمر مطلوب');
 
     $db = getDB();
+    $sid = schoolId();
+
+    // Fix: Ensure parent belongs to current school before returning their linked students
+    if ($sid) {
+        $check = $db->prepare("SELECT id FROM parents WHERE id = ? AND school_id = ?");
+        $check->execute([$parentId, $sid]);
+        if (!$check->fetch()) jsonError('ولي الأمر غير موجود أو ليس ضمن صلاحياتك', 403);
+    }
+
     $stmt = $db->prepare("
         SELECT s.id, s.name, s.student_number, CONCAT(g.name, ' - ', c.name) as class_name
         FROM parent_students ps
@@ -154,6 +163,19 @@ function linkParentStudent() {
     if (!$parentId || !$studentId) jsonError('البيانات غير مكتملة');
 
     $db = getDB();
+    $sid = schoolId();
+
+    // Fix: Verify parent and student both belong to the current school
+    if ($sid) {
+        $parentCheck = $db->prepare("SELECT id FROM parents WHERE id = ? AND school_id = ?");
+        $parentCheck->execute([$parentId, $sid]);
+        if (!$parentCheck->fetch()) jsonError('ولي الأمر غير موجود أو ليس ضمن مدرستك', 403);
+
+        $studentCheck = $db->prepare("SELECT id FROM students WHERE id = ? AND school_id = ?");
+        $studentCheck->execute([$studentId, $sid]);
+        if (!$studentCheck->fetch()) jsonError('الطالب غير موجود أو ليس ضمن مدرستك', 403);
+    }
+
     try {
         $stmt = $db->prepare("INSERT IGNORE INTO parent_students (parent_id, student_id) VALUES (?, ?)");
         $stmt->execute([$parentId, $studentId]);

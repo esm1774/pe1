@@ -30,9 +30,13 @@ function saveUser() {
     $sid      = schoolId();
     if (!in_array($role, ['admin', 'teacher', 'viewer', 'supervisor'])) jsonError('دور غير صالح');
 
-    // Fix #5: Prevent role privilege escalation - only the first admin (id=1) can assign admin role
-    if ($role === 'admin' && ($_SESSION['user_id'] ?? 0) != 1) {
-        jsonError('لا تملك صلاحية إنشاء مستخدم بدور مدير');
+    // Fix #5: Allow each school admin to create admins within their own school ONLY
+    if ($role === 'admin' && $sid) {
+        // Platform admin (no school context) can create admins anywhere
+        // School admin can only create admins for their own school
+        if (isset($_SESSION['school_id']) && $_SESSION['school_id'] != $sid) {
+            jsonError('لا تملك صلاحية إنشاء مستخدم بدور مدير في مدرسة أخرى');
+        }
     }
 
     // Duplicate check scoped to school
@@ -44,6 +48,12 @@ function saveUser() {
     if ($stmt->fetch()) jsonError('اسم المستخدم مستخدم بالفعل');
 
     if ($id) {
+        // Security: Verify the user being edited belongs to the current school
+        if ($sid) {
+            $ownerCheck = $db->prepare("SELECT id FROM users WHERE id = ? AND school_id = ?");
+            $ownerCheck->execute([$id, $sid]);
+            if (!$ownerCheck->fetch()) jsonError('لا تملك صلاحية تعديل هذا المستخدم', 403);
+        }
         if (!empty($password)) {
             $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
             $db->prepare("UPDATE users SET name=?, username=?, password=?, role=? WHERE id=?")->execute([$name, $username, $hash, $role, $id]);
@@ -87,11 +97,16 @@ function deleteUser() {
 function getTeacherAssignments() {
     requireRole(['admin']);
     $db = getDB();
+    $sid = schoolId();
 
-    $teachers = $db->query("
-        SELECT id, name, username, role FROM users
-        WHERE role = 'teacher' AND active = 1 ORDER BY name
-    ")->fetchAll();
+    // Fix: Scope teachers to current school to prevent cross-school data leakage
+    $sql = "SELECT id, name, username, role FROM users WHERE role = 'teacher' AND active = 1";
+    $params = [];
+    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
+    $sql .= " ORDER BY name";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $teachers = $stmt->fetchAll();
 
     foreach ($teachers as &$teacher) {
         $stmt = $db->prepare("
@@ -102,19 +117,26 @@ function getTeacherAssignments() {
             JOIN classes c ON tc.class_id = c.id
             JOIN grades g ON c.grade_id = g.id
             LEFT JOIN users u ON tc.assigned_by = u.id
-            WHERE tc.teacher_id = ? AND c.active = 1
-            ORDER BY g.sort_order, c.section
+            WHERE tc.teacher_id = ? AND c.active = 1"
+            . ($sid ? " AND c.school_id = ?" : "") .
+            " ORDER BY g.sort_order, c.section
         ");
-        $stmt->execute([$teacher['id']]);
+        $stmtParams = [$teacher['id']];
+        if ($sid) $stmtParams[] = $sid;
+        $stmt->execute($stmtParams);
         $teacher['classes'] = $stmt->fetchAll();
     }
 
-    // Also return all available active classes for the assignment form
-    $allClasses = $db->query("
-        SELECT c.id, CONCAT(g.name, ' - ', c.name) as full_name
-        FROM classes c JOIN grades g ON c.grade_id = g.id
-        WHERE c.active = 1 ORDER BY g.sort_order, c.section
-    ")->fetchAll();
+    // Return only classes belonging to current school
+    $sql2 = "SELECT c.id, CONCAT(g.name, ' - ', c.name) as full_name
+             FROM classes c JOIN grades g ON c.grade_id = g.id
+             WHERE c.active = 1";
+    $params2 = [];
+    if ($sid) { $sql2 .= " AND c.school_id = ?"; $params2[] = $sid; }
+    $sql2 .= " ORDER BY g.sort_order, c.section";
+    $stmtAll = $db->prepare($sql2);
+    $stmtAll->execute($params2);
+    $allClasses = $stmtAll->fetchAll();
 
     jsonSuccess(['teachers' => $teachers, 'all_classes' => $allClasses]);
 }

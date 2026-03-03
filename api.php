@@ -474,6 +474,10 @@ function registerSchool() {
     $planId = !empty($data['plan_id']) ? (int)$data['plan_id'] : null;
 
     // Check slug uniqueness
+    // Fix: Validate slug format — only allow lowercase letters, numbers, and hyphens
+    if (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
+        jsonError('المعرّف الفريد يجب أن يحتوي على أحرف إنجليزية صغيرة وأرقام وشرطة (-) فقط');
+    }
     $stmt = $db->prepare("SELECT id FROM schools WHERE slug = ?");
     $stmt->execute([$slug]);
     if ($stmt->fetch()) jsonError('المعرّف الفريد (slug) مستخدم بالفعل، اختر اسماً آخر');

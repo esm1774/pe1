@@ -167,6 +167,7 @@ function login() {
  * Student Login
  */
 function studentLogin() {
+    checkCSRF(); // Fix: Added CSRF protection (was missing)
     $data = getPostData();
     $student_number = sanitize($data['username'] ?? '');
     $password = $data['password'] ?? '';
@@ -307,6 +308,13 @@ function forgotPassword() {
         // Return success anyway to prevent email enumeration
         jsonSuccess(null, 'إذا كان البريد الإلكتروني مسجلاً لدينا، فستصلك رسالة تحتوي على رمز الاستعادة');
         return;
+    }
+
+    // Fix: OTP Rate Limiting — max 3 requests per email per 10 minutes
+    $recentCount = $db->prepare("SELECT COUNT(*) FROM password_resets WHERE email = ? AND created_at > DATE_SUB(NOW(), INTERVAL 10 MINUTE)");
+    $recentCount->execute([$email]);
+    if ((int)$recentCount->fetchColumn() >= 3) {
+        jsonError('تجاوزت عدد المحاولات. يرجى الانتظار 10 دقائق ثم إعادة المحاولة.');
     }
 
     // Generate OTP & Save
