@@ -262,6 +262,15 @@ async function renderTournamentDetail(id) {
                         <span class="badge bg-gray-100 text-gray-700">跑 ${esc(t.sport_type || 'كرة قدم')}</span>
                         ${t.start_date ? `<span class="badge bg-gray-100 text-gray-700">📅 ${t.start_date}</span>` : ''}
                     </div>
+                    ${t.status === 'completed' && t.winner_team_id ? `
+                    <div class="mt-4 inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-xl shadow-sm">
+                        <span class="text-2xl">🏆</span>
+                        <div>
+                            <p class="text-[10px] font-bold uppercase tracking-wider opacity-80">بطل البطولة</p>
+                            <p class="font-black text-lg">${esc(teams.find(tm => tm.id == t.winner_team_id)?.team_name || 'غير معروف')}</p>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
                 <div class="flex flex-wrap gap-2">
                     ${canEdit() && t.status === 'draft' ? `

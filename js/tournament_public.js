@@ -75,7 +75,16 @@ class TournamentPublic {
         document.getElementById('tournament-name').textContent = this.data.name;
         document.getElementById('tournament-sport').textContent = this.data.sport_type || 'كرة قدم';
 
-        let statusHtml = this.data.status === 'in_progress' ?
+        let statusHtml = '';
+
+        if (this.data.status === 'completed' && this.data.winner_team_id) {
+            // Find winner team name from teams list
+            const winnerTeam = this.data.teams?.find(t => t.id == this.data.winner_team_id);
+            const winnerName = winnerTeam ? winnerTeam.team_name : 'بطل غير معروف';
+            statusHtml += `<div style="background: linear-gradient(135deg, #FFD700, #FFA500); color: #fff; padding: 0.5rem 1rem; border-radius: 2rem; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-weight: 800; box-shadow: 0 4px 10px rgba(255,165,0,0.3);"><span style="font-size: 1.2rem;">🏆</span> بطل البطولة: ${winnerName}</div><br>`;
+        }
+
+        statusHtml += this.data.status === 'in_progress' ?
             '<span class="live-dot"></span> مباشر الآن' : 'منتهية';
 
         if (this.data.top_loved_team && this.data.top_loved_team.cheers_count > 0) {
