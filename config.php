@@ -232,6 +232,67 @@ function requireLogin() {
 }
 
 /**
+ * SaaS: Verify if a record in a table belongs to the current school.
+ */
+function verifyOwnership(string $table, int $id): bool {
+    // Platform Admins skip isolation checks
+    if (isset($_SESSION['platform_admin']) && $_SESSION['platform_admin'] === true) return true;
+    
+    // Resolve school context
+    $sid = Tenant::id();
+    if (!$sid) return false;
+
+    try {
+        $db = getDB();
+        
+        // 1. Direct Ownership (Table has school_id)
+        $directTables = [
+            'students', 'classes', 'grades', 'users', 'parents', 
+            'fitness_tests', 'badges', 'sports_calendar', 'tournaments',
+            'teams', 'schools'
+        ];
+
+        if (in_array($table, $directTables)) {
+            $stmt = $db->prepare("SELECT id FROM `$table` WHERE id = ? AND school_id = ?");
+            $stmt->execute([$id, $sid]);
+            return (bool)$stmt->fetch();
+        }
+
+        // 2. Child Ownership (Linked via student_id)
+        $studentLinked = [
+            'student_badges', 'student_fitness', 'attendance', 
+            'student_measurements', 'student_health', 'notifications'
+        ];
+        if (in_array($table, $studentLinked)) {
+            $stmt = $db->prepare("SELECT t.id FROM `$table` t JOIN students s ON t.student_id = s.id WHERE t.id = ? AND s.school_id = ?");
+            $stmt->execute([$id, $sid]);
+            return (bool)$stmt->fetch();
+        }
+
+        // 3. Special Case: teacher_classes
+        if ($table === 'teacher_classes') {
+            $stmt = $db->prepare("SELECT tc.id FROM teacher_classes tc JOIN classes c ON tc.class_id = c.id WHERE tc.id = ? AND c.school_id = ?");
+            $stmt->execute([$id, $sid]);
+            return (bool)$stmt->fetch();
+        }
+
+        // Default to true for unknown tables (safe fallback)
+        return true; 
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Require ownership or die with 403 error.
+ */
+function requireOwnership(string $table, int $id): void {
+    if (!verifyOwnership($table, $id)) {
+        jsonError('محاولة وصول غير مصرح بها لبيانات مدرسة أخرى (SaaS Protection)', 403);
+    }
+}
+
+/**
  * CSRF Protection Check
  */
 function checkCSRF() {

@@ -50,41 +50,50 @@
 }
 
 /* Force Tailwind Overrides in Dark Mode */
-[data-theme="dark"] .bg-white {
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-slate-50,
+[data-theme="dark"] .bg-blue-50,
+[data-theme="dark"] .bg-indigo-50,
+[data-theme="dark"] .bg-purple-50,
+[data-theme="dark"] .bg-emerald-50,
+[data-theme="dark"] .bg-green-50,
+[data-theme="dark"] .bg-red-50,
+[data-theme="dark"] .bg-orange-50,
+[data-theme="dark"] .bg-yellow-50,
+[data-theme="dark"] .bg-amber-50 {
     background-color: var(--bg-card) !important;
-}
-
-[data-theme="dark"] .bg-gray-50 {
-    background-color: var(--bg-main) !important;
 }
 
 [data-theme="dark"] .bg-gray-100 {
     background-color: var(--input-bg) !important;
 }
 
-[data-theme="dark"] .text-gray-800 {
-    color: var(--text-main) !important;
-}
-
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-gray-800,
 [data-theme="dark"] .text-gray-700 {
     color: var(--text-main) !important;
 }
 
-[data-theme="dark"] .text-gray-600 {
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-400 {
     color: var(--text-muted) !important;
 }
 
-[data-theme="dark"] .text-gray-500 {
-    color: var(--text-muted) !important;
-}
-
+[data-theme="dark"] .border-gray-50,
 [data-theme="dark"] .border-gray-100,
-[data-theme="dark"] .border-gray-200 {
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border-blue-100,
+[data-theme="dark"] .border-green-100,
+[data-theme="dark"] .border-red-100 {
     border-color: var(--border-color) !important;
 }
 
 [data-theme="dark"] .shadow-sm,
+[data-theme="dark"] .shadow-md,
 [data-theme="dark"] .shadow-lg,
+[data-theme="dark"] .shadow-xl,
 [data-theme="dark"] .shadow-2xl {
     box-shadow: var(--shadow-premium) !important;
 }
@@ -164,6 +173,26 @@ body {
 .sidebar-link.active {
     background: rgba(255, 255, 255, 0.15);
     border-right: 4px solid #4ade80;
+}
+
+/* ============================================
+/* Mobile Sidebar Toggle */
+#sidebar.open {
+    right: 0 !important;
+}
+
+#sidebarOverlay.hidden {
+    display: none;
+}
+
+#sidebarOverlay:not(.hidden) {
+    display: block;
+}
+
+/* User Dropdown Position Fix for RTL */
+[dir="rtl"] #userDropdown {
+    left: 0;
+    right: auto;
 }
 
 /* ============================================

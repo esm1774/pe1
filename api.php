@@ -134,6 +134,12 @@ function ensureSchema() {
             CONSTRAINT `fk_notif_student` FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // SaaS Dual Logo Support
+        $schoolcols = array_column($db->query("SHOW COLUMNS FROM schools")->fetchAll(), 'Field');
+        if (!in_array('logo_dark_url', $schoolcols)) {
+            $db->exec("ALTER TABLE schools ADD COLUMN `logo_dark_url` VARCHAR(255) DEFAULT NULL AFTER `logo_url` ");
+        }
+
         // ── Badges System ───────────────────────────────────────────────
         $db->exec("CREATE TABLE IF NOT EXISTS `badges` (
             `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -212,6 +218,30 @@ function ensureSchema() {
             INDEX `idx_cal_school` (`school_id`),
             INDEX `idx_cal_date` (`event_date`),
             INDEX `idx_cal_type` (`event_type`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // ── Timetable System ───────────────────────────────────────────
+        $db->exec("CREATE TABLE IF NOT EXISTS `teacher_timetables` (
+            `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id`     INT UNSIGNED NOT NULL,
+            `teacher_id`    INT UNSIGNED NOT NULL,
+            `day_of_week`   TINYINT UNSIGNED NOT NULL, -- 1=الأحد, 7=السبت
+            `period_number` TINYINT UNSIGNED NOT NULL,
+            `class_id`      INT UNSIGNED NOT NULL,
+            `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_tt_teacher` (`teacher_id`),
+            INDEX `idx_tt_school` (`school_id`),
+            INDEX `idx_tt_class` (`class_id`),
+            UNIQUE KEY `uk_teacher_slot` (`teacher_id`, `day_of_week`, `period_number`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `school_period_times` (
+            `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id`     INT UNSIGNED NOT NULL,
+            `period_number` TINYINT UNSIGNED NOT NULL,
+            `start_time`    TIME NOT NULL,
+            `end_time`      TIME NOT NULL,
+            UNIQUE KEY `uk_school_period` (`school_id`, `period_number`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     } catch (Exception $e) {

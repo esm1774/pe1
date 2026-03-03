@@ -12,45 +12,33 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#10b981">
     <script>
-        // Universal Base Path Detection (Works for Localhost Subfolders & Live Root)
+        /**
+         * Universal Base Path Detection (v4.1)
+         * - Works for: localhost, xampp, subfolders, and SPA slugs
+         * - Uses document.write to ensure <base> is applied BEFORE assets preload
+         */
         (function () {
             let path = window.location.pathname;
-            // Get the directory of index.html by looking at the location
-            // and assuming standard slugs come AFTER the root directory
+            let parts = path.split('/');
             let basePath = '/';
-            // If the URL has more than one part, let's see where index.html really is
-            // A simple way: use common knowledge of common entry points
-            if (path.includes('/api/')) path = path.split('/api/')[0] + '/';
-            if (path.includes('/js/')) path = path.split('/js/')[0] + '/';
 
-            // On hosting root, path is /
-            // On subfolders, we detect it
-            const scripts = document.getElementsByTagName('script');
-            // This script is inline, but we can detect based on current pathname
-            // removing known school slugs (arbitrary list of common words)
-            const parts = window.location.pathname.split('/');
-            // If we have [/pe1/default/], parts are ["", "pe1", "default", ""]
-            // If index.html is in pe1, then APP ROOT is pe1.
-
-            // Better logic: Assume the APP ROOT is where the URL rewrite started.
-            // But browsers don't know about server-side rewrites. 
-            // So we'll use a safer heuristic for common setups.
+            // Heuristic for XAMPP / Localhost subfolders
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                // If it's localhost and we are in a subfolder (like /pe1/default/), 
+                // the first non-empty part is likely the project root
                 if (parts.length > 1 && parts[1] !== '' && !['default', 'school1', 'test'].includes(parts[1])) {
                     basePath = '/' + parts[1] + '/';
                 }
             } else {
-                // Live Hosting: Detect if in subfolder
-                // If the URL is mydomain.com/pe1/ we need /pe1/
-                // If it's mydomain.com/ we need /
-                // Let's check for the first segment if it's NOT a slug
-                // This is risky, but let's assume root for hosting if not specified
-                basePath = '/';
+                // Production: If we know the app is in a specific folder, we can detect it here
+                if (parts.length > 1 && parts[1] !== '' && !['default', 'school1', 'test', 'login', 'register'].includes(parts[1])) {
+                    basePath = '/' + parts[1] + '/';
+                }
             }
 
-            const base = document.createElement('base');
-            base.href = basePath;
-            document.head.appendChild(base);
+            document.write('<base href="' + basePath + '">');
+            window.APP_BASE = basePath; // Exposed for global use Reference
+            console.log("📍 Base Path Detected:", basePath);
         })();
     </script>
 
@@ -93,7 +81,7 @@
             document.documentElement.setAttribute('data-theme', saved);
         })();
     </script>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=3.2.1">
 </head>
 
 <body class="min-h-screen">
@@ -280,7 +268,7 @@
                 class="w-64 bg-sidebar min-h-[calc(100vh-56px)] fixed lg:sticky top-[56px] z-30 transition-all duration-300 -right-64 lg:right-0 no-print border-l border-color">
                 <nav class="py-4 pb-20">
                     <!-- القسم الأول: الرئيسية والوصول السريع -->
-                    <div class="px-4 mb-2">
+                    <div class="sidebar-section-header px-4 mb-2">
                         <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">الوصول السريع</p>
                     </div>
                     <a onclick="navigateTo('dashboard')"
@@ -310,7 +298,7 @@
                     </a>
 
                     <!-- القسم الثاني: الأكاديميات والطلاب -->
-                    <div class="px-4 mt-6 mb-2">
+                    <div class="sidebar-section-header px-4 mt-6 mb-2">
                         <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">الأكاديميات والطلاب</p>
                     </div>
                     <a onclick="navigateTo('grades')"
@@ -330,7 +318,7 @@
                     </a>
 
                     <!-- القسم الثالث: الأنشطة الرياضية -->
-                    <div class="px-4 mt-6 mb-2">
+                    <div class="sidebar-section-header px-4 mt-6 mb-2">
                         <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">الأنشطة الرياضية</p>
                     </div>
                     <a onclick="navigateTo('fitness')"
@@ -355,7 +343,7 @@
                     </a>
 
                     <!-- القسم الرابع: البيانات والتقارير -->
-                    <div class="px-4 mt-6 mb-2">
+                    <div class="sidebar-section-header px-4 mt-6 mb-2">
                         <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">البيانات والتقارير</p>
                     </div>
                     <a onclick="navigateTo('reports')"
@@ -370,7 +358,7 @@
                     </a>
 
                     <!-- القسم الخامس: إدارة النظام -->
-                    <div class="px-4 mt-6 mb-2 border-t border-gray-700 pt-4">
+                    <div class="sidebar-section-header px-4 mt-6 mb-2 border-t border-gray-700 pt-4">
                         <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">الإدارة والإعدادات</p>
                     </div>
                     <a onclick="navigateTo('users')"
@@ -544,7 +532,8 @@
         // هنا تضع JS الخاص بالsidebar
         function toggleSidebar() {
             const s = document.getElementById('sidebar'), o = document.getElementById('sidebarOverlay');
-            s.classList.toggle('-right-64'); s.classList.toggle('right-0'); o.classList.toggle('hidden');
+            s.classList.toggle('open');
+            o.classList.toggle('hidden');
         }
 
         function toggleUserDropdown() {
@@ -554,10 +543,14 @@
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            const d = document.getElementById('userDropdown');
-            const b = e.target.closest('button');
-            if (d && !d.classList.contains('hidden') && (!b || !b.contains(document.getElementById('userDropdown').previousElementSibling))) {
-                if (!e.target.closest('#userDropdown')) d.classList.add('hidden');
+            const dropdown = document.getElementById('userDropdown');
+            const profileBtn = dropdown.previousElementSibling;
+
+            // If click is not on the button and not inside the dropdown, hide it
+            if (dropdown && !dropdown.classList.contains('hidden')) {
+                if (!e.target.closest('#userDropdown') && !e.target.closest('button[onclick="toggleUserDropdown()"]')) {
+                    dropdown.classList.add('hidden');
+                }
             }
         });
 

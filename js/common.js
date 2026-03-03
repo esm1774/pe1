@@ -356,6 +356,20 @@ function showApp() {
         el.style.display = allowedRoles.includes(currentUser.role) ? '' : 'none';
     });
 
+    // Hide empty sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+        let sibling = header.nextElementSibling;
+        let hasVisibleLink = false;
+        while (sibling && !sibling.classList.contains('sidebar-section-header')) {
+            if (sibling.offsetParent !== null && sibling.dataset.role) {
+                hasVisibleLink = true;
+                break;
+            }
+            sibling = sibling.nextElementSibling;
+        }
+        header.style.display = hasVisibleLink ? '' : 'none';
+    });
+
     // Determine starting page (hash-based OR role-based default)
     const hash = window.location.hash.replace('#', '');
     if (hash && PAGE_MAP[hash]) {
