@@ -2178,7 +2178,7 @@ function getAvailableClasses() {
                 FROM classes c
                 JOIN grades g ON c.grade_id = g.id
                 LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-                WHERE c.active = 1
+                WHERE c.active = 1 AND c.school_id = ?
                 AND c.id NOT IN (
                     SELECT COALESCE(class_id, 0) FROM tournament_teams 
                     WHERE tournament_id = ? AND class_id IS NOT NULL
@@ -2186,7 +2186,7 @@ function getAvailableClasses() {
                 GROUP BY c.id ORDER BY g.sort_order, g.id, c.section
             ";
             $stmt = $db->prepare($sql);
-            $stmt->execute([$tournamentId]);
+            $stmt->execute([schoolId(), $tournamentId]);
         } else {
             $sql = "
                 SELECT c.id, c.name, g.name as grade_name,
@@ -2195,11 +2195,11 @@ function getAvailableClasses() {
                 FROM classes c
                 JOIN grades g ON c.grade_id = g.id
                 LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-                WHERE c.active = 1
+                WHERE c.active = 1 AND c.school_id = ?
                 GROUP BY c.id ORDER BY g.sort_order, g.id, c.section
             ";
             $stmt = $db->prepare($sql);
-            $stmt->execute();
+            $stmt->execute([schoolId()]);
         }
         jsonSuccess($stmt->fetchAll());
     } catch (PDOException $e) {
@@ -2211,11 +2211,11 @@ function getAvailableClasses() {
             FROM classes c
             JOIN grades g ON c.grade_id = g.id
             LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-            WHERE c.active = 1
+            WHERE c.active = 1 AND c.school_id = ?
             GROUP BY c.id ORDER BY g.sort_order, g.id, c.section
         ";
         $stmt = $db->prepare($sql);
-        $stmt->execute();
+        $stmt->execute([schoolId()]);
         jsonSuccess($stmt->fetchAll());
     }
 }
@@ -2230,9 +2230,9 @@ function getAvailableStudents() {
         SELECT s.id, s.name, s.student_number, c.name as class_name
         FROM students s
         JOIN classes c ON s.class_id = c.id
-        WHERE s.active = 1
+        WHERE s.active = 1 AND s.school_id = ?
     ";
-    $params = [];
+    $params = [schoolId()];
     
     if ($classId) {
         $sql .= " AND s.class_id = ?";
@@ -2763,8 +2763,8 @@ function getClassStudents() {
     if (!$classId) jsonError('معرف الفصل مطلوب');
     
     $db = getDB();
-    $stmt = $db->prepare("SELECT id, name FROM students WHERE class_id = ? AND active = 1");
-    $stmt->execute([$classId]);
+    $stmt = $db->prepare("SELECT id, name FROM students WHERE class_id = ? AND active = 1 AND school_id = ?");
+    $stmt->execute([$classId, schoolId()]);
     jsonSuccess($stmt->fetchAll());
 }
 
@@ -2780,9 +2780,9 @@ function getAvailableSportsTeams() {
         SELECT id, name, sport_type, color, logo_emoji
         FROM sports_teams
         WHERE id NOT IN (SELECT sports_team_id FROM tournament_teams WHERE tournament_id = ? AND sports_team_id IS NOT NULL)
-        AND is_active = 1
+        AND is_active = 1 AND school_id = ?
     ");
-    $stmt->execute([$tournamentId]);
+    $stmt->execute([$tournamentId, schoolId()]);
     jsonSuccess($stmt->fetchAll());
 }
 
