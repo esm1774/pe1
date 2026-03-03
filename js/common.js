@@ -345,9 +345,12 @@ function showApp() {
     // Ensure URL has school slug if we are logged in with a school context
     if (currentSchool && currentSchool.slug) {
         const path = window.location.pathname;
-        if (!path.includes(`/${currentSchool.slug}`) && path !== window.APP_BASE) {
-            window.location.replace(`${window.APP_BASE}${currentSchool.slug}/#${page}`);
-            return;
+        const targetSlugPath = `${window.APP_BASE}${currentSchool.slug}/`;
+
+        // If the current path doesn't match the specific school's slug path
+        if (path !== targetSlugPath) {
+            // Silently rewrite the URL without reloading the page
+            window.history.pushState(null, '', `${targetSlugPath}#${page}`);
         }
     }
 
