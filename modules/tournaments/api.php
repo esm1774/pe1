@@ -1453,6 +1453,13 @@ function generateDoubleElimination($tournamentId, $teams) {
             $db->prepare("UPDATE matches SET next_match_id = ?, next_match_slot = 'team2' WHERE id = ?")
                ->execute([$grandFinalId, $lFinalId]);
         }
+    } elseif ($wRounds === 1) {
+        // حالة استثنائية: فريقين فقط. الخاسر من مباراة الفائزين يذهب كلياً للنهائي كـ team2.
+        $wFinalId = end($winnersMatchIds[1]);
+        if ($wFinalId) {
+            $db->prepare("UPDATE matches SET loser_next_match_id = ?, loser_next_match_slot = 'team2' WHERE id = ?")
+               ->execute([$grandFinalId, $wFinalId]);
+        }
     }
     
     // ================================================================
@@ -1754,9 +1761,12 @@ function saveMatchResult() {
         
         // تحويل خاسر نصف النهائي → مباراة المركز الثالث (لكل أنواع الإقصاء)
         if ($loserId && $match['loser_next_match_id'] && $match['bracket_type'] !== 'third_place') {
-            $loserSlot = ($match['loser_next_match_slot'] ?? 'team1') === 'team1' ? 'team1_id' : 'team2_id';
-            $db->prepare("UPDATE matches SET $loserSlot = ? WHERE id = ?")
-               ->execute([$loserId, $match['loser_next_match_id']]);
+            $isDoubleElimFallback = ($tournament['type'] === 'double_elimination' && empty($match['loser_next_match_slot']));
+            if (!$isDoubleElimFallback) {
+                $loserSlot = ($match['loser_next_match_slot'] ?? 'team1') === 'team1' ? 'team1_id' : 'team2_id';
+                $db->prepare("UPDATE matches SET $loserSlot = ? WHERE id = ?")
+                   ->execute([$loserId, $match['loser_next_match_id']]);
+            }
         }
 
         // خروج المغلوب المزدوج
