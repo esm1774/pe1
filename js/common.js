@@ -349,8 +349,9 @@ function showApp() {
 
         // If the current path doesn't match the specific school's slug path
         if (path !== targetSlugPath) {
+            const currentHash = window.location.hash || '';
             // Silently rewrite the URL without reloading the page
-            window.history.pushState(null, '', `${targetSlugPath}#${page}`);
+            window.history.replaceState(null, '', `${targetSlugPath}${currentHash}`);
         }
     }
 
