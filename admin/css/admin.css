@@ -930,6 +930,7 @@ tbody tr:hover {
         right: -260px;
         width: 260px;
         height: calc(100vh - 64px);
+        overflow-y: auto;
         z-index: 900;
         transition: var(--transition);
     }

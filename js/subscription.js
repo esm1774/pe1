@@ -92,7 +92,7 @@ async function renderSubscriptionPage() {
                         </div>
 
                         <div class="flex flex-wrap gap-4">
-                            <button onclick="window.open('https://wa.me/966500000000', '_blank')" class="bg-emerald-500 hover:bg-emerald-400 text-white px-10 py-4 rounded-2xl font-black transition shadow-xl shadow-emerald-500/20 active:scale-95 cursor-pointer leading-none">ترقية الخطة</button>
+                            <button onclick="window.open('https://wa.me/966507949591', '_blank')" class="bg-emerald-500 hover:bg-emerald-400 text-white px-10 py-4 rounded-2xl font-black transition shadow-xl shadow-emerald-500/20 active:scale-95 cursor-pointer leading-none">ترقية الخطة</button>
                             ${s.notes ? `
                                 <div class="w-full mt-4 p-4 bg-white/5 rounded-2xl border border-white/10 text-xs italic opacity-70">
                                     📝 ملاحظات الإدارة: ${esc(s.notes)}
@@ -183,7 +183,7 @@ async function renderSubscriptionPage() {
                             <p class="text-[10px] text-gray-400 font-bold uppercase">يوم الاستحقاق</p>
                         </div>
                     </div>
-                    <button onclick="window.open('https://wa.me/966500000000', '_blank')" class="w-full bg-gray-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-black transition cursor-pointer">تواصل مع المبيعات</button>
+                    <button onclick="window.open('https://wa.me/966507949591', '_blank')" class="w-full bg-gray-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-black transition cursor-pointer">تواصل مع المبيعات</button>
                 </div>
             </div>
         </div>
