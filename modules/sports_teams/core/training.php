@@ -40,6 +40,10 @@ function createSession() {
 
     $db = getDB();
 
+    $stmtTeam = $db->prepare("SELECT id FROM sports_teams WHERE id = ? AND school_id = ?");
+    $stmtTeam->execute([$data['team_id'], schoolId()]);
+    if (!$stmtTeam->fetch()) jsonError('الفريق غير موجود أو لا تملك صلاحية الوصول إليه');
+
     $stmt = $db->prepare("
         INSERT INTO training_sessions (school_id, team_id, title, session_date, start_time, end_time, venue, focus, notes, coach_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -72,6 +76,23 @@ function updateSession() {
     if (empty($data['id'])) jsonError('معرّف الجلسة مطلوب');
 
     $db = getDB();
+
+    $stmt = $db->prepare("
+        SELECT ts.coach_id AS session_coach, st.coach_id AS team_coach, st.created_by AS team_creator 
+        FROM training_sessions ts 
+        JOIN sports_teams st ON ts.team_id = st.id 
+        WHERE ts.id = ? AND ts.school_id = ?
+    ");
+    $stmt->execute([$data['id'], schoolId()]);
+    $sessInfo = $stmt->fetch();
+    if (!$sessInfo) jsonError('الجلسة غير موجودة أو لا تملك صلاحية الوصول');
+    
+    $role = $_SESSION['role'] ?? '';
+    $userId = $_SESSION['user_id'] ?? 0;
+    if ($role !== 'admin' && $sessInfo['session_coach'] != $userId && $sessInfo['team_coach'] != $userId && $sessInfo['team_creator'] != $userId) {
+        jsonError('لا تملك صلاحية تعديل هذه الجلسة');
+    }
+
     $db->prepare("
         UPDATE training_sessions
         SET title = ?, session_date = ?, start_time = ?, end_time = ?,
@@ -98,6 +119,23 @@ function deleteSession() {
     if (!$id) jsonError('معرّف الجلسة مطلوب');
 
     $db = getDB();
+    
+    $stmt = $db->prepare("
+        SELECT ts.coach_id AS session_coach, st.coach_id AS team_coach, st.created_by AS team_creator 
+        FROM training_sessions ts 
+        JOIN sports_teams st ON ts.team_id = st.id 
+        WHERE ts.id = ? AND ts.school_id = ?
+    ");
+    $stmt->execute([$id, schoolId()]);
+    $sessInfo = $stmt->fetch();
+    if (!$sessInfo) jsonError('الجلسة غير موجودة أو لا تملك صلاحية الوصول');
+    
+    $role = $_SESSION['role'] ?? '';
+    $userId = $_SESSION['user_id'] ?? 0;
+    if ($role !== 'admin' && $sessInfo['session_coach'] != $userId && $sessInfo['team_coach'] != $userId && $sessInfo['team_creator'] != $userId) {
+        jsonError('لا تملك صلاحية حذف هذه الجلسة');
+    }
+
     $db->prepare("DELETE FROM training_sessions WHERE id = ? AND school_id = ?")->execute([$id, schoolId()]);
 
     jsonSuccess(null, 'تم حذف جلسة التدريب');
@@ -151,6 +189,10 @@ function saveAttendance() {
 
     $db = getDB();
 
+    $stmtSess = $db->prepare("SELECT id FROM training_sessions WHERE id = ? AND school_id = ?");
+    $stmtSess->execute([$data['session_id'], schoolId()]);
+    if (!$stmtSess->fetch()) jsonError('الجلسة غير موجودة أو لا تملك صلاحية الوصول');
+
     $stmt = $db->prepare("
         INSERT INTO training_attendance (session_id, student_id, status, performance, notes)
         VALUES (?, ?, ?, ?, ?)
@@ -166,7 +208,7 @@ function saveAttendance() {
             $data['session_id'],
             $record['student_id'],
             $record['status']      ?? 'present',
-            isset($record['performance']) ? (int)$record['performance'] : null,
+            isset($record['performance']) ? max(1, min(10, (int)$record['performance'])) : null,
             $record['notes']       ?? null
         ]);
     }

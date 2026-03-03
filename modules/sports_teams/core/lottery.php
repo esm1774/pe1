@@ -12,7 +12,8 @@ function lotteryPreview() {
     requireRole(['admin', 'teacher']);
     $data = getPostData();
 
-    $studentIds    = $data['student_ids'] ?? [];
+    $rawStudentIds = is_array($data['student_ids'] ?? null) ? $data['student_ids'] : [];
+    $studentIds    = array_values(array_filter(array_map('intval', $rawStudentIds)));
     $teamCount     = isset($data['team_count'])        ? (int)$data['team_count']        : 0;
     $playersPerTeam= isset($data['players_per_team']) ? (int)$data['players_per_team']  : 0;
 
@@ -39,10 +40,12 @@ function lotteryPreview() {
         FROM students s
         LEFT JOIN classes c ON s.class_id = c.id
         LEFT JOIN grades  g ON c.grade_id  = g.id
-        WHERE s.id IN ($placeholders) AND s.active = 1
+        WHERE s.id IN ($placeholders) AND s.active = 1 AND s.school_id = ?
         ORDER BY s.name
     ");
-    $stmt->execute($studentIds);
+    $params = $studentIds;
+    $params[] = schoolId();
+    $stmt->execute($params);
     $students = $stmt->fetchAll();
 
     if (empty($students)) jsonError('لم يُعثر على طلاب بالمعرفات المحددة');
@@ -94,38 +97,47 @@ function lotteryConfirm() {
     $colors = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
     $created = [];
 
-    foreach ($teams as $i => $team) {
-        if (empty($team['name']))    jsonError("اسم الفريق رقم " . ($i+1) . " مطلوب");
-        if (empty($team['members'])) continue; // فريق فارغ نتجاوزه
+    try {
+        $db->beginTransaction();
 
-        $teamColor = $color ?? $colors[$i % count($colors)];
+        foreach ($teams as $i => $team) {
+            if (empty($team['name']))    throw new Exception("اسم الفريق رقم " . ($i+1) . " مطلوب");
+            if (empty($team['members'])) continue; // فريق فارغ نتجاوزه
 
-        // إنشاء الفريق
-        $stmt = $db->prepare("
-            INSERT INTO sports_teams (school_id, name, sport_type, team_type, color, created_by)
-            VALUES (?, ?, ?, 'mixed', ?, ?)
-        ");
-        $stmt->execute([
-            schoolId(),
-            $team['name'],
-            $sportType,
-            $teamColor,
-            $_SESSION['user_id'] ?? null
-        ]);
-        $teamId = $db->lastInsertId();
+            $teamColor = $color ?? $colors[$i % count($colors)];
 
-        // إضافة الأعضاء
-        $insertMember = $db->prepare("
-            INSERT IGNORE INTO team_members (team_id, student_id, joined_at)
-            VALUES (?, ?, CURDATE())
-        ");
-        foreach ($team['members'] as $member) {
-            $studentId = is_array($member) ? ($member['id'] ?? null) : $member;
-            if ($studentId) $insertMember->execute([$teamId, $studentId]);
+            // إنشاء الفريق
+            $stmt = $db->prepare("
+                INSERT INTO sports_teams (school_id, name, sport_type, team_type, color, created_by)
+                VALUES (?, ?, ?, 'mixed', ?, ?)
+            ");
+            $stmt->execute([
+                schoolId(),
+                $team['name'],
+                $sportType,
+                $teamColor,
+                $_SESSION['user_id'] ?? null
+            ]);
+            $teamId = $db->lastInsertId();
+
+            // إضافة الأعضاء (مع التأكد من تبعيتهم للمدرسة لتجنب الـ IDOR)
+            $insertMember = $db->prepare("
+                INSERT IGNORE INTO team_members (team_id, student_id, joined_at)
+                SELECT ?, id, CURDATE() FROM students WHERE id = ? AND school_id = ?
+            ");
+            foreach ($team['members'] as $member) {
+                $studentId = is_array($member) ? ($member['id'] ?? null) : $member;
+                if ($studentId) $insertMember->execute([$teamId, $studentId, schoolId()]);
+            }
+
+            $created[] = ['id' => $teamId, 'name' => $team['name']];
+            logActivity('lottery_create', 'sports_team', $teamId, $team['name']);
         }
 
-        $created[] = ['id' => $teamId, 'name' => $team['name']];
-        logActivity('lottery_create', 'sports_team', $teamId, $team['name']);
+        $db->commit();
+    } catch (Exception $e) {
+        $db->rollBack();
+        jsonError($e->getMessage());
     }
 
     jsonSuccess([

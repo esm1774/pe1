@@ -921,19 +921,27 @@ function generateMatches() {
     
     $db = getDB();
     
-    $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ?");
-    $stmt->execute([$tournamentId]);
+    $stmt = $db->prepare("SELECT * FROM tournaments WHERE id = ? AND school_id = ?");
+    $stmt->execute([$tournamentId, schoolId()]);
     $tournament = $stmt->fetch();
     
-    if (!$tournament) jsonError('البطولة غير موجودة');
+    if (!$tournament) jsonError('البطولة غير موجودة أو ليست من صلاحياتك!');
     
-    // Delete existing matches and standings
-    $db->prepare("DELETE FROM matches WHERE tournament_id = ?")->execute([$tournamentId]);
-    try { $db->prepare("DELETE FROM standings WHERE tournament_id = ?")->execute([$tournamentId]); } catch(Exception $e) {}
-    
-    generateMatchesForTournament($tournamentId, $tournament['type'], $tournament['randomize_teams']);
-    
-    jsonSuccess(null, 'تم توليد المباريات');
+    try {
+        $db->beginTransaction();
+        
+        // Delete existing matches and standings
+        $db->prepare("DELETE FROM matches WHERE tournament_id = ?")->execute([$tournamentId]);
+        try { $db->prepare("DELETE FROM standings WHERE tournament_id = ?")->execute([$tournamentId]); } catch(Exception $e) {}
+        
+        generateMatchesForTournament($tournamentId, $tournament['type'], $tournament['randomize_teams']);
+        
+        $db->commit();
+        jsonSuccess(null, 'تم توليد المباريات');
+    } catch (Exception $e) {
+        $db->rollBack();
+        jsonError('حدث خطأ أثناء الإنشاء: ' . $e->getMessage());
+    }
 }
 
 function generateMatchesForTournament($tournamentId, $type, $randomize) {
@@ -1014,8 +1022,8 @@ function generateGroupRoundRobin($tournamentId, $teams, $groupName, &$matchNumbe
     foreach ($realTeams as $team) {
         if ($team['id']) {
             try {
-                $db->prepare("INSERT INTO standings (tournament_id, team_id, group_name) VALUES (?, ?, ?)")
-                   ->execute([$tournamentId, $team['id'], $groupName]);
+                $db->prepare("INSERT INTO standings (tournament_id, school_id, team_id, group_name) VALUES (?, ?, ?, ?)")
+                   ->execute([$tournamentId, schoolId(), $team['id'], $groupName]);
             } catch (Exception $e) {}
         }
     }
@@ -1038,9 +1046,9 @@ function generateGroupRoundRobin($tournamentId, $teams, $groupName, &$matchNumbe
             if (!$team1['id'] || !$team2['id']) continue;
             
             $db->prepare("
-                INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, team1_id, team2_id, group_name, status)
-                VALUES (?, ?, ?, 'main', ?, ?, ?, 'scheduled')
-            ")->execute([$tournamentId, $round, $matchNumber, $team1['id'], $team2['id'], $groupName]);
+                INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, team1_id, team2_id, group_name, status)
+                VALUES (?, ?, ?, ?, 'main', ?, ?, ?, 'scheduled')
+            ")->execute([$tournamentId, schoolId(), $round, $matchNumber, $team1['id'], $team2['id'], $groupName]);
             $matchNumber++;
         }
         $last = array_pop($rotating);
@@ -1147,10 +1155,10 @@ function generateSingleElimination($tournamentId, $teams, $startRound = 1) {
 
         for ($pos = 0; $pos < $matchesInRound; $pos++) {
             $stmt = $db->prepare("
-                INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status)
-                VALUES (?, ?, ?, ?, 'scheduled')
+                INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, status)
+                VALUES (?, ?, ?, ?, ?, 'scheduled')
             ");
-            $stmt->execute([$tournamentId, $actualRound, $matchNumber, $bracketType]);
+            $stmt->execute([$tournamentId, schoolId(), $actualRound, $matchNumber, $bracketType]);
             $matchIds[$round][$pos] = (int)$db->lastInsertId();
             $matchNumber++;
         }
@@ -1162,9 +1170,9 @@ function generateSingleElimination($tournamentId, $teams, $startRound = 1) {
     if ($rounds >= 2 && isset($matchIds[$semiFinalsRound]) && count($matchIds[$semiFinalsRound]) >= 2) {
         $finalRoundActual = $rounds + $startRound - 1;
         $db->prepare("
-            INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status)
-            VALUES (?, ?, ?, 'third_place', 'scheduled')
-        ")->execute([$tournamentId, $finalRoundActual, $matchNumber]);
+            INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, status)
+            VALUES (?, ?, ?, ?, 'third_place', 'scheduled')
+        ")->execute([$tournamentId, schoolId(), $finalRoundActual, $matchNumber]);
         $thirdPlaceMatchId = (int)$db->lastInsertId();
         $matchNumber++;
     }
@@ -1305,10 +1313,10 @@ function generateDoubleElimination($tournamentId, $teams) {
         
         for ($pos = 0; $pos < $matchesInRound; $pos++) {
             $stmt = $db->prepare("
-                INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status)
-                VALUES (?, ?, ?, 'main', 'scheduled')
+                INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, status)
+                VALUES (?, ?, ?, ?, 'main', 'scheduled')
             ");
-            $stmt->execute([$tournamentId, $round, $matchNumber]);
+            $stmt->execute([$tournamentId, schoolId(), $round, $matchNumber]);
             $winnersMatchIds[$round][$pos] = (int)$db->lastInsertId();
             $matchNumber++;
         }
@@ -1355,10 +1363,10 @@ function generateDoubleElimination($tournamentId, $teams) {
         
         for ($pos = 0; $pos < $lMatchCount; $pos++) {
             $stmt = $db->prepare("
-                INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status)
-                VALUES (?, ?, ?, 'losers', 'scheduled')
+                INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, status)
+                VALUES (?, ?, ?, ?, 'losers', 'scheduled')
             ");
-            $stmt->execute([$tournamentId, $lr, $matchNumber]);
+            $stmt->execute([$tournamentId, schoolId(), $lr, $matchNumber]);
             $losersMatchIds[$lr][$pos] = (int)$db->lastInsertId();
             $matchNumber++;
         }
@@ -1424,10 +1432,10 @@ function generateDoubleElimination($tournamentId, $teams) {
     // الخطوة 4: إنشاء النهائي الكبير (Grand Final)
     // ================================================================
     $stmt = $db->prepare("
-        INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status)
-        VALUES (?, ?, ?, 'final', 'scheduled')
+        INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, status)
+        VALUES (?, ?, ?, ?, 'final', 'scheduled')
     ");
-    $stmt->execute([$tournamentId, $wRounds + 1, $matchNumber]);
+    $stmt->execute([$tournamentId, schoolId(), $wRounds + 1, $matchNumber]);
     $grandFinalId = (int)$db->lastInsertId();
     $matchNumber++;
     
@@ -1582,12 +1590,13 @@ function generateRoundRobin($tournamentId, $teams, $isDouble) {
         
         foreach ($firstLegMatches as $match) {
             $stmt = $db->prepare("
-                INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, 
+                INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, 
                     team1_id, team2_id, status)
-                VALUES (?, ?, ?, 'main', ?, ?, 'scheduled')
+                VALUES (?, ?, ?, ?, 'main', ?, ?, 'scheduled')
             ");
             $stmt->execute([
                 $tournamentId, 
+                schoolId(),
                 $match['round_number'] + $rounds, 
                 $matchNumber,
                 $match['team2_id'],
@@ -1789,22 +1798,31 @@ function saveMatchResult() {
                     // الخاسر من شعبة الفائزين (أول خسارة) → مباراة إعادة (reset match)
                     // بطل الخاسرين فاز، لكن بطل الفائزين خسر لأول مرة فقط
                     // نحتاج مباراة فاصلة!
-                    $maxMatchNum = $db->prepare("SELECT MAX(match_number) FROM matches WHERE tournament_id = ?");
-                    $maxMatchNum->execute([$match['tournament_id']]);
-                    $nextMatchNum = (int)$maxMatchNum->fetchColumn() + 1;
-                    
-                    $stmt = $db->prepare("
-                        INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, 
-                            team1_id, team2_id, status)
-                        VALUES (?, ?, ?, 'final', ?, ?, 'scheduled')
-                    ");
-                    $stmt->execute([
-                        $match['tournament_id'],
-                        $match['round_number'] + 1,
-                        $nextMatchNum,
-                        $winnerId,  // فائز النهائي الكبير (بطل الخاسرين)
-                        $loserId    // خاسر النهائي الكبير (بطل الفائزين)
-                    ]);
+                    $db->beginTransaction();
+                    try {
+                        $maxMatchNum = $db->prepare("SELECT MAX(match_number) FROM matches WHERE tournament_id = ? AND school_id = ?");
+                        $maxMatchNum->execute([$match['tournament_id'], schoolId()]);
+                        $nextMatchNum = (int)$maxMatchNum->fetchColumn() + 1;
+                        
+                        $stmt = $db->prepare("
+                            INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, 
+                                team1_id, team2_id, status)
+                            VALUES (?, ?, ?, ?, 'final', ?, ?, 'scheduled')
+                        ");
+                        $stmt->execute([
+                            $match['tournament_id'],
+                            schoolId(),
+                            $match['round_number'] + 1,
+                            $nextMatchNum,
+                            $winnerId,  // فائز النهائي الكبير (بطل الخاسرين)
+                            $loserId    // خاسر النهائي الكبير (بطل الفائزين)
+                        ]);
+                        $db->commit();
+                    } catch (Exception $e) {
+                        $db->rollBack();
+                        error_log("Error creating double elimination reset match: " . $e->getMessage());
+                        jsonError('حدث خطأ أثناء إنشاء مباراة الإعادة');
+                    }
                 } else {
                     // خسارة ثانية → يُقصى نهائياً
                     $db->prepare("UPDATE tournament_teams SET is_eliminated = 1 WHERE id = ?")

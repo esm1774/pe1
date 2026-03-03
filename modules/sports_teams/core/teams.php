@@ -135,10 +135,13 @@ function createTeam() {
     $studentIds = $data['student_ids'] ?? [];
 
     if (!empty($studentIds)) {
-        // إضافة الطلاب المحددين يدوياً
-        $insert = $db->prepare("INSERT IGNORE INTO team_members (team_id, student_id, joined_at) VALUES (?, ?, CURDATE())");
+        // إضافة الطلاب المحددين يدوياً (مع التحقق من تبعيتهم للمدرسة)
+        $insert = $db->prepare("
+            INSERT IGNORE INTO team_members (team_id, student_id, joined_at)
+            SELECT ?, id, CURDATE() FROM students WHERE id = ? AND school_id = ?
+        ");
         foreach ($studentIds as $sId) {
-            $insert->execute([$teamId, $sId]);
+            $insert->execute([$teamId, $sId, schoolId()]);
         }
     } elseif ($data['team_type'] === 'class' && !empty($data['class_id']) && empty($data['manual_selection'])) {
         // لو لم يتم تحديد طلاب يدوياً، ولم يكن هناك علم manual_selection، أضف طلاب الفصل تلقائياً
@@ -156,6 +159,18 @@ function updateTeam() {
     if (empty($data['name'])) jsonError('اسم الفريق مطلوب');
 
     $db = getDB();
+
+    $stmt = $db->prepare("SELECT created_by, coach_id FROM sports_teams WHERE id = ? AND school_id = ?");
+    $stmt->execute([$data['id'], schoolId()]);
+    $team = $stmt->fetch();
+    if (!$team) jsonError('الفريق غير موجود أو لا تملك صلاحية الوصول');
+    
+    $role = $_SESSION['role'] ?? '';
+    $userId = $_SESSION['user_id'] ?? 0;
+    if ($role !== 'admin' && $team['created_by'] != $userId && $team['coach_id'] != $userId) {
+        jsonError('لا تملك صلاحية تعديل هذا الفريق، يجب أن تكون المشرف أو منشئ الفريق');
+    }
+
     $db->prepare("
         UPDATE sports_teams
         SET name = ?, sport_type = ?, coach_id = ?, color = ?,
@@ -183,6 +198,18 @@ function deleteTeam() {
     if (!$id) jsonError('معرّف الفريق مطلوب');
 
     $db = getDB();
+    
+    $stmt = $db->prepare("SELECT created_by, coach_id FROM sports_teams WHERE id = ? AND school_id = ?");
+    $stmt->execute([$id, schoolId()]);
+    $team = $stmt->fetch();
+    if (!$team) jsonError('الفريق غير موجود أو لا تملك صلاحية الوصول');
+    
+    $role = $_SESSION['role'] ?? '';
+    $userId = $_SESSION['user_id'] ?? 0;
+    if ($role !== 'admin' && $team['created_by'] != $userId && $team['coach_id'] != $userId) {
+        jsonError('لا تملك صلاحية حذف هذا الفريق، يجب أن تكون المشرف أو منشئ الفريق');
+    }
+
     $db->prepare("DELETE FROM sports_teams WHERE id = ? AND school_id = ?")->execute([$id, schoolId()]);
 
     logActivity('delete', 'sports_team', $id);
@@ -235,16 +262,21 @@ function addMember() {
 
     $stmt = $db->prepare("
         INSERT INTO team_members (team_id, student_id, jersey_number, position, status, joined_at, notes)
-        VALUES (?, ?, ?, ?, ?, CURDATE(), ?)
+        SELECT ?, id, ?, ?, ?, CURDATE(), ? FROM students WHERE id = ? AND school_id = ?
     ");
     $stmt->execute([
         $data['team_id'],
-        $data['student_id'],
         $data['jersey_number'] ?? null,
         $data['position']      ?? null,
         $data['status']        ?? 'active',
-        $data['notes']         ?? null
+        $data['notes']         ?? null,
+        $data['student_id'],
+        schoolId()
     ]);
+
+    if ($stmt->rowCount() === 0) {
+        jsonError('فشل في إضافة اللاعب، قد يكون المعرف غير صحيح أو الطالب لا يتبع لمدرستك');
+    }
 
     logActivity('add_member', 'sports_team', $data['team_id']);
     jsonSuccess(['id' => $db->lastInsertId()], 'تم إضافة اللاعب بنجاح');

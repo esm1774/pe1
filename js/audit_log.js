@@ -25,7 +25,10 @@ async function renderAuditLog() {
         'import': { label: 'استيراد بيانات', icon: '📥', color: 'text-indigo-500', bg: 'bg-indigo-50' },
         'export': { label: 'تصدير بيانات', icon: '📤', color: 'text-purple-500', bg: 'bg-purple-50' },
         'score_add': { label: 'إضافة درجة', icon: '🌟', color: 'text-orange-500', bg: 'bg-orange-50' },
-        'attendance_mark': { label: 'تسجيل حضور', icon: '📋', color: 'text-teal-500', bg: 'bg-teal-50' }
+        'attendance_mark': { label: 'تسجيل حضور', icon: '📋', color: 'text-teal-500', bg: 'bg-teal-50' },
+        'start': { label: 'بدء نشاط', icon: '▶️', color: 'text-green-500', bg: 'bg-green-50' },
+        'complete': { label: 'إنهاء نشاط', icon: '🛑', color: 'text-pink-500', bg: 'bg-pink-50' },
+        'add_teams': { label: 'إضافة فرق', icon: '👥', color: 'text-cyan-500', bg: 'bg-cyan-50' }
     };
 
     mc.innerHTML = `
@@ -75,8 +78,9 @@ async function renderAuditLog() {
             actStyle = { label: log.action, icon: '📌', color: 'text-gray-600', bg: 'bg-gray-100' };
         }
 
-        // Format Date
-        const dateObj = new Date(log.created_at);
+        // Format Date (Safari Support)
+        const dateString = (log.created_at || '').replace(' ', 'T');
+        const dateObj = new Date(dateString);
         const formattedDate = dateObj.toLocaleDateString('ar-SA') + ' - ' + dateObj.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
 
         return `
@@ -105,7 +109,7 @@ async function renderAuditLog() {
                                 </td>
                                 <td class="px-6 py-5">
                                     <p class="text-sm font-bold text-gray-800">
-                                        ${log.entity_type ? '<span class="text-gray-500 italic mr-1">[' + esc(log.entity_type) + ' ' + (log.entity_id || '') + ']</span>' : ''}
+                                        ${log.entity_type ? '<span class="text-gray-500 italic mr-1">[' + esc(log.entity_type) + ' ' + esc(log.entity_id || '') + ']</span>' : ''}
                                     </p>
                                     <p class="text-xs text-gray-500 mt-1 max-w-xs truncate" title="${esc(log.details || '')}">${esc(log.details || '—')}</p>
                                 </td>
