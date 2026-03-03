@@ -22,6 +22,18 @@ const TAPI = {
             });
 
             const options = { method, headers: {} };
+
+            // Add CSRF Token for state-changing requests
+            if (method !== 'GET') {
+                const csrfToken = document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('XSRF-TOKEN='))
+                    ?.split('=')[1];
+                if (csrfToken) {
+                    options.headers['X-CSRF-TOKEN'] = csrfToken;
+                }
+            }
+
             if (data && method !== 'GET') {
                 options.headers['Content-Type'] = 'application/json';
                 options.body = JSON.stringify(data);

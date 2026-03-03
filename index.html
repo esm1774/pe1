@@ -278,45 +278,41 @@
             <!-- Sidebar -->
             <aside id="sidebar"
                 class="w-64 bg-sidebar min-h-[calc(100vh-56px)] fixed lg:sticky top-[56px] z-30 transition-all duration-300 -right-64 lg:right-0 no-print border-l border-color">
-                <nav class="py-4">
-                    <div class="px-4 mb-4">
-                        <p class="text-gray-400 text-xs font-semibold uppercase tracking-wider">القائمة الرئيسية</p>
+                <nav class="py-4 pb-20">
+                    <!-- القسم الأول: الرئيسية والوصول السريع -->
+                    <div class="px-4 mb-2">
+                        <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">الوصول السريع</p>
                     </div>
-                    <a onclick="navigateTo('dashboard')"
-                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,teacher,supervisor,viewer">
-                        <span class="text-xl">📊</span><span>لوحة التحكم</span>
-                    </a>
-                    <a onclick="navigateTo('school_settings')"
-                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin">
-                        <span class="text-xl">⚙️</span><span>إعدادات المدرسة</span>
-                    </a>
-                    <a onclick="navigateTo('analytics')"
-                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,supervisor">
-                        <span class="text-xl">📈</span><span>تحليلات متقدمة</span>
-                    </a>
-                    <a onclick="navigateTo('audit_logs')"
-                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,supervisor">
-                        <span class="text-xl">🛡️</span><span>سجل الأنشطة</span>
-                    </a>
                     <a onclick="navigateTo('dashboard')"
                         class="sidebar-link active flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="teacher">
                         <span class="text-xl">🏠</span><span>الرئيسية</span>
-                    </a>
-                    <a onclick="navigateTo('timetable')"
-                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="teacher,admin">
-                        <span class="text-xl">📅</span><span>جدول الحصص</span>
                     </a>
                     <a onclick="navigateTo('dashboard')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="parent">
                         <span class="text-xl">👨‍👩‍👦‍👦</span><span>أبنائي</span>
                     </a>
+                    <a onclick="navigateTo('dashboard')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor,viewer">
+                        <span class="text-xl">📊</span><span>لوحة التحكم</span>
+                    </a>
+                    <a onclick="navigateTo('timetable')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="teacher,admin">
+                        <span class="text-xl">📅</span><span>جدول الحصص</span>
+                    </a>
+                    <a onclick="navigateTo('sportsCalendar')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">📅</span><span>التقويم الرياضي</span>
+                    </a>
+
+                    <!-- القسم الثاني: الأكاديميات والطلاب -->
+                    <div class="px-4 mt-6 mb-2">
+                        <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">الأكاديميات والطلاب</p>
+                    </div>
                     <a onclick="navigateTo('grades')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="admin,teacher,supervisor">
@@ -332,10 +328,20 @@
                         data-role="admin,teacher,supervisor">
                         <span class="text-xl">📋</span><span>الحضور</span>
                     </a>
+
+                    <!-- القسم الثالث: الأنشطة الرياضية -->
+                    <div class="px-4 mt-6 mb-2">
+                        <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">الأنشطة الرياضية</p>
+                    </div>
                     <a onclick="navigateTo('fitness')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="admin,teacher,supervisor">
                         <span class="text-xl">💪</span><span>اختبارات اللياقة</span>
+                    </a>
+                    <a onclick="navigateTo('sportsTeams')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,teacher,supervisor">
+                        <span class="text-xl">🏅</span><span>الفرق الرياضية</span>
                     </a>
                     <a onclick="navigateTo('competition')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
@@ -347,22 +353,26 @@
                         data-role="admin,teacher,supervisor">
                         <span class="text-xl">⚽</span><span>البطولات</span>
                     </a>
-                    <a onclick="navigateTo('sportsTeams')"
-                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,teacher,supervisor">
-                        <span class="text-xl">🏅</span><span>الفرق الرياضية</span>
-                    </a>
-                    <a onclick="navigateTo('sportsCalendar')"
-                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,teacher,supervisor">
-                        <span class="text-xl">📅</span><span>التقويم الرياضي</span>
-                    </a>
+
+                    <!-- القسم الرابع: البيانات والتقارير -->
+                    <div class="px-4 mt-6 mb-2">
+                        <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">البيانات والتقارير</p>
+                    </div>
                     <a onclick="navigateTo('reports')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="admin,teacher,supervisor,parent,student">
                         <span class="text-xl">📈</span><span>التقارير</span>
                     </a>
-                    <div class="px-4 my-4 border-t border-gray-700"></div>
+                    <a onclick="navigateTo('analytics')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,supervisor">
+                        <span class="text-xl">📈</span><span>تحليلات متقدمة</span>
+                    </a>
+
+                    <!-- القسم الخامس: إدارة النظام -->
+                    <div class="px-4 mt-6 mb-2 border-t border-gray-700 pt-4">
+                        <p class="text-gray-400 text-[10px] font-black uppercase tracking-wider">الإدارة والإعدادات</p>
+                    </div>
                     <a onclick="navigateTo('users')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="admin">
@@ -377,6 +387,16 @@
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
                         data-role="admin">
                         <span class="text-xl">🏅</span><span>إدارة الأوسمة</span>
+                    </a>
+                    <a onclick="navigateTo('audit_logs')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin,supervisor">
+                        <span class="text-xl">🛡️</span><span>سجل الأنشطة</span>
+                    </a>
+                    <a onclick="navigateTo('school_settings')"
+                        class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
+                        data-role="admin">
+                        <span class="text-xl">⚙️</span><span>إعدادات المدرسة</span>
                     </a>
                 </nav>
             </aside>
@@ -467,6 +487,7 @@
     <script src="js/reports.js?v=3.2.1"></script>
     <script src="js/users.js?v=3.2.1"></script>
     <script src="js/user_profile.js?v=3.2.1"></script>
+    <script src="js/profile.js?v=3.2.1"></script>
     <script src="js/tournaments.js?v=3.2.1"></script>
     <script src="js/sports_teams.js?v=3.2.1"></script>
     <script src="js/student_dashboard.js?v=3.2.1"></script>

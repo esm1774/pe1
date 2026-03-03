@@ -18,6 +18,18 @@ const STAPI = {
                 if (v !== null && v !== undefined && v !== '') url += `&${k}=${encodeURIComponent(v)}`;
             });
             const opts = { method, headers: {} };
+
+            // Add CSRF Token for state-changing requests
+            if (method !== 'GET') {
+                const csrfToken = document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('XSRF-TOKEN='))
+                    ?.split('=')[1];
+                if (csrfToken) {
+                    opts.headers['X-CSRF-TOKEN'] = csrfToken;
+                }
+            }
+
             if (data && method !== 'GET') {
                 opts.headers['Content-Type'] = 'application/json';
                 opts.body = JSON.stringify(data);
