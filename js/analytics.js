@@ -11,14 +11,22 @@ async function renderAnalytics() {
     // Fetch data from backend API
     const r = await API.get('analytics_dashboard');
     if (!r || !r.success) {
-        mc.innerHTML = '<p class="text-red-500 text-center py-8">خطأ في تحميل بيانات التحليلات. تأكد من توفر الصلاحيات الكافية لتشغيل هذه الصفحة.</p>';
+        mc.innerHTML = `
+        <div class="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 max-w-2xl mx-auto mt-10 shadow-sm">
+            <div class="text-6xl mb-6 opacity-80">🔒</div>
+            <h3 class="text-2xl font-black text-gray-800 mb-2">هذه الميزة غير مشمولة في باقتك الحالية</h3>
+            <p class="text-gray-500 font-bold mb-8 px-6">للوصول إلى التحليلات المتقدمة والتقارير الشاملة، يرجى ترقية اشتراك المدرسة إلى باقة أعلى.</p>
+            <button onclick="navigateTo('subscription')" class="bg-emerald-600 text-white px-8 py-4 rounded-[1.5rem] font-black hover:bg-emerald-700 shadow-xl shadow-emerald-100 transition active:scale-95 cursor-pointer">
+                ⭐ ترقية الاشتراك الآن
+            </button>
+        </div>`;
         return;
     }
 
     const { timeline, classComparison, heatmap, top10, insights } = r.data;
 
     mc.innerHTML = `
-    <div class="fade-in">
+            < div class="fade-in" >
         <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
@@ -32,7 +40,7 @@ async function renderAnalytics() {
             </div>
         </div>
 
-        <!-- KPI Cards -->
+        <!--KPI Cards-- >
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-gradient-to-tr from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-xl hover:-translate-y-1 transition duration-300">
                 <p class="text-xs font-bold opacity-80 mb-1">متوسط التدريب والحضور <span class="text-[10px]">(آخر 30 يوم)</span></p>
@@ -121,7 +129,7 @@ async function renderAnalytics() {
                 </div>
             </div>
         </div>
-    </div>`;
+    </div > `;
 
     // Render Charts after DOM injection
     setTimeout(() => {

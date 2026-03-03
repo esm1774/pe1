@@ -16,14 +16,22 @@ async function renderBadgeManagementPage() {
 
     const r = await API.get('get_badges');
     if (!r || !r.success) {
-        mc.innerHTML = '<div class="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-100"><p class="text-red-500 font-black">خطأ في تحميل الأوسمة</p></div>';
+        mc.innerHTML = `
+        <div class="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 max-w-2xl mx-auto mt-10 shadow-sm">
+            <div class="text-6xl mb-6 opacity-80">🔒</div>
+            <h3 class="text-2xl font-black text-gray-800 mb-2">هذه الميزة غير مشمولة في باقتك الحالية</h3>
+            <p class="text-gray-500 font-bold mb-8 px-6">لإدارة الأوسمة الرقمية وتحفيز طلابك، يرجى ترقية اشتراك المدرسة إلى باقة أعلى.</p>
+            <button onclick="navigateTo('subscription')" class="bg-emerald-600 text-white px-8 py-4 rounded-[1.5rem] font-black hover:bg-emerald-700 shadow-xl shadow-emerald-100 transition active:scale-95 cursor-pointer">
+                ⭐ ترقية الاشتراك الآن
+            </button>
+        </div>`;
         return;
     }
 
     const badges = r.data || [];
 
     mc.innerHTML = `
-    <div class="fade-in px-4 md:px-0">
+            < div class="fade-in px-4 md:px-0" >
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
             <div>
                 <h2 class="text-3xl font-black text-gray-800">🏅 أكاديمية الأوسمة الرقمية</h2>
@@ -75,7 +83,7 @@ async function renderBadgeManagementPage() {
                 </div>
             ` : ''}
         </div>
-    </div>`;
+    </div > `;
 }
 
 function showBadgeForm(badge = null) {
@@ -93,7 +101,7 @@ function showBadgeForm(badge = null) {
     ];
 
     showModal(`
-        <div class="p-8 md:p-12">
+            < div class="p-8 md:p-12" >
             <div class="flex items-center gap-4 mb-10">
                 <div class="w-16 h-16 rounded-[1.5rem] bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl font-black">
                     ${isEdit ? '✏️' : '➕'}
@@ -169,7 +177,7 @@ function showBadgeForm(badge = null) {
                 </div>
             </div>
         </div>
-    `);
+        `);
 }
 
 async function saveBadgeDefinition(id) {
