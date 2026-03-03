@@ -1339,28 +1339,28 @@ function generateDoubleElimination($tournamentId, $teams) {
     // ================================================================
     // الخطوة 2: إنشاء شعبة الخاسرين (Losers Bracket)
     // ================================================================
-    // الهيكل لـ 8 فرق (wRounds=3):
-    //   L جولة 1: مباراتان (خاسرو الجولة 1 من الفائزين)
-    //   L جولة 2: مباراتان (فائزو L1 ضد خاسري الجولة 2 من الفائزين)
-    //   L جولة 3: مباراة واحدة (فائزو L2 ضد بعضهم)
-    //   L جولة 4: مباراة واحدة (فائز L3 ضد خاسر نصف نهائي الفائزين)
+    // القواعد:
+    // جولة 1 (Minor): تواجه نصف عدد مباريات جولة 1 فائزين (باعتبار N=2^W فرق، عدد مباريات جولة 1 فائزين N/2). عدد مباريات L1 هو N/4. *استثناء: إذا N=4 فجولة L1 تلعب مباراة واحدة*.
+    // بشكل عام:
+    // عدد جولات الخاسرين L = 2 * W - 2
+    // الجولات الفردية (Minor): L1, L3, L5... تجمع الخاسرين الهابطين حديثاً مع الفائزين من الجولة L السابقة. (باستثناء L1 التي تجمع الخاسرين الهابطين مع بعضهم).
+    // الجولات الزوجية (Major): L2, L4, L6... تجمع الفائزين من الجولة L السابقة الفردية مع الخاسرين الهابطين حديثاً.
     
-    $losersMatchIds = []; // [round][position] => match_id
-    $lMatchCount = (int)($bracketSize / 4); // مباريات الجولة الأولى من الخاسرين
+    $losersMatchIds = [];
+    $lMatchCount = (int)($bracketSize / 4);
     
     for ($lr = 1; $lr <= $lRounds; $lr++) {
         if ($lr === 1) {
             $lMatchCount = max(1, (int)($bracketSize / 4));
         } elseif ($lr % 2 === 0) {
-            // جولة زوجية: نفس العدد (استيعاب الخاسرين النازلين من الفائزين)
+            // جولة زوجية: تحافظ على نفس عدد المباريات للجولة الفردية السابقة
             $lMatchCount = max(1, $lMatchCount);
         } else {
-            // جولة فردية: النصف (الناجون يلعبون ضد بعض)
+            // جولة فردية: ينخفض العدد للنصف
             $lMatchCount = max(1, (int)ceil($lMatchCount / 2));
         }
         
         $losersMatchIds[$lr] = [];
-        
         for ($pos = 0; $pos < $lMatchCount; $pos++) {
             $stmt = $db->prepare("
                 INSERT INTO matches (tournament_id, school_id, round_number, match_number, bracket_type, status)
@@ -1372,20 +1372,20 @@ function generateDoubleElimination($tournamentId, $teams) {
         }
     }
     
-    // ربط شعبة الخاسرين داخلياً: الفائز → المباراة التالية
+    // ربط مباريات الخاسرين داخلياً (الفائز يذهب للمباراة التالية)
     for ($lr = 1; $lr < $lRounds; $lr++) {
         foreach ($losersMatchIds[$lr] as $pos => $matchId) {
             $nextRound = $lr + 1;
-            if (!isset($losersMatchIds[$nextRound])) continue;
-            
             $nextMatchCount = count($losersMatchIds[$nextRound]);
             
             if ($lr % 2 === 1) {
-                // جولة فردية: الفائزون يذهبون لـ team1 في الجولة الزوجية التالية
+                // من جولة فردية (Minor) إلى زوجية (Major)
+                // يذهب كـ team1 دائماً
                 $nextPos = min($pos, $nextMatchCount - 1);
                 $nextSlot = 'team1';
             } else {
-                // جولة زوجية: الفائزون يتقدمون للجولة الفردية التالية
+                // من جولة زوجية (Major) إلى فردية (Minor)
+                // يذهب كـ team1 أو team2 لتشكيل المباريات الجديدة
                 $nextPos = min((int)floor($pos / 2), $nextMatchCount - 1);
                 $nextSlot = ($pos % 2 === 0) ? 'team1' : 'team2';
             }
@@ -1399,29 +1399,40 @@ function generateDoubleElimination($tournamentId, $teams) {
     }
     
     // ================================================================
-    // الخطوة 3: ربط الخاسرين من الفائزين → شعبة الخاسرين
+    // الخطوة 3: ربط هبوط الخاسرين من شعبة الفائزين إلى شعبة الخاسرين
     // ================================================================
-    // خاسرو جولة 1 فائزين → جولة 1 خاسرين
+    
+    // هبوط الجولة 1 من الفائزين -> الجولة 1 من الخاسرين (كـ team1 و team2)
     foreach ($winnersMatchIds[1] as $pos => $matchId) {
         $lrPos = (int)floor($pos / 2);
+        $lrSlot = ($pos % 2 === 0) ? 'team1' : 'team2';
         $losersTargetId = $losersMatchIds[1][$lrPos] ?? null;
         
         if ($losersTargetId) {
-            $db->prepare("UPDATE matches SET loser_next_match_id = ? WHERE id = ?")
-               ->execute([$losersTargetId, $matchId]);
+            $db->prepare("UPDATE matches SET loser_next_match_id = ?, loser_next_match_slot = ? WHERE id = ?")
+               ->execute([$losersTargetId, $lrSlot, $matchId]);
         }
     }
     
-    // خاسرو جولة 2+ فائزين → الجولات الزوجية من الخاسرين (كـ team2)
+    // هبوط الجولات 2 وأكثر من الفائزين -> الجولات الزوجية من الخاسرين (Major Rounds) (كـ team2)
     for ($wr = 2; $wr <= $wRounds; $wr++) {
-        $targetLR = ($wr - 1) * 2; // جولة 2 فائزين → L جولة 2، جولة 3 → L جولة 4، ...
+        $targetLR = ($wr - 1) * 2; // W2 -> L2, W3 -> L4, W4 -> L6
+        
         if (isset($losersMatchIds[$targetLR])) {
+            $lMatchCount = count($losersMatchIds[$targetLR]);
+            
             foreach ($winnersMatchIds[$wr] as $pos => $matchId) {
-                $lrPos = min($pos, count($losersMatchIds[$targetLR]) - 1);
+                // Cross-matching: عكس الترتيب لتجنب المواجهات المتكررة المبكرة
+                // إذا كان العدد 4: 0->3, 1->2, 2->1, 3->0
+                // أو بشكل أبسط: نعكس الترتيب
+                $crossoverPos = ($lMatchCount - 1) - $pos;
+                // حماية من تقاطع خارج الحدود لو كان عدد المباريات غير متطابق
+                $lrPos = max(0, min($crossoverPos, $lMatchCount - 1));
+                
                 $losersTargetId = $losersMatchIds[$targetLR][$lrPos] ?? null;
                 
                 if ($losersTargetId) {
-                    $db->prepare("UPDATE matches SET loser_next_match_id = ? WHERE id = ?")
+                    $db->prepare("UPDATE matches SET loser_next_match_id = ?, loser_next_match_slot = 'team2' WHERE id = ?")
                        ->execute([$losersTargetId, $matchId]);
                 }
             }
@@ -1777,24 +1788,7 @@ function saveMatchResult() {
             $db->prepare("UPDATE tournament_teams SET elimination_count = elimination_count + 1 WHERE id = ?")
                ->execute([$loserId]);
 
-            if ($bracketType === 'main') {
-                // خاسر من شعبة الفائزين → ينتقل لشعبة الخاسرين
-                if ($match['loser_next_match_id']) {
-                    $lMatch = $db->prepare("SELECT * FROM matches WHERE id = ?");
-                    $lMatch->execute([$match['loser_next_match_id']]);
-                    $losersMatch = $lMatch->fetch();
-
-                    if ($losersMatch) {
-                        if (!$losersMatch['team1_id']) {
-                            $db->prepare("UPDATE matches SET team1_id = ? WHERE id = ?")
-                               ->execute([$loserId, $match['loser_next_match_id']]);
-                        } elseif (!$losersMatch['team2_id']) {
-                            $db->prepare("UPDATE matches SET team2_id = ? WHERE id = ?")
-                               ->execute([$loserId, $match['loser_next_match_id']]);
-                        }
-                    }
-                }
-            } elseif ($bracketType === 'losers') {
+            if ($bracketType === 'losers') {
                 // خاسر من شعبة الخاسرين → يُقصى نهائياً (خسارة ثانية)
                 $db->prepare("UPDATE tournament_teams SET is_eliminated = 1 WHERE id = ?")
                    ->execute([$loserId]);
