@@ -203,12 +203,12 @@ async function renderSchools() {
     mc.innerHTML = `
         <div class="page-header">
             <h1>🏫 إدارة المدارس</h1>
-            <p>إضافة وتعديل المدارس وإدارة اشتراكاتها</p>
+            <p>إضافة وتعديل المدارس وإدارة اشتراكاتها والتحكم فـي صلاحيات الدخول.</p>
         </div>
 
         <div class="panel">
             <div class="panel-header">
-                <h3>📋 قائمة المدارس (${schools.length})</h3>
+                <h3>📋 سجل المدارس (${schools.length})</h3>
                 <button class="btn btn-emerald btn-sm" onclick="openAddSchoolModal()">➕ إضافة مدرسة</button>
             </div>
             <div class="table-wrapper">
@@ -218,10 +218,10 @@ async function renderSchools() {
                             <th>#</th>
                             <th>اسم المدرسة</th>
                             <th>المعرف</th>
-                            <th>الخطة</th>
+                            <th>تاريخ الانضمام</th>
+                            <th>الخطة الحالية</th>
                             <th>الاشتراك</th>
-                            <th>الطلاب</th>
-                            <th>المعلمون</th>
+                            <th>الطلاب / المعلمون</th>
                             <th>الحالة</th>
                             <th>الإجراءات</th>
                         </tr>
@@ -231,23 +231,32 @@ async function renderSchools() {
                         ${schools.map(s => `
                             <tr>
                                 <td>${s.id}</td>
-                                <td><strong>${esc(s.name)}</strong>${s.city ? `<br><small style="color:var(--text-muted)">${esc(s.city)}</small>` : ''}</td>
-                                <td><code style="color:var(--accent-emerald);font-size:12px">${esc(s.slug)}</code></td>
-                                <td>${s.plan_name || '<span style="color:var(--text-muted)">—</span>'}</td>
+                                <td>
+                                    <strong>${esc(s.name)}</strong>
+                                    ${s.city ? `<span style="display:block;font-size:10px;color:var(--text-muted)">📍 ${esc(s.city)}</span>` : ''}
+                                </td>
+                                <td><code style="color:var(--accent-emerald);font-size:11px">${esc(s.slug)}</code></td>
+                                <td style="font-size:12px;color:var(--text-muted)">${s.created_at ? s.created_at.split(' ')[0] : '—'}</td>
+                                <td>
+                                    <div style="font-size:12px;font-weight:600">${s.plan_name || '<small style="color:var(--text-muted)">بدون خطة</small>'}</div>
+                                    <small style="font-size:9px;color:var(--text-muted)">نهاية الخدمة: ${s.subscription_ends_at || s.trial_ends_at || '—'}</small>
+                                </td>
                                 <td>${subBadge(s.subscription_status)}</td>
-                                <td>${s.student_count || 0} / ${s.max_students || '∞'}</td>
-                                <td>${s.user_count || 0} / ${s.max_teachers || '∞'}</td>
+                                <td style="font-size:12px">
+                                    <span style="color:var(--accent-orange)">👤 ${s.student_count || 0} / ${s.max_students || '∞'}</span><br>
+                                    <span style="color:var(--accent-cyan)">👨‍🏫 ${s.user_count || 0} / ${s.max_teachers || '∞'}</span>
+                                </td>
                                 <td>${s.active == 1 ? '<span class="badge badge-active">نشطة</span>' : '<span class="badge badge-inactive">معطلة</span>'}</td>
                                 <td>
                                     <div class="action-btns">
-                                        <button class="action-btn edit" onclick="openEditSchoolModal(${s.id})" title="تعديل">✏️</button>
-                                        <button class="action-btn sub" onclick="openSubModal(${s.id})" title="الاشتراك">💳</button>
-                                        <button class="action-btn enter" onclick="impersonateSchool(${s.id})" title="الدخول كمدرسة">🔑</button>
+                                        <button class="action-btn edit" onclick="openEditSchoolModal(${s.id})" title="تعديل البيانات">✏️</button>
+                                        <button class="action-btn sub" onclick="openSubModal(${s.id})" title="الاشتراك والميزات">💳</button>
+                                        <button class="action-btn enter" onclick="impersonateSchool(${s.id})" title="دخول سريع">🔑</button>
                                         ${s.active == 1
-            ? `<button class="action-btn toggle-off" onclick="toggleSchool(${s.id}, 0)" title="تعطيل">⏸️</button>`
+            ? `<button class="action-btn toggle-off" onclick="toggleSchool(${s.id}, 0)" title="إيقاف المؤقت">⏸️</button>`
             : `<button class="action-btn toggle-on" onclick="toggleSchool(${s.id}, 1)" title="تفعيل">▶️</button>`
         }
-                                        <button class="action-btn toggle-off" onclick="deleteSchool(${s.id}, '${esc(s.name)}')" title="حذف نهائي" style="background:var(--accent-pink);color:white;border:none">🗑️</button>
+                                        <button class="action-btn delete" onclick="deleteSchool(${s.id}, '${esc(s.name)}')" title="حذف نهائي">🗑️</button>
                                     </div>
                                 </td>
                             </tr>
@@ -493,91 +502,23 @@ async function deleteSchool(id, name) {
 }
 
 // ============================================================
-// SUBSCRIPTION MODAL
-// ============================================================
-async function openSubModal(schoolId) {
-    const r = await API.get('schools');
-    if (!r || !r.success) return;
-    const school = r.data.find(s => s.id == schoolId);
-    if (!school) return;
-
-    const planOptions = cachedPlans.map(p =>
-        `<option value="${p.id}" ${school.plan_id == p.id ? 'selected' : ''}>${esc(p.name)}</option>`
-    ).join('');
-
-    openModal(`
-        <div class="modal-header">
-            <h3>💳 إدارة اشتراك: ${esc(school.name)}</h3>
-            <button class="modal-close" onclick="closeModal()">✕</button>
-        </div>
-        <div class="modal-body">
-            <div style="background:var(--bg-glass);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;border:1px solid var(--border-glass)">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                    <span style="color:var(--text-secondary);font-size:13px">الحالة الحالية</span>
-                    ${subBadge(school.subscription_status)}
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                    <span style="color:var(--text-secondary);font-size:13px">الخطة</span>
-                    <span style="font-weight:600">${school.plan_name || 'غير محددة'}</span>
-                </div>
-                ${school.trial_ends_at ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-                    <span style="color:var(--text-secondary);font-size:13px">نهاية التجربة</span>
-                    <span style="font-weight:600">${school.trial_ends_at}</span>
-                </div>` : ''}
-                ${school.subscription_ends_at ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-                    <span style="color:var(--text-secondary);font-size:13px">نهاية الاشتراك</span>
-                    <span style="font-weight:600">${school.subscription_ends_at}</span>
-                </div>` : ''}
-            </div>
-
-            <div class="form-group-modal">
-                <label>تغيير الحالة</label>
-                <select id="subStatus" class="form-select">
-                    <option value="active" ${school.subscription_status === 'active' ? 'selected' : ''}>✅ نشط</option>
-                    <option value="trial" ${school.subscription_status === 'trial' ? 'selected' : ''}>⏳ تجريبي</option>
-                    <option value="suspended" ${school.subscription_status === 'suspended' ? 'selected' : ''}>⛔ معلق</option>
-                </select>
-            </div>
-            <div class="form-group-modal">
-                <label>الخطة</label>
-                <select id="subPlan" class="form-select">
-                    <option value="">— نفس الخطة —</option>
-                    ${planOptions}
-                </select>
-            </div>
-            <div class="form-group-modal">
-                <label>تاريخ انتهاء الاشتراك</label>
-                <input type="date" id="subEndsAt" class="form-input" value="${school.subscription_ends_at || ''}" dir="ltr">
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-orange btn-sm" onclick="updateSubscription(${schoolId})">💾 تحديث الاشتراك</button>
-            <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
-        </div>
-    `);
-}
-
-async function updateSubscription(schoolId) {
-    const data = {
-        id: schoolId,
-        status: document.getElementById('subStatus').value,
-        plan_id: document.getElementById('subPlan').value,
-        ends_at: document.getElementById('subEndsAt').value
-    };
-
-    const r = await API.post('school_subscription', data);
-    if (r && r.success) {
-        toast(r.message || 'تم تحديث الاشتراك');
-        closeModal();
-        renderSchools();
-    } else {
-        toast(r?.error || 'خطأ في التحديث', 'error');
-    }
-}
-
+// PLANS
 // ============================================================
 // PLANS
 // ============================================================
+
+const ALL_FEATURES = {
+    tournaments: { icon: '🏆', label: 'البطولات الرياضية', desc: 'إنشاء وإدارة البطولات وتتبع النتائج' },
+    sports_teams: { icon: '🛡️', label: 'الفرق المدرسية', desc: 'تشكيل الفرق والتدريبات وإدارة الأعضاء' },
+    badges: { icon: '🏅', label: 'الأوسمة والتحفيز', desc: 'منح الأوسمة والنقاط التشجيعية للطلاب' },
+    certificates: { icon: '📜', label: 'إصدار الشهادات', desc: 'طباعة شهادات أداء وتميز مخصصة' },
+    notifications: { icon: '🔔', label: 'إشعارات أولياء الأمور', desc: 'إرسال تنبيهات فورية لأولياء الأمور' },
+    reports: { icon: '📊', label: 'التقارير المتقدمة', desc: 'تقارير تحليلية وإحصائية شاملة' },
+    analytics: { icon: '📈', label: 'لوحة التحليلات', desc: 'رؤية تحليلية لأداء المدرسة والطلاب' },
+    fitness_tests: { icon: '💪', label: 'اختبارات اللياقة البدنية', desc: 'تسجيل ومتابعة نتائج اختبارات اللياقة' },
+    timetable: { icon: '🗓️', label: 'جدول الحصص', desc: 'إعداد وعرض جداول الحصص الأسبوعية' }
+};
+
 async function renderPlans() {
     const mc = document.getElementById('mainContent');
     mc.innerHTML = '<div class="spinner"></div>';
@@ -594,47 +535,101 @@ async function renderPlans() {
     mc.innerHTML = `
         <div class="page-header">
             <h1>💎 الخطط والأسعار</h1>
-            <p>إدارة خطط الاشتراك المتاحة للمدارس</p>
+            <p>تحكم كامل في كل خطط الاشتراك — الميزات، الحدود، الأسعار، والصلاحيات.</p>
         </div>
 
+        <!-- Plan Cards Preview -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:28px">
+            ${plans.map(p => {
+        const features = p.features ? JSON.parse(p.features) : {};
+        const activeCount = Object.keys(ALL_FEATURES).filter(f => features[f]).length;
+        const totalCount = Object.keys(ALL_FEATURES).length;
+        return `
+                <div style="background:var(--bg-card);border:${p.is_default ? '2px solid var(--accent-emerald)' : '1px solid var(--border-glass)'};border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden;transition:var(--transition)" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+                    ${p.is_default ? '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient-primary)"></div>' : ''}
+                    ${!p.active ? '<div style="position:absolute;top:12px;left:12px;background:rgba(239,68,68,0.15);color:var(--accent-red);font-size:9px;padding:2px 8px;border-radius:20px">معطلة</div>' : ''}
+                    ${p.is_default ? '<div style="position:absolute;top:12px;left:12px;background:rgba(16,185,129,0.15);color:var(--accent-emerald);font-size:9px;padding:2px 8px;border-radius:20px">افتراضية</div>' : ''}
+                    <div style="font-size:24px;margin-bottom:8px">💎</div>
+                    <div style="font-size:18px;font-weight:800;margin-bottom:2px">${esc(p.name)}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">${esc(p.name_en || p.slug)}</div>
+                    <div style="font-size:28px;font-weight:900;color:var(--accent-emerald);line-height:1">${p.price_monthly > 0 ? p.price_monthly : 'مجاني'}</div>
+                    ${p.price_monthly > 0 ? '<div style="font-size:10px;color:var(--text-muted)">ر.س / شهرياً</div>' : ''}
+                    <hr style="border-color:var(--border-glass);margin:14px 0">
+                    <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">
+                        👤 ${p.max_students || '∞'} طالب &nbsp;|&nbsp; 👨‍🏫 ${p.max_teachers || '∞'} معلم &nbsp;|&nbsp; 🏛️ ${p.max_classes || '∞'} فصل
+                    </div>
+                    <div style="background:var(--bg-glass);border-radius:8px;padding:4px 8px;font-size:11px;color:${activeCount >= totalCount * 0.7 ? 'var(--accent-emerald)' : 'var(--text-secondary)'}">
+                        ✅ ${activeCount} / ${totalCount} ميزة مفعّلة
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:12px">
+                        <button class="btn btn-emerald btn-sm" style="flex:1;font-size:12px" onclick="openPlanModal(${p.id})">✏️ تعديل</button>
+                        <button class="btn btn-outline btn-sm" style="font-size:12px" onclick="confirmDeletePlan(${p.id},'${esc(p.name)}')" title="مسح">🗑️</button>
+                    </div>
+                </div>
+                `;
+    }).join('')}
+            <div style="background:rgba(16,185,129,0.05);border:2px dashed var(--border-glass);border-radius:var(--radius-lg);padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;min-height:220px" onclick="openPlanModal()">
+                <div style="font-size:36px;opacity:0.4">➕</div>
+                <p style="color:var(--text-muted);font-size:13px;text-align:center">إضافة خطة اشتراك جديدة</p>
+            </div>
+        </div>
+
+        <!-- Detailed Table -->
         <div class="panel">
             <div class="panel-header">
-                <h3>📋 الخطط (${plans.length})</h3>
+                <h3>📋 جدول تفصيلي للخطط</h3>
                 <button class="btn btn-emerald btn-sm" onclick="openPlanModal()">➕ إضافة خطة</button>
             </div>
             <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>اسم الخطة</th>
-                            <th>المعرف</th>
-                            <th>شهري</th>
-                            <th>سنوي</th>
-                            <th>الطلاب</th>
-                            <th>المعلمون</th>
-                            <th>الفصول</th>
+                            <th>الترتيب</th>
+                            <th>الخطة</th>
+                            <th>الأسعار</th>
+                            <th>الحدود</th>
+                            <th>الميزات</th>
+                            <th>الحالة</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${plans.map(p => `
+                        ${plans.map(p => {
+        const features = p.features ? JSON.parse(p.features) : {};
+        const activeFeatures = Object.keys(ALL_FEATURES).filter(f => features[f]);
+        const inactiveFeatures = Object.keys(ALL_FEATURES).filter(f => !features[f]);
+        return `
                             <tr>
-                                <td>${p.id}</td>
-                                <td><strong>${esc(p.name)}</strong></td>
-                                <td><code style="color:var(--accent-cyan);font-size:12px">${esc(p.slug)}</code></td>
-                                <td>${p.price_monthly > 0 ? p.price_monthly + ' ر.س' : '<span style="color:var(--accent-green)">مجاني</span>'}</td>
-                                <td>${p.price_yearly > 0 ? p.price_yearly + ' ر.س' : '—'}</td>
-                                <td>${p.max_students || '∞'}</td>
-                                <td>${p.max_teachers || '∞'}</td>
-                                <td>${p.max_classes || '∞'}</td>
+                                <td><span style="font-size:12px;color:var(--text-muted)">#${p.sort_order || p.id}</span></td>
                                 <td>
-                                    <div class="action-btns">
-                                        <button class="action-btn edit" onclick="openPlanModal(${p.id})">✏️</button>
+                                    <div style="font-weight:700">${esc(p.name)} ${p.is_default ? '<span style="font-size:9px;background:rgba(16,185,129,0.15);color:var(--accent-emerald);padding:1px 6px;border-radius:10px">افتراضي</span>' : ''}</div>
+                                    <div style="font-size:10px;color:var(--text-muted)">${esc(p.name_en || '')} · <code>${esc(p.slug)}</code></div>
+                                    ${p.description ? `<div style="font-size:10px;color:var(--text-secondary);margin-top:2px">${esc(p.description)}</div>` : ''}
+                                </td>
+                                <td style="font-size:12px">
+                                    <div><span style="color:var(--accent-emerald);font-weight:700">${p.price_monthly > 0 ? p.price_monthly + ' ر.س' : 'مجاني'}</span> / شهر</div>
+                                    <div style="color:var(--text-muted)">${p.price_yearly > 0 ? p.price_yearly + ' ر.س / سنة' : '—'}</div>
+                                </td>
+                                <td style="font-size:11px;line-height:1.8">
+                                    👤 <strong>${p.max_students || '∞'}</strong> طالب<br>
+                                    👨‍🏫 <strong>${p.max_teachers || '∞'}</strong> معلم<br>
+                                    🏛️ <strong>${p.max_classes || '∞'}</strong> فصل
+                                </td>
+                                <td>
+                                    <div style="display:flex;flex-wrap:wrap;gap:3px;max-width:220px">
+                                        ${activeFeatures.map(f => `<span title="${ALL_FEATURES[f].label}" style="background:rgba(16,185,129,0.12);color:var(--accent-emerald);border:1px solid rgba(16,185,129,0.2);padding:1px 6px;border-radius:4px;font-size:9px">${ALL_FEATURES[f].icon} ${ALL_FEATURES[f].label.split(' ')[0]}</span>`).join('')}
+                                        ${inactiveFeatures.map(f => `<span title="${ALL_FEATURES[f].label}" style="background:rgba(239,68,68,0.05);color:var(--text-muted);border:1px solid rgba(239,68,68,0.1);padding:1px 6px;border-radius:4px;font-size:9px;text-decoration:line-through">${ALL_FEATURES[f].icon}</span>`).join('')}
                                     </div>
                                 </td>
-                            </tr>
-                        `).join('')}
+                                <td>${p.active ? '<span class="badge badge-active">نشطة</span>' : '<span class="badge badge-inactive">معطلة</span>'}</td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="action-btn edit" onclick="openPlanModal(${p.id})" title="تعديل">✏️</button>
+                                        <button class="action-btn delete" onclick="confirmDeletePlan(${p.id},'${esc(p.name)}')" title="مسح">🗑️</button>
+                                    </div>
+                                </td>
+                            </tr>`;
+    }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -644,68 +639,144 @@ async function renderPlans() {
 
 function openPlanModal(editId) {
     const plan = editId ? cachedPlans.find(p => p.id == editId) : null;
-    const title = plan ? `✏️ تعديل الخطة: ${esc(plan.name)}` : '➕ إضافة خطة جديدة';
+    const title = plan ? `✏️ تعديل: ${esc(plan.name)}` : '➕ خطة اشتراك جديدة';
+    const features = plan && plan.features ? JSON.parse(plan.features) : {};
 
     openModal(`
         <div class="modal-header">
             <h3>${title}</h3>
             <button class="modal-close" onclick="closeModal()">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="max-height:75vh;overflow-y:auto">
             ${plan ? `<input type="hidden" id="planId" value="${plan.id}">` : ''}
-            <div class="form-row">
-                <div class="form-group-modal">
-                    <label>اسم الخطة *</label>
-                    <input type="text" id="planName" class="form-input" value="${plan ? esc(plan.name) : ''}" placeholder="أساسي">
+
+            <!-- القسم الأول: الهوية -->
+            <div style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:10px;padding:16px;margin-bottom:16px">
+                <h4 style="font-size:12px;color:var(--accent-emerald);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">🏷️ هوية الخطة</h4>
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>الاسم بالعربي *</label>
+                        <input type="text" id="planName" class="form-input" value="${plan ? esc(plan.name) : ''}" placeholder="مثال: الخطة المتقدمة">
+                    </div>
+                    <div class="form-group-modal">
+                        <label>الاسم بالإنجليزي</label>
+                        <input type="text" id="planNameEn" class="form-input" value="${plan ? esc(plan.name_en || '') : ''}" placeholder="e.g. Advanced Plan" dir="ltr">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>المعرف (slug) *</label>
+                        <input type="text" id="planSlug" class="form-input" value="${plan ? esc(plan.slug) : ''}" placeholder="advanced" dir="ltr">
+                    </div>
+                    <div class="form-group-modal">
+                        <label>ترتيب العرض</label>
+                        <input type="number" id="planSortOrder" class="form-input" value="${plan ? (plan.sort_order || 0) : 0}" min="0">
+                    </div>
                 </div>
                 <div class="form-group-modal">
-                    <label>المعرف (slug) *</label>
-                    <input type="text" id="planSlug" class="form-input" value="${plan ? esc(plan.slug) : ''}" placeholder="basic" dir="ltr">
+                    <label>وصف الخطة</label>
+                    <textarea id="planDesc" class="form-input" rows="2" placeholder="وصف مختصر يظهر لعملائك...">${plan ? esc(plan.description || '') : ''}</textarea>
+                </div>
+                <div style="display:flex;gap:20px">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                        <input type="checkbox" id="planIsDefault" ${plan && plan.is_default ? 'checked' : ''}>
+                        <span>🌟 خطة افتراضية للتسجيل</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                        <input type="checkbox" id="planActive" ${!plan || plan.active ? 'checked' : ''}>
+                        <span>✅ خطة نشطة ومرئية</span>
+                    </label>
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group-modal">
-                    <label>السعر الشهري (ر.س)</label>
-                    <input type="number" id="planMonthly" class="form-input" value="${plan ? plan.price_monthly : 0}" step="0.01">
-                </div>
-                <div class="form-group-modal">
-                    <label>السعر السنوي (ر.س)</label>
-                    <input type="number" id="planYearly" class="form-input" value="${plan ? plan.price_yearly : 0}" step="0.01">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group-modal">
-                    <label>الحد الأقصى للطلاب</label>
-                    <input type="number" id="planMaxStudents" class="form-input" value="${plan ? plan.max_students : 100}">
-                </div>
-                <div class="form-group-modal">
-                    <label>الحد الأقصى للمعلمين</label>
-                    <input type="number" id="planMaxTeachers" class="form-input" value="${plan ? plan.max_teachers : 5}">
+
+            <!-- القسم الثاني: الأسعار -->
+            <div style="background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:16px;margin-bottom:16px">
+                <h4 style="font-size:12px;color:var(--accent-orange);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">💰 الأسعار</h4>
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>السعر الشهري (ر.س)</label>
+                        <input type="number" id="planMonthly" class="form-input" value="${plan ? plan.price_monthly : 0}" step="0.01" min="0">
+                        <small style="font-size:10px;color:var(--text-muted)">اترك 0 للخطة المجانية</small>
+                    </div>
+                    <div class="form-group-modal">
+                        <label>السعر السنوي (ر.س)</label>
+                        <input type="number" id="planYearly" class="form-input" value="${plan ? plan.price_yearly : 0}" step="0.01" min="0">
+                        <small style="font-size:10px;color:var(--text-muted)">يُعرض للعملاء كخيار توفير</small>
+                    </div>
                 </div>
             </div>
-            <div class="form-group-modal">
-                <label>الحد الأقصى للفصول</label>
-                <input type="number" id="planMaxClasses" class="form-input" value="${plan ? plan.max_classes : 10}">
+
+            <!-- القسم الثالث: حدود الاستهلاك -->
+            <div style="background:rgba(6,182,212,0.05);border:1px solid rgba(6,182,212,0.15);border-radius:10px;padding:16px;margin-bottom:16px">
+                <h4 style="font-size:12px;color:var(--accent-cyan);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">📊 حدود الاستهلاك</h4>
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>👤 الحد الأقصى للطلاب</label>
+                        <input type="number" id="planMaxStudents" class="form-input" value="${plan ? plan.max_students : 100}" min="1">
+                    </div>
+                    <div class="form-group-modal">
+                        <label>👨‍🏫 الحد الأقصى للمعلمين</label>
+                        <input type="number" id="planMaxTeachers" class="form-input" value="${plan ? plan.max_teachers : 5}" min="1">
+                    </div>
+                    <div class="form-group-modal">
+                        <label>🏛️ الحد الأقصى للفصول</label>
+                        <input type="number" id="planMaxClasses" class="form-input" value="${plan ? plan.max_classes : 10}" min="1">
+                    </div>
+                </div>
+                <small style="font-size:10px;color:var(--text-muted)">💡 استخدم 9999 للخطط غير المحدودة</small>
+            </div>
+
+            <!-- القسم الرابع: الميزات -->
+            <div style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:16px">
+                <h4 style="font-size:12px;color:#8b5cf6;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">🔓 الميزات والصلاحيات</h4>
+                <p style="font-size:10px;color:var(--text-muted);margin-bottom:14px">فعّل أو أوقف كل ميزة بشكل مستقل لهذه الخطة</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    ${Object.entries(ALL_FEATURES).map(([key, info]) => `
+                        <label style="display:flex;align-items:flex-start;gap:10px;background:var(--bg-glass);padding:10px 12px;border-radius:8px;border:1px solid ${features[key] ? 'rgba(16,185,129,0.3)' : 'var(--border-glass)'};cursor:pointer;transition:all 0.2s" onchange="this.style.borderColor=this.querySelector('input').checked?'rgba(16,185,129,0.3)':'var(--border-glass)'">
+                            <input type="checkbox" class="plan-feature-chk" data-feature="${key}" ${features[key] ? 'checked' : ''} style="margin-top:3px;cursor:pointer;accent-color:var(--accent-emerald)">
+                            <div>
+                                <div style="font-size:12px;font-weight:700">${info.icon} ${info.label}</div>
+                                <div style="font-size:10px;color:var(--text-muted);margin-top:1px">${info.desc}</div>
+                            </div>
+                        </label>
+                    `).join('')}
+                </div>
+                <div style="display:flex;gap:10px;margin-top:10px">
+                    <button type="button" onclick="document.querySelectorAll('.plan-feature-chk').forEach(c=>c.checked=true);document.querySelectorAll('label:has(.plan-feature-chk)').forEach(l=>l.style.borderColor='rgba(16,185,129,0.3)')" style="background:rgba(16,185,129,0.1);color:var(--accent-emerald);border:none;padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer">✅ تفعيل الكل</button>
+                    <button type="button" onclick="document.querySelectorAll('.plan-feature-chk').forEach(c=>c.checked=false);document.querySelectorAll('label:has(.plan-feature-chk)').forEach(l=>l.style.borderColor='var(--border-glass)')" style="background:rgba(239,68,68,0.1);color:var(--accent-red);border:none;padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer">🚫 إيقاف الكل</button>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-emerald btn-sm" onclick="savePlan()">💾 حفظ الخطة</button>
             <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
         </div>
-    `);
+    `, 'lg');
 }
 
 async function savePlan() {
     const idEl = document.getElementById('planId');
+    const featureChks = document.querySelectorAll('.plan-feature-chk');
+    const features = {};
+    featureChks.forEach(chk => {
+        features[chk.dataset.feature] = chk.checked;
+    });
+
     const data = {
         id: idEl ? idEl.value : null,
         name: document.getElementById('planName').value.trim(),
+        name_en: document.getElementById('planNameEn').value.trim(),
         slug: document.getElementById('planSlug').value.trim(),
+        description: document.getElementById('planDesc').value.trim(),
         price_monthly: document.getElementById('planMonthly').value,
         price_yearly: document.getElementById('planYearly').value,
         max_students: document.getElementById('planMaxStudents').value,
         max_teachers: document.getElementById('planMaxTeachers').value,
-        max_classes: document.getElementById('planMaxClasses').value
+        max_classes: document.getElementById('planMaxClasses').value,
+        is_default: document.getElementById('planIsDefault').checked ? 1 : 0,
+        active: document.getElementById('planActive').checked ? 1 : 0,
+        sort_order: document.getElementById('planSortOrder').value,
+        features: features
     };
 
     if (!data.name || !data.slug) return toast('اسم الخطة والمعرف مطلوبان', 'error');
@@ -720,11 +791,194 @@ async function savePlan() {
     }
 }
 
+async function confirmDeletePlan(id, name) {
+    if (!confirm(`⚠️ هل تريد حذف خطة "${name}"؟ لا يمكن حذف خطة عليها مشتركون.`)) return;
+    const r = await API.post('plan_delete', { id });
+    if (r && r.success) {
+        toast(r.message || 'تم مسح الخطة');
+        renderPlans();
+    } else {
+        toast(r?.error || 'خطأ في الحذف', 'error');
+    }
+}
+
+// ============================================================
+// SUBSCRIPTION MODAL (School)
+// ============================================================
+async function openSubModal(schoolId) {
+    const r = await API.get('schools');
+    if (!r || !r.success) return;
+    const school = r.data.find(s => s.id == schoolId);
+    if (!school) return;
+
+    const planOptions = cachedPlans.map(p =>
+        `<option value="${p.id}" ${school.plan_id == p.id ? 'selected' : ''}>${esc(p.name)} — ${p.price_monthly > 0 ? p.price_monthly + ' ر.س/شهر' : 'مجاني'}</option>`
+    ).join('');
+
+    // Pre-calculate merged features
+    // If school has specific features, use them (explicitly override), else follow plan
+    const schoolFeatures = school.features ? JSON.parse(school.features) : null;
+    const planFeatures = school.plan_features ? JSON.parse(school.plan_features) : {};
+    const mergedFeatures = schoolFeatures || planFeatures;
+
+    openModal(`
+        <div class="modal-header">
+            <h3>💳 اشتراك: ${esc(school.name)}</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:75vh;overflow-y:auto">
+
+            <!-- معلومات الحالة الراهنة -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+                <div style="background:var(--bg-glass);border-radius:10px;padding:12px;border:1px solid var(--border-glass);text-align:center">
+                    <p style="font-size:9px;color:var(--text-muted);margin-bottom:4px">تاريخ الانضمام</p>
+                    <p style="font-weight:700;font-size:12px;color:var(--accent-cyan)">📅 ${school.created_at ? school.created_at.split(' ')[0] : '—'}</p>
+                </div>
+                <div style="background:var(--bg-glass);border-radius:10px;padding:12px;border:1px solid var(--border-glass);text-align:center">
+                    <p style="font-size:9px;color:var(--text-muted);margin-bottom:4px">حالة الاشتراك</p>
+                    ${subBadge(school.subscription_status)}
+                </div>
+                <div style="background:var(--bg-glass);border-radius:10px;padding:12px;border:1px solid var(--border-glass);text-align:center">
+                    <p style="font-size:9px;color:var(--text-muted);margin-bottom:4px">الخطة الحالية</p>
+                    <p style="font-weight:700;font-size:12px">${school.plan_name || '—'}</p>
+                </div>
+            </div>
+
+            <!-- ميزات مخصصة للمدرسة -->
+            <div style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:14px;margin-bottom:18px">
+                <h4 style="font-size:12px;color:#8b5cf6;margin-bottom:4px;text-transform:uppercase">🔓 التحكم في الميزات (تجاوز الخطة)</h4>
+                <p style="font-size:10px;color:var(--text-muted);margin-bottom:12px">يمكنك تفعيل ميزات محددة لهذه المدرسة حتى لو لم تكن في خطتها</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px">
+                    ${Object.entries(ALL_FEATURES).map(([key, info]) => `
+                        <label style="display:flex;align-items:center;gap:6px;font-size:10px;padding:5px 8px;border-radius:6px;background:var(--bg-glass);border:1px solid ${mergedFeatures[key] ? 'rgba(16,185,129,0.3)' : 'var(--border-glass)'};cursor:pointer">
+                            <input type="checkbox" class="sub-feature-chk" data-feature="${key}" ${mergedFeatures[key] ? 'checked' : ''} style="margin:0;accent-color:var(--accent-emerald)">
+                            <span>${info.icon} ${info.label.split(' ').slice(0, 2).join(' ')}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                ${!schoolFeatures ? `<p style="font-size:9px;color:var(--accent-orange);margin-top:8px">ℹ️ هذه الميزات مأخوذة حالياً من "خطة الاشتراك". عند تغييرها سيتم حفظ "نسخة مخصصة" لهذه المدرسة.</p>` : ''}
+            </div>
+
+            <!-- تحديث الاشتراك -->
+            <div style="background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:14px;margin-bottom:18px">
+                <h4 style="font-size:12px;color:var(--accent-orange);margin-bottom:12px;text-transform:uppercase">🔄 تحديث حالة الاشتراك</h4>
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>حالة الاشتراك</label>
+                        <select id="subStatus" class="form-select" onchange="toggleTrialDays(this.value)">
+                            <option value="active"    ${school.subscription_status === 'active' ? 'selected' : ''}>✅ نشط (مدفوع)</option>
+                            <option value="trial"     ${school.subscription_status === 'trial' ? 'selected' : ''}>⏳ تجريبي (مجاني)</option>
+                            <option value="suspended" ${school.subscription_status === 'suspended' ? 'selected' : ''}>⛔ معلق (محجوب)</option>
+                            <option value="cancelled" ${school.subscription_status === 'cancelled' ? 'selected' : ''}>🚫 ملغي</option>
+                        </select>
+                    </div>
+                    <div class="form-group-modal">
+                        <label>خطة التسعير</label>
+                        <select id="subPlan" class="form-select">
+                            <option value="">— الخطة الحالية —</option>
+                            ${planOptions}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>📅 تاريخ بداية الاشتراك</label>
+                        <input type="date" id="subStartsAt" class="form-input" value="${school.subscription_starts_at || ''}" dir="ltr">
+                    </div>
+                    <div class="form-group-modal">
+                        <label>📅 تاريخ انتهاء الصلاحية</label>
+                        <input type="date" id="subEndsAt" class="form-input" value="${school.subscription_ends_at || school.trial_ends_at || ''}" dir="ltr">
+                        <small style="font-size:10px;color:var(--text-muted)">سيُوقف النظام تلقائياً بعد هذا التاريخ</small>
+                    </div>
+                </div>
+                <div id="trialDaysRow" style="display:${school.subscription_status === 'trial' ? 'block' : 'none'}">
+                    <div class="form-group-modal">
+                        <label>⏳ أيام الفترة التجريبية</label>
+                        <input type="number" id="subTrialDays" class="form-input" value="14" min="1" max="365">
+                        <small style="font-size:10px;color:var(--text-muted)">يُطبق عند تحويل الاشتراك لتجريبي</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تجاوز حدود الخطة -->
+            <div style="background:rgba(6,182,212,0.05);border:1px solid rgba(6,182,212,0.15);border-radius:10px;padding:14px;margin-bottom:18px">
+                <h4 style="font-size:12px;color:var(--accent-cyan);margin-bottom:4px;text-transform:uppercase">🛠️ تجاوز حدود الخطة</h4>
+                <p style="font-size:10px;color:var(--text-muted);margin-bottom:12px">ادخل أرقاماً لتحديد سعة خاصة، أو اترك فارغاً لاتباع حدود الخطة</p>
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>👤 الحد الأقصى للطلاب</label>
+                        <input type="number" id="subMaxStudents" class="form-input" placeholder="حسب الخطة" value="${school.max_students || ''}">
+                    </div>
+                    <div class="form-group-modal">
+                        <label>👨‍🏫 الحد الأقصى للمعلمين</label>
+                        <input type="number" id="subMaxTeachers" class="form-input" placeholder="حسب الخطة" value="${school.max_teachers || ''}">
+                    </div>
+                    <div class="form-group-modal">
+                        <label>🏛️ الحد الأقصى للفصول</label>
+                        <input type="number" id="subMaxClasses" class="form-input" placeholder="حسب الخطة" value="${school.max_classes || ''}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group-modal" style="margin-top:10px">
+                <label>📝 ملاحظات إدارية حول الاشتراك</label>
+                <textarea id="subNotes" class="form-input" rows="2" placeholder="أضف أي ملاحظات خاصة بالدفع أو العقد هنا...">${esc(school.subscription_notes || '')}</textarea>
+                <small style="font-size:10px;color:var(--text-muted)">تظهر هذه الملاحظات لمدير المدرسة في صفحة اشتراكه.</small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-emerald btn-sm" onclick="updateSubscription(${schoolId})">💾 حفظ التحديثات</button>
+            <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
+        </div>
+    `, 'lg');
+}
+
+async function updateSubscription(schoolId) {
+    const gets = id => document.getElementById(id);
+    if (!gets('subStatus')) return;
+
+    const featureChks = document.querySelectorAll('.sub-feature-chk');
+    const features = {};
+    featureChks.forEach(chk => {
+        features[chk.dataset.feature] = chk.checked;
+    });
+
+    const data = {
+        id: schoolId,
+        status: gets('subStatus').value,
+        plan_id: gets('subPlan').value,
+        starts_at: gets('subStartsAt')?.value || '',
+        ends_at: gets('subEndsAt').value,
+        trial_days: gets('subTrialDays')?.value || 14,
+        max_students: gets('subMaxStudents')?.value || null,
+        max_teachers: gets('subMaxTeachers')?.value || null,
+        max_classes: gets('subMaxClasses')?.value || null,
+        subscription_notes: gets('subNotes').value.trim(),
+        features: features
+    };
+
+    const r = await API.post('school_subscription', data);
+    if (r && r.success) {
+        toast(r.message || 'تم تحديث الاشتراك');
+        closeModal();
+        renderSchools();
+    } else {
+        toast(r?.error || 'خطأ في التحديث', 'error');
+    }
+}
+
+function toggleTrialDays(status) {
+    const row = document.getElementById('trialDaysRow');
+    if (row) row.style.display = status === 'trial' ? 'block' : 'none';
+}
+
 // ============================================================
 // MODAL HELPERS
 // ============================================================
-function openModal(html) {
+function openModal(html, size = 'md') {
     document.getElementById('modalContent').innerHTML = html;
+    const modal = document.querySelector('.modal');
+    if (modal) modal.style.maxWidth = size === 'lg' ? '720px' : '560px';
     document.getElementById('modalOverlay').classList.add('active');
 }
 

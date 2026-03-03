@@ -16,17 +16,24 @@ class Subscription {
 
         try {
             $db = getDB();
-            $stmt = $db->prepare("SELECT subscription_status, trial_ends_at, subscription_ends_at FROM schools WHERE id = ?");
+            $stmt = $db->prepare("SELECT subscription_status, trial_ends_at, subscription_starts_at, subscription_ends_at FROM schools WHERE id = ?");
             $stmt->execute([$schoolId]);
             $school = $stmt->fetch();
             if (!$school) return false;
 
             $status = $school['subscription_status'];
+            $today = date('Y-m-d');
+
+            // Suspended or cancelled always inactive
+            if (in_array($status, ['suspended', 'cancelled'])) return false;
 
             // Active subscription
             if ($status === 'active') {
-                if ($school['subscription_ends_at'] && $school['subscription_ends_at'] < date('Y-m-d')) {
-                    // Subscription expired — auto-suspend
+                // If it hasn't started yet, it is not active
+                if ($school['subscription_starts_at'] && $school['subscription_starts_at'] > $today) return false;
+                
+                // If it is already expired
+                if ($school['subscription_ends_at'] && $school['subscription_ends_at'] < $today) {
                     self::suspend($schoolId, 'انتهت صلاحية الاشتراك تلقائياً');
                     return false;
                 }
@@ -35,7 +42,7 @@ class Subscription {
 
             // Trial period
             if ($status === 'trial') {
-                if ($school['trial_ends_at'] && $school['trial_ends_at'] >= date('Y-m-d')) {
+                if ($school['trial_ends_at'] && $school['trial_ends_at'] >= $today) {
                     return true;
                 }
                 // Trial expired
@@ -43,9 +50,9 @@ class Subscription {
                 return false;
             }
 
-            return false; // suspended or cancelled
+            return false;
         } catch (Exception $e) {
-            return true; // Fail open for backward compatibility
+            return true; // Fail open for backward compatibility during transitions
         }
     }
 
@@ -53,11 +60,11 @@ class Subscription {
      * Require active subscription or die with error
      */
     public static function requireActive(): void {
-        if (!Tenant::isSaasMode()) return; // Backward compatibility
-        if (Tenant::isPlatformAdmin()) return; // Super admins bypass
+        if (!Tenant::isSaasMode()) return;
+        if (Tenant::isPlatformAdmin()) return;
 
         if (!self::isActive()) {
-            jsonError('اشتراك المدرسة غير فعّال. الرجاء التواصل مع إدارة المنصة.', 403);
+            jsonError('الخدمة غير مفعّلة حالياً لمدرستك. يرجى مراجعة تفاصيل الاشتراك أو التواصل مع الإدارة.', 403);
         }
     }
 
@@ -74,41 +81,47 @@ class Subscription {
         try {
             $db = getDB();
 
-            // Get school limits (from school or plan)
+            // Get school limits (prefer school-level override, else plan-level, else fallback)
             $stmt = $db->prepare("
-                SELECT s.max_students, s.max_teachers, s.plan_id,
-                       COALESCE(p.max_students, s.max_students) as plan_max_students,
-                       COALESCE(p.max_teachers, s.max_teachers) as plan_max_teachers,
-                       COALESCE(p.max_classes, 999) as plan_max_classes
+                SELECT s.max_students as school_max_students, 
+                       s.max_teachers as school_max_teachers, 
+                       s.max_classes as school_max_classes,
+                       p.max_students as plan_max_students,
+                       p.max_teachers as plan_max_teachers,
+                       p.max_classes as plan_max_classes
                 FROM schools s
                 LEFT JOIN plans p ON s.plan_id = p.id
                 WHERE s.id = ?
             ");
             $stmt->execute([$schoolId]);
-            $limits = $stmt->fetch();
-            if (!$limits) return false;
+            $row = $stmt->fetch();
+            if (!$row) return false;
 
-            switch ($resource) {
-                case 'students':
-                    $count = $db->prepare("SELECT COUNT(*) FROM students WHERE school_id = ? AND active = 1");
-                    $count->execute([$schoolId]);
-                    return $count->fetchColumn() < $limits['plan_max_students'];
-
-                case 'teachers':
-                    $count = $db->prepare("SELECT COUNT(*) FROM users WHERE school_id = ? AND role = 'teacher' AND active = 1");
-                    $count->execute([$schoolId]);
-                    return $count->fetchColumn() < $limits['plan_max_teachers'];
-
-                case 'classes':
-                    $count = $db->prepare("SELECT COUNT(*) FROM classes WHERE school_id = ? AND active = 1");
-                    $count->execute([$schoolId]);
-                    return $count->fetchColumn() < $limits['plan_max_classes'];
-
-                default:
-                    return true;
+            // Determine final limit for this resource
+            $limit = 0;
+            if ($resource === 'students') {
+                $limit = !empty($row['school_max_students']) ? $row['school_max_students'] : (!empty($row['plan_max_students']) ? $row['plan_max_students'] : 100);
+            } elseif ($resource === 'teachers') {
+                $limit = !empty($row['school_max_teachers']) ? $row['school_max_teachers'] : (!empty($row['plan_max_teachers']) ? $row['plan_max_teachers'] : 5);
+            } elseif ($resource === 'classes') {
+                $limit = !empty($row['school_max_classes']) ? $row['school_max_classes'] : (!empty($row['plan_max_classes']) ? $row['plan_max_classes'] : 10);
             }
+
+            // Count current usage
+            if ($resource === 'students') {
+                $count = $db->prepare("SELECT COUNT(*) FROM students WHERE school_id = ? AND active = 1");
+            } elseif ($resource === 'teachers') {
+                $count = $db->prepare("SELECT COUNT(*) FROM users WHERE school_id = ? AND role = 'teacher' AND active = 1");
+            } elseif ($resource === 'classes') {
+                $count = $db->prepare("SELECT COUNT(*) FROM classes WHERE school_id = ? AND active = 1");
+            } else {
+                return true;
+            }
+
+            $count->execute([$schoolId]);
+            return (int)$count->fetchColumn() < (int)$limit;
         } catch (Exception $e) {
-            return true; // Fail open
+            return true;
         }
     }
 
@@ -117,18 +130,14 @@ class Subscription {
      */
     public static function requireLimit(string $resource): void {
         if (!self::checkLimit($resource)) {
-            $names = [
-                'students' => 'الطلاب',
-                'teachers' => 'المعلمين',
-                'classes' => 'الفصول'
-            ];
+            $names = ['students'=>'الطلاب', 'teachers'=>'المعلمين', 'classes'=>'الفصول'];
             $name = $names[$resource] ?? $resource;
-            jsonError("تم الوصول للحد الأقصى من {$name}. يرجى ترقية خطة الاشتراك.", 403);
+            jsonError("تم الوصول للحد الأقصى من {$name} المسموح به في خطة اشتراكك. يرجى الترقية.", 403);
         }
     }
 
     /**
-     * Check if a feature is available in the current plan
+     * Check if a feature is available in the current plan (with school-level override)
      */
     public static function hasFeature(string $feature): bool {
         if (!Tenant::isSaasMode()) return true;
@@ -140,17 +149,28 @@ class Subscription {
         try {
             $db = getDB();
             $stmt = $db->prepare("
-                SELECT p.features
+                SELECT s.features as school_features, p.features as plan_features
                 FROM schools s
-                JOIN plans p ON s.plan_id = p.id
+                LEFT JOIN plans p ON s.plan_id = p.id
                 WHERE s.id = ?
             ");
             $stmt->execute([$schoolId]);
             $row = $stmt->fetch();
-            if (!$row || !$row['features']) return true; // No plan = all features
+            if (!$row) return false;
 
-            $features = json_decode($row['features'], true);
-            return isset($features[$feature]) ? (bool)$features[$feature] : true;
+            // Prioritize per-school toggles if they exist
+            if (!empty($row['school_features'])) {
+                $sf = json_decode($row['school_features'], true);
+                if (isset($sf[$feature])) return (bool)$sf[$feature];
+            }
+
+            // Fallback to plan features
+            if (!empty($row['plan_features'])) {
+                $pf = json_decode($row['plan_features'], true);
+                return isset($pf[$feature]) ? (bool)$pf[$feature] : true;
+            }
+
+            return true; // No plan and no override = assume free and allow all (or define default)
         } catch (Exception $e) {
             return true;
         }
@@ -162,20 +182,23 @@ class Subscription {
     public static function requireFeature(string $feature): void {
         if (!self::hasFeature($feature)) {
             $names = [
-                'tournaments' => 'البطولات',
-                'badges' => 'الأوسمة',
-                'notifications' => 'الإشعارات',
-                'reports' => 'التقارير المتقدمة',
-                'sports_teams' => 'الفرق الرياضية',
-                'certificates' => 'الشهادات'
+                'tournaments'   => 'البطولات الرياضية',
+                'badges'        => 'الأوسمة والتحفيز',
+                'notifications' => 'إشعارات أولياء الأمور',
+                'reports'       => 'التقارير المتقدمة',
+                'sports_teams'  => 'إدارة الفرق الرياضية',
+                'certificates'  => 'إصدار الشهادات',
+                'analytics'     => 'لوحة التحليلات المتقدمة',
+                'fitness_tests' => 'اختبارات اللياقة البدنية',
+                'timetable'     => 'جدول الحصص الأسبوعي'
             ];
             $name = $names[$feature] ?? $feature;
-            jsonError("ميزة {$name} غير متاحة في خطتك الحالية. يرجى الترقية.", 403);
+            jsonError("ميزة '{$name}' غير مفعلة لمدرستك حالياً. يرجى ترقية الاشتراك.", 403);
         }
     }
 
     /**
-     * Get subscription info for current school
+     * Get summary subscription info
      */
     public static function getInfo(?int $schoolId = null): array {
         $schoolId = $schoolId ?? Tenant::id();
@@ -184,49 +207,59 @@ class Subscription {
         try {
             $db = getDB();
             $stmt = $db->prepare("
-                SELECT s.subscription_status, s.trial_ends_at, s.subscription_ends_at,
-                       s.max_students, s.max_teachers,
-                       p.name as plan_name, p.slug as plan_slug,
-                       p.price_monthly, p.price_yearly,
-                       p.max_students as plan_max_students,
-                       p.max_teachers as plan_max_teachers,
-                       p.max_classes as plan_max_classes,
-                       p.features as plan_features
+                SELECT s.subscription_status, s.subscription_starts_at, s.subscription_ends_at, s.trial_ends_at,
+                       s.max_students as school_max_students, s.max_teachers as school_max_teachers, s.max_classes as school_max_classes,
+                       s.features as school_features, s.subscription_notes,
+                       p.name as plan_name, p.slug as plan_slug, p.features as plan_features,
+                       p.max_students as plan_max_students, p.max_teachers as plan_max_teachers, p.max_classes as plan_max_classes
                 FROM schools s
                 LEFT JOIN plans p ON s.plan_id = p.id
                 WHERE s.id = ?
             ");
             $stmt->execute([$schoolId]);
-            $info = $stmt->fetch();
-            if (!$info) return [];
+            $raw = $stmt->fetch();
+            if (!$raw) return [];
 
-            // Count current usage
-            $students = $db->prepare("SELECT COUNT(*) FROM students WHERE school_id = ? AND active = 1");
-            $students->execute([$schoolId]);
-            $teachers = $db->prepare("SELECT COUNT(*) FROM users WHERE school_id = ? AND role = 'teacher' AND active = 1");
-            $teachers->execute([$schoolId]);
-            $classes = $db->prepare("SELECT COUNT(*) FROM classes WHERE school_id = ? AND active = 1");
-            $classes->execute([$schoolId]);
+            // Determine final limits
+            $info = [
+                'status'        => $raw['subscription_status'],
+                'starts_at'     => $raw['subscription_starts_at'],
+                'ends_at'       => ($raw['subscription_status'] === 'trial') ? $raw['trial_ends_at'] : $raw['subscription_ends_at'],
+                'plan_name'     => $raw['plan_name'] ?? 'خطة مخصصة',
+                'plan_slug'     => $raw['plan_slug'] ?? 'custom',
+                'max_students'  => !empty($raw['school_max_students']) ? (int)$raw['school_max_students'] : (int)$raw['plan_max_students'],
+                'max_teachers'  => !empty($raw['school_max_teachers']) ? (int)$raw['school_max_teachers'] : (int)$raw['plan_max_teachers'],
+                'max_classes'   => !empty($raw['school_max_classes'])  ? (int)$raw['school_max_classes']  : (int)$raw['plan_max_classes'],
+                'notes'         => $raw['subscription_notes'],
+                'is_active'     => self::isActive($schoolId)
+            ];
 
-            $info['current_students'] = (int)$students->fetchColumn();
-            $info['current_teachers'] = (int)$teachers->fetchColumn();
-            $info['current_classes'] = (int)$classes->fetchColumn();
-            $info['is_active'] = self::isActive($schoolId);
-
-            // Calculate days left
-            $info['days_left'] = null;
-            $endDate = $info['subscription_status'] === 'trial' ? $info['trial_ends_at'] : $info['subscription_ends_at'];
-            if ($endDate) {
-                $diff = strtotime($endDate) - time();
-                $info['days_left'] = max(0, ceil($diff / (60 * 60 * 24)));
-            }
+            // Usage stats
+            $q1 = $db->prepare("SELECT COUNT(*) FROM students WHERE school_id = ? AND active = 1"); $q1->execute([$schoolId]);
+            $q2 = $db->prepare("SELECT COUNT(*) FROM users WHERE school_id = ? AND role = 'teacher' AND active = 1"); $q2->execute([$schoolId]);
+            $q3 = $db->prepare("SELECT COUNT(*) FROM classes WHERE school_id = ? AND active = 1"); $q3->execute([$schoolId]);
             
-            // Decode features
-            if (!empty($info['plan_features'])) {
-                $info['features'] = json_decode($info['plan_features'], true);
-            } else {
-                $info['features'] = [];
+            $info['usage'] = [
+                'students' => (int)$q1->fetchColumn(),
+                'teachers' => (int)$q2->fetchColumn(),
+                'classes'  => (int)$q3->fetchColumn(),
+            ];
+
+            // Days left calculation
+            $info['days_left'] = 0;
+            if (!empty($info['ends_at'])) {
+                $end = new DateTime($info['ends_at'] . ' 23:59:59');
+                $now = new DateTime();
+                if ($end > $now) {
+                    $diff = $now->diff($end);
+                    $info['days_left'] = $diff->days;
+                }
             }
+
+            // Features merge
+            $pf = !empty($raw['plan_features']) ? json_decode($raw['plan_features'], true) : [];
+            $sf = !empty($raw['school_features']) ? json_decode($raw['school_features'], true) : [];
+            $info['features'] = array_merge($pf, $sf);
 
             return $info;
         } catch (Exception $e) {

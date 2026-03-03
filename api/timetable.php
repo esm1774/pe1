@@ -14,22 +14,26 @@ function getTimetable() {
     $schoolId = schoolId();
 
     // Determine whose timetable to fetch
-    $targetTeacherId = $_SESSION['user_id']; // Default to self
+    $targetTeacherId = isset($_GET['teacher_id']) ? (int)$_GET['teacher_id'] : $_SESSION['user_id'];
     
-    // If admin or supervisor wants to see another teacher's timetable
-    if (in_array($_SESSION['user_role'], ['admin', 'supervisor']) && isset($_GET['teacher_id'])) {
-        $targetTeacherId = (int)$_GET['teacher_id'];
-        
-        // Ensure the requested teacher belongs to the same school
-        $stmt = $db->prepare("SELECT id FROM users WHERE id = ? AND school_id = ? AND role = 'teacher'");
-        $stmt->execute([$targetTeacherId, $schoolId]);
-        if (!$stmt->fetch()) {
-            jsonError('المعلم غير موجود أو لا ينتمي لهذه المدرسة.');
+    // Validate target user exists in this school
+    $stmt = $db->prepare("SELECT id, role FROM users WHERE id = ? AND school_id = ?");
+    $stmt->execute([$targetTeacherId, $schoolId]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        jsonError('المستخدم غير موجود أو لا ينتمي لهذه المدرسة.');
+    }
+
+    // Permission check
+    if ($targetTeacherId !== $_SESSION['user_id']) {
+        if (!isAdmin() && !isSupervisor()) {
+            jsonError('لا تملك صلاحية عرض جدول مستخدم آخر', 403);
         }
     } else {
-        // Normal user must be a teacher to have a timetable
-        if ($_SESSION['user_role'] !== 'teacher') {
-            jsonError('عذراً، هذه الميزة متاحة للمعلمين فقط.');
+        // Accessing own timetable - only teachers, admins, and supervisors generally have schedules
+        if (!in_array($_SESSION['user_role'], ['teacher', 'admin', 'supervisor'])) {
+            jsonError('عذراً، هذه الميزة غير متاحة لنوع حسابك.');
         }
     }
 

@@ -95,7 +95,8 @@ const PAGE_MAP = {
     analytics: 'renderAnalytics',
     audit_logs: 'renderAuditLog',
     timetable: 'renderTimetablePage',
-    school_settings: 'renderSchoolSettings'
+    school_settings: 'renderSchoolSettings',
+    subscription: 'renderSubscriptionPage'
 };
 
 // ============================================================
@@ -457,13 +458,9 @@ function navigateTo(page) {
     // Close mobile sidebar
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar) {
-        sidebar.classList.add('-right-64');
-        sidebar.classList.remove('right-0');
-    }
-    if (overlay) {
-        overlay.classList.add('hidden');
-    }
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
 
     // Safe function checker - prevents ReferenceError
     function safeGetFunction(name) {

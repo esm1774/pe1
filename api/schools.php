@@ -69,16 +69,14 @@ function uploadSchoolLogo() {
     requireRole(['admin']);
     $sid = schoolId();
     
-    $type = getParam('type', 'light'); // 'light' or 'dark'
-    $fileKey = $type === 'dark' ? 'logo_dark' : 'logo';
-
-    if (!isset($_FILES[$fileKey]) || $_FILES[$fileKey]['error'] !== UPLOAD_ERR_OK) {
+    if (!isset($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
         jsonError('فشل رفع الملف أو لم يتم اختيار ملف.');
     }
 
-    $file = $_FILES[$fileKey];
+    $file = $_FILES['logo'];
     $allowed = ['image/jpeg', 'image/png', 'image/webp'];
 
+    // Fix: Use finfo to detect the REAL content type (MIME from browser is spoofable)
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $realMime = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
@@ -87,22 +85,21 @@ function uploadSchoolLogo() {
         jsonError('نوع الملف غير مدعوم. يرجى اختيار صورة (جيبيج, PNG, WEBP).');
     }
 
+    // Limit size to 2MB
     if ($file['size'] > 2 * 1024 * 1024) {
         jsonError('حجم الصورة كبير جداً. الحد الأقصى 2 ميجابايت.');
     }
 
     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = 'school_' . $sid . '_' . ($type === 'dark' ? 'dark_' : '') . time() . '.' . $ext;
+    $filename = 'school_' . $sid . '_' . time() . '.' . $ext;
     $targetDir = __DIR__ . '/../uploads/logos/';
     $targetFile = $targetDir . $filename;
 
     if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $db = getDB();
         
-        $column = $type === 'dark' ? 'logo_dark_url' : 'logo_url';
-
         // Delete old logo file if exists
-        $stmt = $db->prepare("SELECT $column FROM schools WHERE id = ?");
+        $stmt = $db->prepare("SELECT logo_url FROM schools WHERE id = ?");
         $stmt->execute([$sid]);
         $oldLogo = $stmt->fetchColumn();
         if ($oldLogo && file_exists(__DIR__ . '/../' . $oldLogo)) {
@@ -110,11 +107,20 @@ function uploadSchoolLogo() {
         }
 
         $logoUrl = 'uploads/logos/' . $filename;
-        $db->prepare("UPDATE schools SET $column = ? WHERE id = ?")->execute([$logoUrl, $sid]);
+        $db->prepare("UPDATE schools SET logo_url = ? WHERE id = ?")->execute([$logoUrl, $sid]);
 
-        logActivity('update', "school_logo_$type", $sid, "تم تغيير شعار المدرسة (" . ($type === 'dark' ? 'الوضع الداكن' : 'الوضع الفاتح') . ")");
-        jsonSuccess([$column => $logoUrl], 'تم رفع الشعار بنجاح');
+        logActivity('update', 'school_logo', $sid, 'تم تغيير شعار المدرسة');
+        jsonSuccess(['logo_url' => $logoUrl], 'تم رفع الشعار بنجاح');
     } else {
         jsonError('حدث خطأ أثناء حفظ الملف على الخادم.');
     }
+}
+// ============================================================
+// GET SUBSCRIPTION INFO
+// ============================================================
+function getSubscriptionInfo() {
+    requireRole(['admin']);
+    $info = Subscription::getInfo();
+    if (empty($info)) jsonError('تعذر جلب بيانات الاشتراك');
+    jsonSuccess($info);
 }

@@ -71,7 +71,7 @@ function getSchools() {
     requirePlatformAdmin();
     $db = getDB();
     $schools = $db->query("
-        SELECT s.*, p.name as plan_name,
+        SELECT s.*, p.name as plan_name, p.features as plan_features,
             (SELECT COUNT(*) FROM users u WHERE u.school_id = s.id AND u.active = 1) as user_count,
             (SELECT COUNT(*) FROM students st WHERE st.school_id = s.id AND st.active = 1) as student_count,
             (SELECT COUNT(*) FROM classes c WHERE c.school_id = s.id AND c.active = 1) as class_count
@@ -167,7 +167,7 @@ function updateSchoolSubscription() {
 // ============================================================
 function getPlans() {
     requirePlatformAdmin();
-    jsonSuccess(getDB()->query("SELECT * FROM plans ORDER BY sort_order")->fetchAll());
+    jsonSuccess(getDB()->query("SELECT * FROM plans ORDER BY sort_order, id")->fetchAll());
 }
 
 function savePlan() {
@@ -176,27 +176,111 @@ function savePlan() {
     validateRequired($data, ['name', 'slug']);
     $db = getDB();
 
-    $id = $data['id'] ?? null;
-    $name = sanitize($data['name']);
-    $slug = sanitize($data['slug']);
+    $id           = $data['id'] ?? null;
+    $name         = sanitize($data['name']);
+    $nameEn       = sanitize($data['name_en'] ?? '');
+    $slug         = strtolower(trim(sanitize($data['slug'])));
+    $description  = sanitize($data['description'] ?? '');
     $priceMonthly = (float)($data['price_monthly'] ?? 0);
-    $priceYearly = (float)($data['price_yearly'] ?? 0);
-    $maxStudents = (int)($data['max_students'] ?? 100);
-    $maxTeachers = (int)($data['max_teachers'] ?? 5);
-    $maxClasses = (int)($data['max_classes'] ?? 10);
-    $features = $data['features'] ?? '{}';
+    $priceYearly  = (float)($data['price_yearly']  ?? 0);
+    $maxStudents  = (int)($data['max_students'] ?? 100);
+    $maxTeachers  = (int)($data['max_teachers'] ?? 5);
+    $maxClasses   = (int)($data['max_classes']  ?? 10);
+    $isDefault    = (int)(!empty($data['is_default']));
+    $active       = isset($data['active']) ? (int)($data['active']) : 1;
+    $sortOrder    = (int)($data['sort_order'] ?? 0);
+    $features     = $data['features'] ?? '{}';
 
-    if (is_array($features)) $features = json_encode($features);
+    if (is_array($features)) $features = json_encode($features, JSON_UNESCAPED_UNICODE);
+
+    if ($isDefault) {
+        $db->prepare("UPDATE plans SET is_default = 0 WHERE id != ?")->execute([$id ?? 0]);
+    }
 
     if ($id) {
-        $db->prepare("UPDATE plans SET name=?, slug=?, price_monthly=?, price_yearly=?, max_students=?, max_teachers=?, max_classes=?, features=? WHERE id=?")
-           ->execute([$name, $slug, $priceMonthly, $priceYearly, $maxStudents, $maxTeachers, $maxClasses, $features, $id]);
+        $db->prepare("UPDATE plans SET name=?, name_en=?, slug=?, description=?, price_monthly=?, price_yearly=?, max_students=?, max_teachers=?, max_classes=?, features=?, is_default=?, active=?, sort_order=? WHERE id=?")
+           ->execute([$name, $nameEn, $slug, $description, $priceMonthly, $priceYearly, $maxStudents, $maxTeachers, $maxClasses, $features, $isDefault, $active, $sortOrder, $id]);
     } else {
-        $db->prepare("INSERT INTO plans (name, slug, price_monthly, price_yearly, max_students, max_teachers, max_classes, features) VALUES (?,?,?,?,?,?,?,?)")
-           ->execute([$name, $slug, $priceMonthly, $priceYearly, $maxStudents, $maxTeachers, $maxClasses, $features]);
+        $db->prepare("INSERT INTO plans (name, name_en, slug, description, price_monthly, price_yearly, max_students, max_teachers, max_classes, features, is_default, active, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
+           ->execute([$name, $nameEn, $slug, $description, $priceMonthly, $priceYearly, $maxStudents, $maxTeachers, $maxClasses, $features, $isDefault, $active, $sortOrder]);
         $id = $db->lastInsertId();
     }
-    jsonSuccess(['id' => (int)$id], 'تم حفظ الخطة');
+    jsonSuccess(['id' => (int)$id], 'تم حفظ الخطة بنجاح');
+}
+
+function deletePlan() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) jsonError('معرف غير صالح');
+    $db = getDB();
+    $stmt = $db->prepare("SELECT COUNT(*) FROM schools WHERE plan_id = ?");
+    $stmt->execute([$id]);
+    if ($stmt->fetchColumn() > 0) jsonError('لا يمكن مسح الخطة لأن مدارس مشتركة بها. يرجى نقلها لخطة أخرى أولاً.');
+    $db->prepare("DELETE FROM plans WHERE id = ?")->execute([$id]);
+    jsonSuccess(null, 'تم مسح الخطة');
+}
+
+function updateSchoolSubscriptionFull() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) jsonError('معرف غير صالح');
+
+    $db         = getDB();
+    $status     = sanitize($data['status'] ?? '');
+    $planId     = !empty($data['plan_id']) ? (int)$data['plan_id'] : null;
+    $startsAt   = sanitize($data['starts_at'] ?? '');
+    $endsAt     = sanitize($data['ends_at'] ?? '');
+    $trialDays  = (int)($data['trial_days'] ?? 14);
+    $maxStudents= !empty($data['max_students']) ? (int)$data['max_students'] : null;
+    $maxTeachers= !empty($data['max_teachers']) ? (int)$data['max_teachers'] : null;
+    $maxClasses = !empty($data['max_classes'])  ? (int)$data['max_classes']  : null;
+    $notes      = sanitize($data['subscription_notes'] ?? '');
+    $features   = $data['features'] ?? null;
+
+    if (is_array($features)) {
+        $features = json_encode($features, JSON_UNESCAPED_UNICODE);
+    }
+
+    // Prepare update parameters
+    // We update subscription_starts_at always if sent, even if empty (sets to NULL)
+    $updateData = [
+        'subscription_status' => $status,
+        'subscription_notes'  => $notes,
+        'subscription_starts_at' => !empty($startsAt) ? $startsAt : null,
+        'max_students'        => $maxStudents,
+        'max_teachers'        => $maxTeachers,
+        'max_classes'         => $maxClasses,
+        'features'            => $features
+    ];
+
+    if ($planId !== null) {
+        $updateData['plan_id'] = $planId;
+    }
+
+    // Mapping ends_at based on status
+    if ($status === 'trial') {
+        $updateData['trial_ends_at'] = date('Y-m-d', strtotime("+{$trialDays} days"));
+    } else {
+        if (!empty($endsAt)) {
+            $updateData['subscription_ends_at'] = $endsAt;
+        }
+    }
+
+    // Build query
+    $sets = [];
+    $params = [];
+    foreach ($updateData as $col => $val) {
+        $sets[] = "$col = ?";
+        $params[] = $val;
+    }
+    $params[] = $id;
+
+    $sql = "UPDATE schools SET " . implode(", ", $sets) . " WHERE id = ?";
+    $db->prepare($sql)->execute($params);
+
+    jsonSuccess(null, 'تم تحديث بيانات الاشتراك والميزات للمدرسة بنجاح');
 }
 
 // ============================================================
@@ -299,9 +383,10 @@ try {
         case 'school_save':       saveSchool(); break;
         case 'school_toggle':     toggleSchool(); break;
         case 'school_delete':     deleteSchool(); break;
-        case 'school_subscription': updateSchoolSubscription(); break;
+        case 'school_subscription': updateSchoolSubscriptionFull(); break;
         case 'plans':             getPlans(); break;
         case 'plan_save':         savePlan(); break;
+        case 'plan_delete':       deletePlan(); break;
         case 'platform_stats':    getPlatformStats(); break;
         case 'impersonate':       impersonateSchool(); break;
         default: jsonError('إجراء غير معروف', 404);

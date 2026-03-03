@@ -134,12 +134,6 @@ function ensureSchema() {
             CONSTRAINT `fk_notif_student` FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        // SaaS Dual Logo Support
-        $schoolcols = array_column($db->query("SHOW COLUMNS FROM schools")->fetchAll(), 'Field');
-        if (!in_array('logo_dark_url', $schoolcols)) {
-            $db->exec("ALTER TABLE schools ADD COLUMN `logo_dark_url` VARCHAR(255) DEFAULT NULL AFTER `logo_url` ");
-        }
-
         // ── Badges System ───────────────────────────────────────────────
         $db->exec("CREATE TABLE IF NOT EXISTS `badges` (
             `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -435,6 +429,7 @@ try {
         // PUBLIC / ONBOARDING
         case 'get_public_plans':    getPublicPlans(); break;
         case 'register_school':     registerSchool(); break;
+        case 'subscription':        getSubscriptionInfo(); break;
 
         default:
             jsonError('إجراء غير معروف', 404);
