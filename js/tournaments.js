@@ -1779,10 +1779,19 @@ async function doUploadMedia(matchId, t1, t2) {
 
     try {
         // نمرر الإجراء في الرابط لضمان التعرف عليه بواسطة getParam
-        const response = await fetch('modules/tournaments/api.php?action=match_media_upload', {
+        const options = {
             method: 'POST',
-            body: formData
-        });
+            body: formData,
+            headers: {}
+        };
+
+        // Add CSRF Token
+        const csrfToken = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1];
+        if (csrfToken) {
+            options.headers['X-CSRF-TOKEN'] = csrfToken;
+        }
+
+        const response = await fetch(window.APP_BASE + 'modules/tournaments/api.php?action=match_media_upload', options);
 
         if (!response.ok) {
             const text = await response.text();

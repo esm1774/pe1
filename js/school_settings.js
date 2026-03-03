@@ -143,10 +143,19 @@ async function handleLogoUpload() {
     document.getElementById('logoPreview').innerHTML = loader;
 
     try {
-        const response = await fetch('api.php?action=upload_logo', {
+        const options = {
             method: 'POST',
-            body: formData
-        });
+            body: formData,
+            headers: {}
+        };
+
+        // Add CSRF Token
+        const csrfToken = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1];
+        if (csrfToken) {
+            options.headers['X-CSRF-TOKEN'] = csrfToken;
+        }
+
+        const response = await fetch(`${API.base}?action=upload_logo`, options);
         const res = await response.json();
 
         if (res && res.success) {

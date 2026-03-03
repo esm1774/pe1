@@ -528,10 +528,19 @@ async function executeImport() {
     if (defaultClass) formData.append('default_class_id', defaultClass);
 
     try {
-        const response = await fetch(`api.php?action=students_import`, {
+        const options = {
             method: 'POST',
-            body: formData
-        });
+            body: formData,
+            headers: {}
+        };
+
+        // Add CSRF Token
+        const csrfToken = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1];
+        if (csrfToken) {
+            options.headers['X-CSRF-TOKEN'] = csrfToken;
+        }
+
+        const response = await fetch(`${API.base}?action=students_import`, options);
 
         const r = await response.json();
 

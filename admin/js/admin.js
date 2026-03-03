@@ -44,6 +44,32 @@ let currentPage = 'dashboard';
 let cachedPlans = [];
 
 // ============================================================
+// THEME
+// ============================================================
+function initTheme() {
+    const saved = localStorage.getItem('theme_admin') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    updateThemeIcon(saved);
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const target = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', target);
+    localStorage.setItem('theme_admin', target);
+    updateThemeIcon(target);
+}
+
+function updateThemeIcon(theme) {
+    const btn = document.getElementById('themeToggleBtn');
+    if (btn) {
+        btn.innerHTML = theme === 'dark' ? '☀️' : '🌙';
+        btn.title = theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن';
+    }
+}
+initTheme();
+
+// ============================================================
 // AUTH
 // ============================================================
 async function handleLogin() {
@@ -99,11 +125,26 @@ function showApp() {
 // ============================================================
 // NAVIGATION
 // ============================================================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('active');
+}
+
 function navigate(page) {
     currentPage = page;
     document.querySelectorAll('.sidebar-link').forEach(el => {
         el.classList.toggle('active', el.dataset.page === page);
     });
+
+    // Close mobile sidebar if open
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar && sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('active');
+    }
 
     const renderers = {
         dashboard: renderDashboard,

@@ -49,10 +49,15 @@
         <!-- TOP NAV -->
         <nav class="top-nav">
             <div class="nav-brand">
+                <button id="mobileMenuBtn" class="btn btn-outline btn-sm mobile-only" onclick="toggleSidebar()"
+                    style="padding: 4px 8px; font-size: 18px; margin-left: 10px;">☰</button>
                 <div class="brand-icon">🛡️</div>
                 <h2>PE <span>Smart</span> Admin</h2>
             </div>
             <div class="nav-user">
+                <button id="themeToggleBtn" onclick="toggleTheme()" class="btn btn-outline btn-sm"
+                    style="padding: 4px 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 16px;"
+                    title="الوضع الداكن">🌙</button>
                 <span class="user-name">مرحباً، <strong id="adminNameDisplay">المدير</strong></span>
                 <button onclick="handleLogout()" class="btn btn-outline btn-sm">🚪 خروج</button>
             </div>
@@ -61,7 +66,8 @@
         <!-- BODY -->
         <div class="admin-body">
             <!-- SIDEBAR -->
-            <aside class="sidebar">
+            <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+            <aside class="sidebar" id="sidebar">
                 <ul class="sidebar-menu">
                     <li>
                         <button class="sidebar-link active" onclick="navigate('dashboard')" data-page="dashboard">
