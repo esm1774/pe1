@@ -9,6 +9,7 @@
 // ============================================================
 function getFitnessTests() {
     requireLogin();
+    Subscription::requireFeature('fitness_tests');
     $db = getDB();
     $sid = schoolId();
     $sql = "SELECT * FROM fitness_tests WHERE active = 1";
@@ -19,6 +20,7 @@ function getFitnessTests() {
 
 function saveFitnessTest() {
     requireRole(['admin', 'teacher']);
+    Subscription::requireFeature('fitness_tests');
     $data     = getPostData();
     validateRequired($data, ['name', 'unit', 'type']);
     $db       = getDB();
@@ -44,6 +46,7 @@ function saveFitnessTest() {
 
 function deleteFitnessTest() {
     requireRole(['admin']);
+    Subscription::requireFeature('fitness_tests');
     $id = getParam('id');
     if (!$id) jsonError('معرّف غير صالح');
     $sid = schoolId();
@@ -60,6 +63,7 @@ function deleteFitnessTest() {
 // ============================================================
 function getFitnessResults() {
     requireLogin();
+    Subscription::requireFeature('fitness_tests');
     // Fix #1: Retrieve parameters before using them (were undefined before)
     $classId = (int)getParam('class_id');
     $testId  = (int)getParam('test_id');
@@ -101,6 +105,7 @@ function getFitnessResults() {
 
 function saveFitnessResults() {
     requireRole(['admin', 'teacher']);
+    Subscription::requireFeature('fitness_tests');
     $data    = getPostData();
     $testId  = (int)($data['test_id'] ?? 0);
     $classId = (int)($data['class_id'] ?? 0);
@@ -160,6 +165,7 @@ function saveFitnessResults() {
 
 function getFitnessView() {
     requireLogin();
+    Subscription::requireFeature('fitness_tests');
     $classId = (int)getParam('class_id');
     if (!$classId) jsonError('يجب تحديد الفصل');
     if (!canAccessClass($classId)) jsonError('لا تملك صلاحية الوصول لهذا الفصل', 403);
@@ -188,6 +194,7 @@ function getFitnessView() {
 // ============================================================
 function getFitnessCriteria() {
     requireLogin();
+    Subscription::requireFeature('fitness_tests');
     $testId = (int)getParam('test_id');
     if (!$testId) jsonError('يجب تحديد الاختبار');
     
@@ -202,6 +209,7 @@ function getFitnessCriteria() {
 
 function saveFitnessCriteria() {
     requireRole(['admin', 'teacher']);
+    Subscription::requireFeature('fitness_tests');
     $data = getPostData();
     $testId = (int)($data['test_id'] ?? 0);
     $criteria = $data['criteria'] ?? []; // Array of {min_value, max_value, score}

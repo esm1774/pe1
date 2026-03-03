@@ -351,10 +351,14 @@ function showApp() {
         }
     }
 
-    // Show/hide menu items based on role
+    // Show/hide menu items based on role and active features
     document.querySelectorAll('[data-role]').forEach(el => {
         const allowedRoles = el.dataset.role.split(',');
-        el.style.display = allowedRoles.includes(currentUser.role) ? '' : 'none';
+        let allowed = allowedRoles.includes(currentUser.role);
+        if (allowed && typeof hasFeature === 'function' && el.dataset.feature) {
+            allowed = hasFeature(el.dataset.feature);
+        }
+        el.style.display = allowed ? '' : 'none';
     });
 
     // Hide empty sidebar sections

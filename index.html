@@ -288,7 +288,7 @@
                     </a>
                     <a onclick="navigateTo('timetable')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="teacher,admin">
+                        data-role="teacher,admin" data-feature="timetable">
                         <span class="text-xl">📅</span><span>جدول الحصص</span>
                     </a>
                     <a onclick="navigateTo('sportsCalendar')"
@@ -323,12 +323,12 @@
                     </div>
                     <a onclick="navigateTo('fitness')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,teacher,supervisor">
+                        data-role="admin,teacher,supervisor" data-feature="fitness_tests">
                         <span class="text-xl">💪</span><span>اختبارات اللياقة</span>
                     </a>
                     <a onclick="navigateTo('sportsTeams')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,teacher,supervisor">
+                        data-role="admin,teacher,supervisor" data-feature="sports_teams">
                         <span class="text-xl">🏅</span><span>الفرق الرياضية</span>
                     </a>
                     <a onclick="navigateTo('competition')"
@@ -338,7 +338,7 @@
                     </a>
                     <a onclick="navigateTo('tournaments')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,teacher,supervisor">
+                        data-role="admin,teacher,supervisor" data-feature="tournaments">
                         <span class="text-xl">⚽</span><span>البطولات</span>
                     </a>
 
@@ -348,12 +348,12 @@
                     </div>
                     <a onclick="navigateTo('reports')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,teacher,supervisor,parent,student">
+                        data-role="admin,teacher,supervisor,parent,student" data-feature="reports">
                         <span class="text-xl">📈</span><span>التقارير</span>
                     </a>
                     <a onclick="navigateTo('analytics')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin,supervisor">
+                        data-role="admin,supervisor" data-feature="analytics">
                         <span class="text-xl">📈</span><span>تحليلات متقدمة</span>
                     </a>
 
@@ -373,7 +373,7 @@
                     </a>
                     <a onclick="navigateTo('badgesAdmin')"
                         class="sidebar-link flex items-center gap-3 px-5 py-3 text-gray-300 hover:text-white cursor-pointer"
-                        data-role="admin">
+                        data-role="admin" data-feature="badges">
                         <span class="text-xl">🏅</span><span>إدارة الأوسمة</span>
                     </a>
                     <a onclick="navigateTo('audit_logs')"

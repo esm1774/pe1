@@ -6,6 +6,17 @@ let fitnessTab = 'tests';
 let fitnessFilter = { class_id: '', test_id: '' };
 
 async function renderFitness() {
+    if (typeof hasFeature === 'function' && !hasFeature('fitness_tests')) {
+        document.getElementById('mainContent').innerHTML = `
+            <div class="text-center flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 mt-6 mx-2">
+                <div class="w-24 h-24 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">🔒</div>
+                <h3 class="text-2xl font-black text-gray-800 mb-3">الصلاحية غير متوفرة</h3>
+                <p class="text-gray-500 font-bold max-w-md">ميزة "اختبارات اللياقة البدنية" غير مشمولة في باقة اشتراككم الحالية. يرجى التواصل مع إدارة النظام لترقية الحساب.</p>
+            </div>
+        `;
+        return;
+    }
+
     document.getElementById('mainContent').innerHTML = `
     <div class="fade-in max-w-full overflow-x-hidden">
         <div class="mb-6 px-1">
