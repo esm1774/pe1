@@ -166,9 +166,15 @@ const API = {
             const r = await fetch(url, options);
             const result = await r.json();
 
-            if (!r.ok && r.status === 401) {
-                showLoginPage();
-                return null;
+            if (!r.ok) {
+                if (r.status === 401) {
+                    showLoginPage();
+                    return null;
+                }
+                if (r.status === 503 && result.error === 'maintenance') {
+                    handleMaintenance(result);
+                    return null;
+                }
             }
 
             return result;
@@ -869,4 +875,32 @@ function dismissAnnouncement(id) {
         dismissed.push(id);
         localStorage.setItem('dismissedAnnouncements', JSON.stringify(dismissed));
     }
+}
+/**
+ * MAINTENANCE HANDLER
+ */
+function handleMaintenance(data) {
+    const overlay = document.getElementById('maintenanceOverlay');
+    if (!overlay) return;
+
+    document.getElementById('maintenanceMessage').innerText = data.message || 'المنصة في صيانة حالياً، سنعود قريباً.';
+
+    if (data.until) {
+        document.getElementById('maintenanceUntilRow').style.display = 'inline-flex';
+        document.getElementById('maintenanceUntilText').innerText = data.until;
+    } else {
+        document.getElementById('maintenanceUntilRow').style.display = 'none';
+    }
+
+    overlay.style.display = 'flex';
+
+    // Hide all other main components
+    const login = document.getElementById('loginPage');
+    if (login) login.classList.add('hidden');
+
+    const app = document.getElementById('mainApp');
+    if (app) app.classList.add('hidden');
+
+    // Disable any background tasks
+    if (window.announcementTimer) clearInterval(window.announcementTimer);
 }

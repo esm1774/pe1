@@ -1,0 +1,35 @@
+# خطة تنفيذ وضع الصيانة للمنصة (Maintenance Mode)
+
+تهدف هذه الميزة إلى منح مدير المنصة القدرة على إيقاف العمل في المنصة مؤقتاً لإجراء الصيانة، مع عرض صفحة احترافية للمستخدمين توضح حالة الصيانة والمدة المتوقعة.
+
+## التغييرات المقترحة
+
+### 📂 قاعدة البيانات (Database)
+#### [MODIFY] [api.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/api.php):
+- إضافة جدول `platform_settings` لتخزين الإعدادات العامة للمنصة.
+- الحقول: `setting_key`, `setting_value`, `updated_at`.
+- إدراج إعداد `maintenance_mode` و `maintenance_message` و `maintenance_until`.
+
+### ⚙️ المسارات الخلفية (Backend API)
+#### [MODIFY] [api.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/api.php):
+- إنشاء دالة `checkMaintenance()` لفحص ما إذا كان وضع الصيانة نشطاً.
+- استدعاء هذه الدالة في بداية طلبات API (باستثناء مسار دخول المسؤول).
+
+#### [MODIFY] [admin/api.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/admin/api.php):
+- إضافة دالات لجلب وحفظ إعدادات الصيانة: `getPlatformSettings`, `savePlatformSettings`.
+
+### 🎨 الواجهة الأمامية (Frontend)
+#### [MODIFY] [index.html](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/index.html):
+- إضافة واجهة "صفحة الصيانة" (Maintenance Overlay) تظهر عندما يكون الوضع نشطاً.
+- تصميم الواجهة بحيث تكون "جميلة" وتفاعلية (Glassmorphism, Centered Content).
+
+#### [MODIFY] [js/common.js](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/js/common.js):
+- تعديل منطق البداية لفحص وضع الصيانة قبل إظهار أي محتوى آخر للمدارس.
+
+#### [MODIFY] [admin/js/admin.js](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/admin/js/admin.js):
+- إضافة قسم "إعدادات المنصة" في لوحة التحكم للتحكم في وضع الصيانة.
+
+## خطة التحقق
+- [ ] تفعيل وضع الصيانة من لوحة المسؤول والتأكد من ظهور الصفحة للمدارس.
+- [ ] تعطيل وضع الصيانة والتأكد من عودة النظام للعمل بشكل طبيعي.
+- [ ] التأكد من أن مدير المنصة ما زال قادراً على دخول لوحته الخاصة أثناء الصيانة.

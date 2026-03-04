@@ -495,6 +495,8 @@ try {
         case 'announcement_delete': deleteAnnouncement(); break;
         case 'global_audit_logs':    getGlobalAuditLogs(); break;
         case 'advanced_analytics':   getAdvancedAnalytics(); break;
+        case 'maintenance_get':      getMaintenanceSettings(); break;
+        case 'maintenance_save':     saveMaintenanceSettings(); break;
         default: jsonError('إجراء غير معروف', 404);
     }
 } catch (PDOException $e) {
@@ -503,6 +505,44 @@ try {
 } catch (Exception $e) {
     jsonError($e->getMessage(), 500);
 }
+
+// ... existing functions ...
+
+// ============================================================
+// PLATFORM MAINTENANCE
+// ============================================================
+function getMaintenanceSettings() {
+    requirePlatformAdmin();
+    jsonSuccess([
+        'mode' => getPlatformSetting('maintenance_mode', '0'),
+        'message' => getPlatformSetting('maintenance_message', ''),
+        'until' => getPlatformSetting('maintenance_until', '')
+    ]);
+}
+
+function saveMaintenanceSettings() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $db = getDB();
+
+    $settings = [
+        'maintenance_mode' => (string)($data['mode'] ?? '0'),
+        'maintenance_message' => sanitize($data['message'] ?? ''),
+        'maintenance_until' => sanitize($data['until'] ?? '')
+    ];
+
+    foreach ($settings as $key => $val) {
+        $db->prepare("INSERT INTO platform_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?")
+           ->execute([$key, $val, $val]);
+    }
+
+    logActivity('update', 'platform_settings', 0, 'تم تحديث إعدادات وضع الصيانة');
+    jsonSuccess(null, 'تم حفظ الإعدادات بنجاح');
+}
+
+// ============================================================
+// GLOBAL AUDIT LOG
+// ============================================================
 
 // ============================================================
 // GLOBAL AUDIT LOG

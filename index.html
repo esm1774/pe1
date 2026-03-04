@@ -85,6 +85,19 @@
 </head>
 
 <body class="min-h-screen">
+    <!-- Maintenance Overlay -->
+    <div id="maintenanceOverlay" class="maintenance-overlay" style="display: none;">
+        <div class="maintenance-box">
+            <div class="maintenance-icon">🛠️</div>
+            <h1>المنصة في صيانة مجدولة</h1>
+            <p id="maintenanceMessage">نحن نقوم ببعض التحسينات لنقدم لكم تجربة أفضل. سنعود للعمل قريباً جداً.</p>
+            <div class="maintenance-meta" id="maintenanceUntilRow" style="display: none;">
+                <span>⏱️ الوقت المتوقع للعودة:</span>
+                <strong id="maintenanceUntilText">--</strong>
+            </div>
+            <div class="maintenance-footer">شكراً لصبركم وتفهمكم ❤️</div>
+        </div>
+    </div>
 
     <!-- ============================================================ -->
     <!-- LOGIN PAGE -->

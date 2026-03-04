@@ -193,6 +193,300 @@ require_once __DIR__ . '/includes/tenant.php';
 require_once __DIR__ . '/includes/subscription.php';
 
 // ============================================================
+// AUTO-MIGRATE: Ensure all required tables exist
+// ============================================================
+function ensureSchema() {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    
+    try {
+        $db = getDB();
+        
+        // Check & add missing columns to students table
+        $cols = array_column($db->query("SHOW COLUMNS FROM students")->fetchAll(), 'Field');
+        $alter = [];
+        if (!in_array('date_of_birth', $cols)) $alter[] = "ADD COLUMN `date_of_birth` DATE DEFAULT NULL";
+        if (!in_array('blood_type', $cols)) $alter[] = "ADD COLUMN `blood_type` VARCHAR(5) DEFAULT NULL";
+        if (!in_array('guardian_phone', $cols)) $alter[] = "ADD COLUMN `guardian_phone` VARCHAR(20) DEFAULT NULL";
+        if (!in_array('medical_notes', $cols)) $alter[] = "ADD COLUMN `medical_notes` TEXT DEFAULT NULL";
+        if (!empty($alter)) $db->exec("ALTER TABLE students " . implode(", ", $alter));
+        
+        // Tables definitions...
+        $db->exec("CREATE TABLE IF NOT EXISTS `student_measurements` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `student_id` INT UNSIGNED NOT NULL,
+            `measurement_date` DATE NOT NULL,
+            `height_cm` DECIMAL(5,1) DEFAULT NULL,
+            `weight_kg` DECIMAL(5,1) DEFAULT NULL,
+            `bmi` DECIMAL(4,1) DEFAULT NULL,
+            `bmi_category` ENUM('underweight','normal','overweight','obese') DEFAULT NULL,
+            `waist_cm` DECIMAL(5,1) DEFAULT NULL,
+            `resting_heart_rate` INT UNSIGNED DEFAULT NULL,
+            `notes` TEXT DEFAULT NULL,
+            `recorded_by` INT UNSIGNED DEFAULT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX `idx_sm_student` (`student_id`),
+            INDEX `idx_sm_date` (`measurement_date`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        
+        $db->exec("CREATE TABLE IF NOT EXISTS `student_health` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `student_id` INT UNSIGNED NOT NULL,
+            `condition_type` ENUM('asthma','diabetes','heart','allergy','bones','vision','exemption','other') NOT NULL,
+            `condition_name` VARCHAR(150) NOT NULL,
+            `severity` ENUM('mild','moderate','severe') NOT NULL DEFAULT 'mild',
+            `notes` TEXT DEFAULT NULL,
+            `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+            `start_date` DATE DEFAULT NULL,
+            `end_date` DATE DEFAULT NULL,
+            `recorded_by` INT UNSIGNED DEFAULT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX `idx_sh_student` (`student_id`),
+            INDEX `idx_sh_active` (`is_active`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `teacher_classes` (
+            `id`           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `teacher_id`   INT UNSIGNED NOT NULL,
+            `class_id`     INT UNSIGNED NOT NULL,
+            `is_temporary` TINYINT(1)   NOT NULL DEFAULT 0,
+            `assigned_by`  INT UNSIGNED DEFAULT NULL,
+            `assigned_at`  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            `expires_at`   DATE         DEFAULT NULL,
+            UNIQUE KEY `uk_teacher_class` (`teacher_id`, `class_id`),
+            INDEX `idx_tc_parent` (`teacher_id`),
+            INDEX `idx_tc_class`   (`class_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `parents` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `username` VARCHAR(50) NOT NULL,
+            `password` VARCHAR(255) NOT NULL,
+            `name` VARCHAR(100) NOT NULL,
+            `email` VARCHAR(100) DEFAULT NULL,
+            `phone` VARCHAR(20) DEFAULT NULL,
+            `active` TINYINT(1) NOT NULL DEFAULT 1,
+            `last_login` TIMESTAMP NULL DEFAULT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY `uk_parent_username` (`username`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `parent_students` (
+            `id`         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `parent_id`  INT UNSIGNED NOT NULL,
+            `student_id` INT UNSIGNED NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY `uk_parent_student` (`parent_id`, `student_id`),
+            INDEX `idx_ps_parent` (`parent_id`),
+            INDEX `idx_ps_student` (`student_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("ALTER TABLE `users` MODIFY COLUMN `role` ENUM('admin','teacher','viewer','supervisor') NOT NULL DEFAULT 'teacher'");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `notifications` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `parent_id` INT UNSIGNED NOT NULL,
+            `student_id` INT UNSIGNED DEFAULT NULL,
+            `type` ENUM('attendance', 'fitness', 'health', 'general') NOT NULL DEFAULT 'general',
+            `title` VARCHAR(255) NOT NULL,
+            `message` TEXT NOT NULL,
+            `is_read` TINYINT(1) DEFAULT 0,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_notif_parent` (`parent_id`),
+            INDEX `idx_notif_read` (`parent_id`, `is_read`),
+            CONSTRAINT `fk_notif_parent` FOREIGN KEY (`parent_id`) REFERENCES `parents`(`id`) ON DELETE CASCADE,
+            CONSTRAINT `fk_notif_student` FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `badges` (
+            `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `name`           VARCHAR(100) NOT NULL,
+            `description`    TEXT DEFAULT NULL,
+            `icon`           VARCHAR(50) NOT NULL,
+            `color`          VARCHAR(50) NOT NULL,
+            `badge_type`     ENUM('manual', 'attendance_100', 'fitness_pro', 'improvement') NOT NULL DEFAULT 'manual',
+            `criteria_value` DECIMAL(10,2) DEFAULT NULL,
+            `created_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `student_badges` (
+            `id`         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `student_id` INT UNSIGNED NOT NULL,
+            `badge_id`   INT UNSIGNED NOT NULL,
+            `awarded_by` INT UNSIGNED DEFAULT NULL,
+            `awarded_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `notes`      TEXT DEFAULT NULL,
+            UNIQUE KEY `uk_student_badge` (`student_id`, `badge_id`),
+            CONSTRAINT `fk_sb_student` FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE CASCADE,
+            CONSTRAINT `fk_sb_badge`   FOREIGN KEY (`badge_id`)   REFERENCES `badges`(`id`)   ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `password_resets` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id` INT UNSIGNED DEFAULT NULL,
+            `email` VARCHAR(150) NOT NULL,
+            `user_type` VARCHAR(50) NOT NULL,
+            `user_id` INT UNSIGNED NOT NULL,
+            `otp` VARCHAR(10) NOT NULL,
+            `expires_at` DATETIME NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_pr_email` (`email`),
+            INDEX `idx_pr_otp` (`otp`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        
+        $classCols = array_column($db->query("SHOW COLUMNS FROM classes")->fetchAll(), 'Field');
+        if (!in_array('created_by', $classCols)) {
+            $db->exec("ALTER TABLE `classes` ADD COLUMN `created_by` INT UNSIGNED DEFAULT NULL");
+        }
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `fitness_criteria` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `test_id` INT UNSIGNED NOT NULL,
+            `min_value` DECIMAL(10,2) NOT NULL,
+            `max_value` DECIMAL(10,2) NOT NULL,
+            `score` INT NOT NULL,
+            CONSTRAINT `fk_criteria_test_auto` FOREIGN KEY (`test_id`) REFERENCES `fitness_tests`(`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `sports_calendar` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id` INT UNSIGNED DEFAULT NULL,
+            `title` VARCHAR(255) NOT NULL,
+            `description` TEXT DEFAULT NULL,
+            `event_date` DATE NOT NULL,
+            `end_date` DATE DEFAULT NULL,
+            `start_time` TIME DEFAULT NULL,
+            `end_time` TIME DEFAULT NULL,
+            `event_type` ENUM('match','training','tournament','fitness','ceremony','meeting','holiday','other') NOT NULL DEFAULT 'other',
+            `location` VARCHAR(255) DEFAULT NULL,
+            `color` VARCHAR(20) DEFAULT '#10b981',
+            `icon` VARCHAR(50) DEFAULT '📅',
+            `is_recurring` TINYINT(1) DEFAULT 0,
+            `recurrence_pattern` VARCHAR(50) DEFAULT NULL,
+            `target_grades` VARCHAR(255) DEFAULT NULL,
+            `is_public` TINYINT(1) DEFAULT 1,
+            `created_by` INT UNSIGNED DEFAULT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX `idx_cal_school` (`school_id`),
+            INDEX `idx_cal_date` (`event_date`),
+            INDEX `idx_cal_type` (`event_type`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `teacher_timetables` (
+            `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id`     INT UNSIGNED NOT NULL,
+            `teacher_id`    INT UNSIGNED NOT NULL,
+            `day_of_week`   TINYINT UNSIGNED NOT NULL, -- 1=الأحد, 7=السبت
+            `period_number` TINYINT UNSIGNED NOT NULL,
+            `class_id`      INT UNSIGNED NOT NULL,
+            `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_tt_teacher` (`teacher_id`),
+            INDEX `idx_tt_school` (`school_id`),
+            INDEX `idx_tt_class` (`class_id`),
+            UNIQUE KEY `uk_teacher_slot` (`teacher_id`, `day_of_week`, `period_number`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `school_period_times` (
+            `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id`     INT UNSIGNED NOT NULL,
+            `period_number` TINYINT UNSIGNED NOT NULL,
+            `start_time`    TIME NOT NULL,
+            `end_time`      TIME NOT NULL,
+            UNIQUE KEY `uk_school_period` (`school_id`, `period_number`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `platform_announcements` (
+            `id`               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `title`            VARCHAR(255) NOT NULL,
+            `message`          TEXT NOT NULL,
+            `type`             ENUM('info','warning','success','danger') NOT NULL DEFAULT 'info',
+            `target_school_id` INT UNSIGNED DEFAULT NULL, -- NULL for all schools
+            `is_active`        TINYINT(1) NOT NULL DEFAULT 1,
+            `expires_at`       DATE DEFAULT NULL,
+            `created_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_ann_school` (`target_school_id`),
+            INDEX `idx_ann_active` (`is_active`, `expires_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->exec("CREATE TABLE IF NOT EXISTS `platform_settings` (
+            `setting_key`   VARCHAR(100) PRIMARY KEY,
+            `setting_value` TEXT DEFAULT NULL,
+            `updated_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->prepare("INSERT IGNORE INTO `platform_settings` (setting_key, setting_value) VALUES ('maintenance_mode', '0')")->execute();
+        $db->prepare("INSERT IGNORE INTO `platform_settings` (setting_key, setting_value) VALUES ('maintenance_message', 'المنصة في صيانة حالياً، سنعود قريباً.')")->execute();
+
+    } catch (Exception $e) {
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            error_log('[ensureSchema Error] ' . $e->getMessage());
+        }
+    }
+}
+
+/**
+ * PLATFORM SETTINGS HELPER
+ */
+function getPlatformSetting($key, $default = null) {
+    try {
+        $db = getDB();
+        $stmt = $db->prepare("SELECT setting_value FROM platform_settings WHERE setting_key = ?");
+        $stmt->execute([$key]);
+        $val = $stmt->fetchColumn();
+        return ($val !== false) ? $val : $default;
+    } catch (Exception $e) {
+        return $default;
+    }
+}
+
+/**
+ * GLOBAL MAINTENANCE CHECK
+ */
+function checkMaintenance() {
+    global $action;
+    
+    // Exception 1: Platform Admin API should ALWAYS ignore maintenance
+    if (strpos($_SERVER['PHP_SELF'], '/admin/api.php') !== false) return;
+    
+    // Exception 2: Authenticated Platform Admins can bypass maintenance even on school site
+    if (isset($_SESSION['platform_admin']) && $_SESSION['platform_admin'] === true) return;
+
+    // Check if maintenance mode is ACTIVE
+    if (getPlatformSetting('maintenance_mode') === '1') {
+        // Resolve target action (even if global $action isn't set yet)
+        $currentAction = $action ?? getParam('action', '');
+        
+        // Critical: In school portal (api.php), block everything except essentials
+        // We only allow logout. check_auth/login should be blocked to show maintenance UI.
+        $allowed = ['logout']; 
+        
+        if (!in_array($currentAction, $allowed)) {
+            $msg = getPlatformSetting('maintenance_message', 'المنصة في صيانة حالياً، سنعود قريباً.');
+            $until = getPlatformSetting('maintenance_until', '');
+            
+            // If it's an API call or a critical POST/AUTH request, block with 503
+            if (!empty($currentAction) || $_SERVER['REQUEST_METHOD'] === 'POST') {
+                http_response_code(503);
+                header('Content-Type: application/json; charset=utf-8');
+                die(json_encode([
+                    'success' => false, 
+                    'error' => 'maintenance',
+                    'message' => $msg,
+                    'until' => $until
+                ]));
+            }
+        }
+    }
+}
+
+
+
+// ============================================================
 // HELPER FUNCTIONS - دوال مساعدة
 // ============================================================
 
@@ -550,3 +844,9 @@ function unassignClassFromTeacher(int $teacherId, int $classId): void {
     $db = getDB();
     $db->prepare("DELETE FROM teacher_classes WHERE teacher_id = ? AND class_id = ?")->execute([$teacherId, $classId]);
 }
+
+// ============================================================
+// INITIALIZE SYSTEM
+// ============================================================
+ensureSchema();
+checkMaintenance();
