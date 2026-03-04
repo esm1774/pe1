@@ -150,7 +150,9 @@ function navigate(page) {
         dashboard: renderDashboard,
         schools: renderSchools,
         plans: renderPlans,
-        announcements: renderAnnouncements
+        announcements: renderAnnouncements,
+        audit_logs: renderGlobalLogs,
+        analytics: renderAdvancedAnalytics
     };
 
     if (renderers[page]) renderers[page]();
@@ -1282,6 +1284,172 @@ async function deleteAnnouncement(id) {
     } else {
         toast(r?.error || 'خطأ في المسح', 'error');
     }
+}
+
+// ============================================================
+// GLOBAL AUDIT LOGS
+// ============================================================
+async function renderGlobalLogs() {
+    const mc = document.getElementById('mainContent');
+    mc.innerHTML = '<div class="spinner"></div>';
+
+    const res = await API.get('global_audit_logs');
+    if (!res || !res.success) {
+        mc.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>خطأ في جلب سجل النشاط</p></div>';
+        return;
+    }
+
+    const logs = res.data;
+
+    mc.innerHTML = `
+        <div class="page-header">
+            <h1>📜 سجل نشاط النظام الشامل</h1>
+            <p>مراقبة آخر العمليات والأنشطة عبر جميع المدارس في المنصة.</p>
+        </div>
+
+        <div class="panel">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>المدرسة</th>
+                            <th>المستخدم</th>
+                            <th>العملية</th>
+                            <th>التفاصيل</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.length === 0 ? '<tr><td colspan="6" class="text-center">لا توجد سجلات حالياً</td></tr>' : ''}
+                        ${logs.map(log => `
+                            <tr>
+                                <td style="font-size:12px; white-space:nowrap">${log.created_at}</td>
+                                <td style="font-weight:700">${esc(log.school_name || 'System')}</td>
+                                <td>
+                                    <div style="font-size:13px">${esc(log.user_name || '—')}</div>
+                                    <div style="font-size:10px; color:var(--text-muted)">${log.user_role || ''}</div>
+                                </td>
+                                <td>
+                                    <span class="badge" style="background:#f3f4f6; color:#374151; font-size:10px">
+                                        ${log.action.toUpperCase()}
+                                    </span>
+                                </td>
+                                <td style="font-size:12px; max-width:300px; white-space:normal">${esc(log.details)}</td>
+                                <td style="font-size:10px; color:var(--text-muted)">${log.ip_address}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================
+// ADVANCED ANALYTICS
+// ============================================================
+async function renderAdvancedAnalytics() {
+    const mc = document.getElementById('mainContent');
+    mc.innerHTML = '<div class="spinner"></div>';
+
+    const res = await API.get('advanced_analytics');
+    if (!res || !res.success) {
+        mc.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>خطأ في جلب التحليلات</p></div>';
+        return;
+    }
+
+    const { most_active, alert_schools, subscription_distribution } = res.data;
+
+    mc.innerHTML = `
+        <div class="page-header">
+            <h1>📈 التحليلات المتقدمة</h1>
+            <p>إحصائيات تفصيلية تساعدك على فهم نشاط المدارس واستهدافهم للترقية.</p>
+        </div>
+
+        <div class="analytics-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap:20px;">
+            
+            <!-- Most Active Schools (Last 7 Days) -->
+            <div class="panel">
+                <div class="panel-header"><h3>🔥 المدارس الأكثر نشاطاً (آخر 7 أيام)</h3></div>
+                <div class="p-4">
+                    ${most_active.length === 0 ? '<p class="text-muted">لا يوجد نشاط مسجل كافٍ</p>' : ''}
+                    ${most_active.map(s => {
+        const maxVal = most_active[0].activity_count || 1;
+        const pct = Math.round((s.activity_count / maxVal) * 100);
+        return `
+                            <div class="mb-4">
+                                <div class="flex justify-between mb-1">
+                                    <span style="font-weight:700">${esc(s.name)}</span>
+                                    <span style="color:var(--text-muted)">${s.activity_count} عملية</span>
+                                </div>
+                                <div style="height:10px; background:#f3f4f6; border-radius:5px; overflow:hidden">
+                                    <div style="width:${pct}%; height:100%; background:var(--accent-emerald); border-radius:5px"></div>
+                                </div>
+                            </div>
+                        `;
+    }).join('')}
+                </div>
+            </div>
+
+            <!-- Schools Needing Attention (Near Limits) -->
+            <div class="panel">
+                <div class="panel-header"><h3>🚨 مدارس تحتاج اهتمام (قاربت على استنفاد طاقتها)</h3></div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>المدرسة</th>
+                                <th>استهلاك الطلاب</th>
+                                <th>استهلاك المعلمين</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${alert_schools.length === 0 ? '<tr><td colspan="4" class="text-muted">جميع المدارس ضمن الحدود الآمنة</td></tr>' : ''}
+                            ${alert_schools.map(s => `
+                                <tr>
+                                    <td style="font-weight:700">${esc(s.name)}</td>
+                                    <td>
+                                        <div style="font-size:11px">${s.counts.students} / ${s.counts.max_students}</div>
+                                        <div style="height:6px; background:#f3f4f6; border-radius:3px">
+                                            <div style="width:${s.student_usage}%; height:100%; background:${s.student_usage > 90 ? 'var(--accent-red)' : 'var(--accent-orange)'}; border-radius:3px"></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="font-size:11px">${s.counts.teachers} / ${s.counts.max_teachers}</div>
+                                        <div style="height:6px; background:#f3f4f6; border-radius:3px">
+                                            <div style="width:${s.teacher_usage}%; height:100%; background:${s.teacher_usage > 90 ? 'var(--accent-red)' : 'var(--accent-orange)'}; border-radius:3px"></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-emerald btn-sm" onclick="impersonateSchool(${s.id})">🔍 فحص</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Subscription Status Distribution -->
+            <div class="panel">
+                <div class="panel-header"><h3>💳 توزيع الاشتراكات</h3></div>
+                <div class="p-6 flex flex-wrap gap-4 items-center justify-around">
+                    ${subscription_distribution.map(d => {
+        const colors = { active: 'emerald', trial: 'cyan', suspended: 'red', expired: 'orange' };
+        const color = colors[d.subscription_status] || 'gray';
+        return `
+                            <div class="text-center">
+                                <div style="font-size:24px; font-weight:900; color:var(--accent-${color})">${d.count}</div>
+                                <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase">${d.subscription_status}</div>
+                            </div>
+                        `;
+    }).join('')}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 // ============================================================

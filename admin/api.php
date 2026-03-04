@@ -493,6 +493,8 @@ try {
         case 'announcements':     getAnnouncements(); break;
         case 'announcement_save': saveAnnouncement(); break;
         case 'announcement_delete': deleteAnnouncement(); break;
+        case 'global_audit_logs':    getGlobalAuditLogs(); break;
+        case 'advanced_analytics':   getAdvancedAnalytics(); break;
         default: jsonError('إجراء غير معروف', 404);
     }
 } catch (PDOException $e) {
@@ -500,4 +502,89 @@ try {
     jsonError('حدث خطأ في قاعدة البيانات', 500);
 } catch (Exception $e) {
     jsonError($e->getMessage(), 500);
+}
+
+// ============================================================
+// GLOBAL AUDIT LOG
+// ============================================================
+function getGlobalAuditLogs() {
+    requirePlatformAdmin();
+    $db = getDB();
+    $page = max(1, (int)getParam('page', 1));
+    $limit = 50;
+    $offset = ($page - 1) * $limit;
+
+    $stmt = $db->prepare("
+        SELECT a.action, a.entity_type, a.entity_id, a.details, a.ip_address, a.created_at,
+               u.name as user_name, u.role as user_role, s.name as school_name
+        FROM activity_log a
+        LEFT JOIN users u ON a.user_id = u.id
+        LEFT JOIN schools s ON a.school_id = s.id
+        ORDER BY a.created_at DESC
+        LIMIT $limit OFFSET $offset
+    ");
+    $stmt->execute();
+    jsonSuccess($stmt->fetchAll());
+}
+
+// ============================================================
+// ADVANCED ANALYTICS
+// ============================================================
+function getAdvancedAnalytics() {
+    requirePlatformAdmin();
+    $db = getDB();
+
+    // 1. Most Active Schools (last 7 days)
+    $mostActive = $db->query("
+        SELECT s.name, COUNT(a.id) as activity_count
+        FROM activity_log a
+        JOIN schools s ON a.school_id = s.id
+        WHERE a.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY a.school_id
+        ORDER BY activity_count DESC
+        LIMIT 5
+    ")->fetchAll();
+
+    // 2. Schools nearing limits (>80%)
+    $allSchools = $db->query("
+        SELECT s.id, s.name, s.max_students, s.max_teachers,
+               (SELECT COUNT(*) FROM students WHERE school_id = s.id AND active = 1) as student_count,
+               (SELECT COUNT(*) FROM users WHERE school_id = s.id AND role = 'teacher' AND active = 1) as teacher_count
+        FROM schools s
+        WHERE active = 1
+    ")->fetchAll();
+
+    $alertSchools = [];
+    foreach ($allSchools as $s) {
+        $studentUsage = $s['max_students'] > 0 ? ($s['student_count'] / $s['max_students']) : 0;
+        $teacherUsage = $s['max_teachers'] > 0 ? ($s['teacher_count'] / $s['max_teachers']) : 0;
+        
+        if ($studentUsage > 0.8 || $teacherUsage > 0.8) {
+            $alertSchools[] = [
+                'id' => $s['id'],
+                'name' => $s['name'],
+                'student_usage' => round($studentUsage * 100),
+                'teacher_usage' => round($teacherUsage * 100),
+                'counts' => [
+                    'students' => $s['student_count'],
+                    'max_students' => $s['max_students'],
+                    'teachers' => $s['teacher_count'],
+                    'max_teachers' => $s['max_teachers']
+                ]
+            ];
+        }
+    }
+
+    // 3. Subscription Distribution
+    $subDist = $db->query("
+        SELECT subscription_status, COUNT(*) as count
+        FROM schools
+        GROUP BY subscription_status
+    ")->fetchAll();
+
+    jsonSuccess([
+        'most_active' => $mostActive,
+        'alert_schools' => $alertSchools,
+        'subscription_distribution' => $subDist
+    ]);
 }
