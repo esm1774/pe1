@@ -149,7 +149,8 @@ function navigate(page) {
     const renderers = {
         dashboard: renderDashboard,
         schools: renderSchools,
-        plans: renderPlans
+        plans: renderPlans,
+        announcements: renderAnnouncements
     };
 
     if (renderers[page]) renderers[page]();
@@ -1105,6 +1106,182 @@ function esc(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ============================================================
+// ANNOUNCEMENTS
+// ============================================================
+async function renderAnnouncements() {
+    const mc = document.getElementById('mainContent');
+    mc.innerHTML = '<div class="spinner"></div>';
+
+    const [ansRes, schoolsRes] = await Promise.all([
+        API.get('announcements'),
+        API.get('schools')
+    ]);
+
+    if (!ansRes || !ansRes.success) {
+        mc.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>خطأ في جلب الإعلانات</p></div>';
+        return;
+    }
+
+    const announcements = ansRes.data;
+    const schools = schoolsRes?.data || [];
+
+    mc.innerHTML = `
+        <div class="page-header">
+            <h1>📢 رسائل النظام والإعلانات</h1>
+            <p>تواصل مع المدارس من خلال شريط إعلانات يظهر في لوحة تحكمهم.</p>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h3>📋 سجل الإعلانات (${announcements.length})</h3>
+                <button class="btn btn-emerald btn-sm" onclick="openAnnouncementModal()">➕ إضافة إعلان</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>العنوان</th>
+                            <th>النوع</th>
+                            <th>المستهدف</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${announcements.length === 0 ? '<tr><td colspan="7"><div class="empty-state"><div class="icon">📢</div><p>لا توجد إعلانات حالياً</p></div></td></tr>' : ''}
+                        ${announcements.map(a => `
+                            <tr>
+                                <td>${a.id}</td>
+                                <td>
+                                    <div style="font-weight:700">${esc(a.title)}</div>
+                                    <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${esc(a.message)}</div>
+                                </td>
+                                <td>
+                                    <span class="badge" style="background:var(--accent-${a.type === 'danger' ? 'red' : (a.type === 'info' ? 'cyan' : a.type)}); color:white; font-size:10px">
+                                        ${a.type.toUpperCase()}
+                                    </span>
+                                </td>
+                                <td style="font-size:12px">${a.target_school_id ? `🏫 ${esc(a.school_name)}` : '🌍 للجميع'}</td>
+                                <td style="font-size:12px;color:var(--text-muted)">${a.expires_at || '—'}</td>
+                                <td>
+                                    ${a.is_active ? '<span class="badge badge-active">نشط</span>' : '<span class="badge badge-inactive">معطل</span>'}
+                                </td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="action-btn edit" onclick="openAnnouncementModal(${a.id})" title="تعديل">✏️</button>
+                                        <button class="action-btn delete" onclick="deleteAnnouncement(${a.id})" title="حذف">🗑️</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function openAnnouncementModal(id = null) {
+    const res = await API.get('announcements');
+    const announcements = res?.data || [];
+    const a = id ? announcements.find(x => x.id == id) : null;
+
+    // Fetch schools for targeting
+    const sRes = await API.get('schools');
+    const schools = sRes?.data || [];
+    const schoolOptions = schools.map(s => `<option value="${s.id}" ${a?.target_school_id == s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+
+    openModal(`
+        <div class="modal-header">
+            <h3>${id ? '✏️ تعديل إعلان' : '📢 إضافة إعلان جديد'}</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="annId" value="${a?.id || ''}">
+            <div class="form-group-modal">
+                <label>عنوان الإعلان *</label>
+                <input type="text" id="annTitle" class="form-input" value="${esc(a?.title || '')}" placeholder="مثال: تنبيه بخصوص الصيانة">
+            </div>
+            <div class="form-group-modal mt-3">
+                <label>نص الإعلان *</label>
+                <textarea id="annMessage" class="form-input" style="height:100px">${esc(a?.message || '')}</textarea>
+            </div>
+            <div class="form-row mt-3">
+                <div class="form-group-modal">
+                    <label>النوع (اللون)</label>
+                    <select id="annType" class="form-select">
+                        <option value="info" ${a?.type === 'info' ? 'selected' : ''}>🔵 معلومات (Info)</option>
+                        <option value="warning" ${a?.type === 'warning' ? 'selected' : ''}>🟡 تنبيه (Warning)</option>
+                        <option value="danger" ${a?.type === 'danger' ? 'selected' : ''}>🔴 خطر (Danger)</option>
+                        <option value="success" ${a?.type === 'success' ? 'selected' : ''}>🟢 نجاح (Success)</option>
+                    </select>
+                </div>
+                <div class="form-group-modal">
+                    <label>المدرسة المستهدفة</label>
+                    <select id="annTarget" class="form-select">
+                        <option value="">🌍 جميع المدارس</option>
+                        ${schoolOptions}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row mt-3">
+                <div class="form-group-modal">
+                    <label>تاريخ الانتهاء</label>
+                    <input type="date" id="annExpires" class="form-input" value="${a?.expires_at || ''}">
+                </div>
+                <div class="form-group-modal">
+                    <label>الحالة</label>
+                    <select id="annActive" class="form-select">
+                        <option value="1" ${a?.is_active != 0 ? 'selected' : ''}>✅ تفعيل</option>
+                        <option value="0" ${a?.is_active == 0 ? 'selected' : ''}>⏸️ تعطيل</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-emerald btn-sm" onclick="saveAnnouncement()">💾 حفظ الإعلان</button>
+            <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
+        </div>
+    `);
+}
+
+async function saveAnnouncement() {
+    const data = {
+        id: document.getElementById('annId').value || null,
+        title: document.getElementById('annTitle').value.trim(),
+        message: document.getElementById('annMessage').value.trim(),
+        type: document.getElementById('annType').value,
+        target_school_id: document.getElementById('annTarget').value || null,
+        is_active: document.getElementById('annActive').value,
+        expires_at: document.getElementById('annExpires').value || null
+    };
+
+    if (!data.title || !data.message) return toast('العنوان والنص مطلوبان', 'error');
+
+    const r = await API.post('announcement_save', data);
+    if (r && r.success) {
+        toast(r.message);
+        closeModal();
+        renderAnnouncements();
+    } else {
+        toast(r?.error || 'خطأ في الحفظ', 'error');
+    }
+}
+
+async function deleteAnnouncement(id) {
+    if (!confirm('هل أنت متأكد من مسح هذا الإعلان؟')) return;
+    const r = await API.post('announcement_delete', { id });
+    if (r && r.success) {
+        toast(r.message);
+        renderAnnouncements();
+    } else {
+        toast(r?.error || 'خطأ في المسح', 'error');
+    }
 }
 
 // ============================================================

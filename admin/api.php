@@ -423,6 +423,54 @@ function resetSchoolAdminPassword() {
 }
 
 // ============================================================
+// SYSTEM ANNOUNCEMENTS
+// ============================================================
+function getAnnouncements() {
+    requirePlatformAdmin();
+    $db = getDB();
+    $ans = $db->query("
+        SELECT a.*, s.name as school_name 
+        FROM platform_announcements a 
+        LEFT JOIN schools s ON a.target_school_id = s.id 
+        ORDER BY a.id DESC
+    ")->fetchAll();
+    jsonSuccess($ans);
+}
+
+function saveAnnouncement() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    validateRequired($data, ['title', 'message']);
+    
+    $id = $data['id'] ?? null;
+    $title = sanitize($data['title']);
+    $message = $data['message']; // message can have HTML or line breaks, sanitize might be too restrictive
+    $type = sanitize($data['type'] ?? 'info');
+    $schoolId = !empty($data['target_school_id']) ? (int)$data['target_school_id'] : null;
+    $isActive = (int)($data['is_active'] ?? 1);
+    $expiresAt = !empty($data['expires_at']) ? sanitize($data['expires_at']) : null;
+
+    $db = getDB();
+    if ($id) {
+        $db->prepare("UPDATE platform_announcements SET title=?, message=?, type=?, target_school_id=?, is_active=?, expires_at=? WHERE id=?")
+           ->execute([$title, $message, $type, $schoolId, $isActive, $expiresAt, $id]);
+    } else {
+        $db->prepare("INSERT INTO platform_announcements (title, message, type, target_school_id, is_active, expires_at) VALUES (?,?,?,?,?,?)")
+           ->execute([$title, $message, $type, $schoolId, $isActive, $expiresAt]);
+    }
+    jsonSuccess(null, 'تم حفظ الإعلان بنجاح');
+}
+
+function deleteAnnouncement() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) jsonError('معرف غير صالح');
+    getDB()->prepare("DELETE FROM platform_announcements WHERE id = ?")->execute([$id]);
+    jsonSuccess(null, 'تم مسح الإعلان');
+}
+
+// ============================================================
 // ROUTER
 // ============================================================
 try {
@@ -442,6 +490,9 @@ try {
         case 'impersonate':       impersonateSchool(); break;
         case 'get_school_admins': getSchoolAdmins(); break;
         case 'reset_school_admin': resetSchoolAdminPassword(); break;
+        case 'announcements':     getAnnouncements(); break;
+        case 'announcement_save': saveAnnouncement(); break;
+        case 'announcement_delete': deleteAnnouncement(); break;
         default: jsonError('إجراء غير معروف', 404);
     }
 } catch (PDOException $e) {

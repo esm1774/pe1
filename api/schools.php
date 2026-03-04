@@ -124,3 +124,24 @@ function getSubscriptionInfo() {
     if (empty($info)) jsonError('تعذر جلب بيانات الاشتراك');
     jsonSuccess($info);
 }
+
+/**
+ * Get Active System Announcements
+ * For Display in School Admin Dashboard
+ */
+function getActiveAnnouncements() {
+    requireLogin();
+    $sid = (int)schoolId();
+    $db = getDB();
+    
+    $stmt = $db->prepare("
+        SELECT id, title, message, type, created_at
+        FROM platform_announcements
+        WHERE is_active = 1 
+          AND (expires_at IS NULL OR expires_at >= CURDATE())
+          AND (target_school_id IS NULL OR target_school_id = ?)
+        ORDER BY created_at DESC
+    ");
+    $stmt->execute([$sid]);
+    jsonSuccess($stmt->fetchAll(PDO::FETCH_ASSOC));
+}

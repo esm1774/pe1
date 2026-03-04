@@ -238,6 +238,20 @@ function ensureSchema() {
             UNIQUE KEY `uk_school_period` (`school_id`, `period_number`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // ── Platform Announcements (Super Admin Communications) ──────────
+        $db->exec("CREATE TABLE IF NOT EXISTS `platform_announcements` (
+            `id`               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `title`            VARCHAR(255) NOT NULL,
+            `message`          TEXT NOT NULL,
+            `type`             ENUM('info','warning','success','danger') NOT NULL DEFAULT 'info',
+            `target_school_id` INT UNSIGNED DEFAULT NULL, -- NULL for all schools
+            `is_active`        TINYINT(1) NOT NULL DEFAULT 1,
+            `expires_at`       DATE DEFAULT NULL,
+            `created_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_ann_school` (`target_school_id`),
+            INDEX `idx_ann_active` (`is_active`, `expires_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
     } catch (Exception $e) {
         // Fix: Log schema errors instead of silently ignoring them
         if (defined('DEBUG_MODE') && DEBUG_MODE) {
@@ -276,7 +290,7 @@ require_once 'api/schools.php';
 // ============================================================
 try {
     // SaaS Middleware: Check subscription for protected actions
-    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'exit_impersonation', 'schools_list', 'get_public_plans', 'register_school', 'forgot_password', 'reset_password'];
+    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'exit_impersonation', 'schools_list', 'get_public_plans', 'register_school', 'forgot_password', 'reset_password', 'get_active_announcements'];
     if (!in_array($action, $publicActions)) {
         Subscription::requireActive();
     }
@@ -303,6 +317,7 @@ try {
         case 'schools_list':    getSchoolsList(); break;
         case 'forgot_password': forgotPassword(); break;
         case 'reset_password':  resetPassword(); break;
+        case 'get_active_announcements': getActiveAnnouncements(); break;
 
         // DASHBOARD
         case 'dashboard':       getDashboard(); break;

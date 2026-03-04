@@ -416,6 +416,11 @@ function showApp() {
     if (typeof startNotificationPolling === 'function') {
         startNotificationPolling();
     }
+
+    // SaaS: Load system announcements
+    if (typeof loadAnnouncements === 'function') {
+        loadAnnouncements();
+    }
 }
 
 // SaaS: Check if a feature is available in current plan
@@ -789,4 +794,79 @@ function getReportHeaderHTML(title = 'تقرير رياضي شامل') {
         </div>
     </div>
     `;
+}
+/**
+ * SaaS: Load and Display System Announcements
+ */
+async function loadAnnouncements() {
+    const container = document.getElementById('systemAnnouncements');
+    if (!container) return;
+
+    try {
+        const r = await API.get('get_active_announcements');
+        if (!r || !r.success || !r.data || r.data.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const dismissed = JSON.parse(localStorage.getItem('dismissedAnnouncements') || '[]');
+        const activeAnnouncements = r.data.filter(a => !dismissed.includes(a.id));
+
+        if (activeAnnouncements.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = activeAnnouncements.map(a => {
+            const colors = {
+                info: 'bg-cyan-600',
+                warning: 'bg-orange-500',
+                danger: 'bg-red-600',
+                success: 'bg-emerald-600'
+            };
+            const bgColor = colors[a.type] || colors.info;
+
+            return `
+                <div id="announcement-${a.id}" class="${bgColor} text-white px-6 py-3 flex items-start justify-between shadow-lg relative z-40 animate-slide-down">
+                    <div class="flex gap-3">
+                        <span class="text-xl">📢</span>
+                        <div>
+                            <div class="font-black text-sm uppercase tracking-wider mb-0.5">${esc(a.title)}</div>
+                            <div class="text-sm opacity-95 leading-relaxed">${esc(a.message)}</div>
+                        </div>
+                    </div>
+                    <button onclick="dismissAnnouncement(${a.id})" class="mt-1 hover:bg-white/20 p-1 rounded-full transition-colors" title="إغلاق">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error('Error loading announcements:', e);
+    }
+}
+
+function dismissAnnouncement(id) {
+    const element = document.getElementById(`announcement-${id}`);
+    if (element) {
+        element.style.maxHeight = element.scrollHeight + 'px';
+        setTimeout(() => {
+            element.style.transition = 'all 0.4s ease';
+            element.style.maxHeight = '0';
+            element.style.opacity = '0';
+            element.style.paddingTop = '0';
+            element.style.paddingBottom = '0';
+            element.style.marginTop = '0';
+            element.style.marginBottom = '0';
+            element.style.overflow = 'hidden';
+            setTimeout(() => element.remove(), 400);
+        }, 10);
+    }
+
+    const dismissed = JSON.parse(localStorage.getItem('dismissedAnnouncements') || '[]');
+    if (!dismissed.includes(id)) {
+        dismissed.push(id);
+        localStorage.setItem('dismissedAnnouncements', JSON.stringify(dismissed));
+    }
 }
