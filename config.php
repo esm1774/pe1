@@ -71,12 +71,22 @@ date_default_timezone_set(APP_TIMEZONE);
 // ============================================================
 // ERROR HANDLING - معالجة الأخطاء
 // ============================================================
-// في بيئة الإنتاج، غيّر إلى 0
+// ⚠️ مهم: في بيئة الإنتاج، يجب تغيير إلى false لحماية المعلومات الحساسة
 define('DEBUG_MODE', true);
 
+// Production Safety Guard: Warn if DEBUG is on outside localhost
 if (DEBUG_MODE) {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
+    $currentHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $isLocal = in_array($currentHost, ['localhost', '127.0.0.1']) || str_contains($currentHost, '.local');
+    if (!$isLocal) {
+        // In production with DEBUG=true: log but do not expose errors to browser
+        error_reporting(E_ALL);
+        ini_set('display_errors', 0); // NEVER output errors in production
+        error_log('[SECURITY WARNING] DEBUG_MODE is true on production host: ' . $currentHost);
+    } else {
+        error_reporting(E_ALL);
+        ini_set('display_errors', 1);
+    }
 } else {
     error_reporting(0);
     ini_set('display_errors', 0);
