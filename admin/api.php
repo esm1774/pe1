@@ -259,9 +259,24 @@ function updateSchoolSubscriptionFull() {
         $updateData['plan_id'] = $planId;
     }
 
-    // Mapping ends_at based on status
+    // Fix: Only update dates when explicitly provided or when switching status to trial
+    // Previously this was recalculating trial_ends_at = today+14 on EVERY save,
+    // causing the trial countdown to reset and never expire.
     if ($status === 'trial') {
-        $updateData['trial_ends_at'] = date('Y-m-d', strtotime("+{$trialDays} days"));
+        if (!empty($endsAt)) {
+            // Admin explicitly set a specific end date → save it
+            $updateData['trial_ends_at'] = $endsAt;
+        } else {
+            // Check current status: only auto-set +N days if switching INTO trial (new trial)
+            $curStmt = $db->prepare("SELECT subscription_status, trial_ends_at FROM schools WHERE id = ?");
+            $curStmt->execute([$id]);
+            $current = $curStmt->fetch();
+            if ($current && $current['subscription_status'] !== 'trial') {
+                // School was NOT on trial before → start a fresh trial countdown
+                $updateData['trial_ends_at'] = date('Y-m-d', strtotime("+{$trialDays} days"));
+            }
+            // If already on trial → do NOT touch trial_ends_at (preserve original expiry)
+        }
     } else {
         if (!empty($endsAt)) {
             $updateData['subscription_ends_at'] = $endsAt;
