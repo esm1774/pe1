@@ -276,7 +276,7 @@ require_once 'api/schools.php';
 // ============================================================
 try {
     // SaaS Middleware: Check subscription for protected actions
-    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'schools_list', 'get_public_plans', 'register_school', 'forgot_password', 'reset_password'];
+    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'exit_impersonation', 'schools_list', 'get_public_plans', 'register_school', 'forgot_password', 'reset_password'];
     if (!in_array($action, $publicActions)) {
         Subscription::requireActive();
     }
@@ -299,6 +299,7 @@ try {
         case 'login':           login(); break;
         case 'student_login':   studentLogin(); break;
         case 'logout':          logout(); break;
+        case 'exit_impersonation': exitImpersonation(); break;
         case 'schools_list':    getSchoolsList(); break;
         case 'forgot_password': forgotPassword(); break;
         case 'reset_password':  resetPassword(); break;

@@ -229,6 +229,6 @@ class Tenant {
         self::$schoolId = $schoolId;
         self::$school = null;
         $_SESSION['school_id'] = $schoolId;
-        $_SESSION['impersonating'] = true;
+        $_SESSION['is_impersonating'] = true;
     }
 }

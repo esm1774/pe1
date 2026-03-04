@@ -197,6 +197,20 @@
     <!-- MAIN APP -->
     <!-- ============================================================ -->
     <div id="mainApp" class="hidden min-h-screen bg-main">
+        <!-- Impersonation Banner -->
+        <div id="impersonateBanner"
+            class="hidden bg-emerald-600 text-white px-4 py-2 flex items-center justify-between text-sm font-bold shadow-md relative z-50">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">🕵️</span>
+                <span>وضع الإشراف: أنت الآن تتصفح لوحة تحكم هذه المدرسة كمدير. المحتوى الذي تراه هو ما يراه مدير المدرسة
+                    بالضبط.</span>
+            </div>
+            <button onclick="exitImpersonation()"
+                class="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1 rounded-lg text-xs font-black shadow-sm transition">
+                🚪 إنهاء الإشراف والعودة
+            </button>
+        </div>
+
         <!-- Header -->
         <header
             class="bg-card shadow-sm border-b border-color no-print sticky top-0 z-40 transition-colors duration-300">

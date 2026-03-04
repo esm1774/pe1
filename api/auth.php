@@ -5,17 +5,21 @@
  * يدعم تسجيل الدخول مع تحديد المدرسة تلقائياً
  */
 
+// Check Auth
 function checkAuth() {
     if (isLoggedIn()) {
         $db = getDB();
         if ($_SESSION['user_role'] === 'student') {
             $stmt = $db->prepare("SELECT id, student_number, name, 'student' as role, class_id, school_id FROM students WHERE id = ? AND active = 1");
+            $stmt->execute([$_SESSION['user_id']]);
         } elseif ($_SESSION['user_role'] === 'parent') {
             $stmt = $db->prepare("SELECT id, username, name, 'parent' as role, school_id FROM parents WHERE id = ? AND active = 1");
+            $stmt->execute([$_SESSION['user_id']]);
         } else {
             $stmt = $db->prepare("SELECT id, username, name, role, school_id FROM users WHERE id = ? AND active = 1");
+            $stmt->execute([$_SESSION['user_id']]);
         }
-        $stmt->execute([$_SESSION['user_id']]);
+        
         $user = $stmt->fetch();
         if ($user) {
             // Include school info if available
@@ -29,7 +33,14 @@ function checkAuth() {
                 // Include subscription info
                 $user['subscription'] = Subscription::getInfo($user['school_id']);
             }
+            
+            // Flag if the super admin is impersonating this account
+            if (isset($_SESSION['is_impersonating']) && $_SESSION['is_impersonating'] === true) {
+                $user['is_impersonating'] = true;
+            }
+            
             jsonSuccess($user);
+            return;
         }
     }
     jsonResponse(['success' => false, 'error' => 'غير مسجل'], 401);
@@ -212,6 +223,30 @@ function logout() {
     logActivity('logout', 'user', $_SESSION['user_id'] ?? null);
     session_destroy();
     jsonSuccess(null, 'تم تسجيل الخروج');
+}
+
+/**
+ * Exit Impersonation Mode
+ * Used by Platform Admin to return to the admin dashboard
+ */
+function exitImpersonation() {
+    // Only allow if actually impersonating
+    if (!isset($_SESSION['is_impersonating']) || $_SESSION['is_impersonating'] !== true) {
+        jsonError('أنت لست في وضع الإشراف');
+    }
+    
+    // Clear school-level session data
+    unset($_SESSION['user_id']);
+    unset($_SESSION['user_role']);
+    unset($_SESSION['user_name']);
+    unset($_SESSION['class_id']);
+    unset($_SESSION['school_id']);
+    unset($_SESSION['is_impersonating']);
+    
+    // Reset Tenant context
+    Tenant::reset();
+    
+    jsonSuccess(null, 'تم إنهاء وضع الإشراف');
 }
 
 /**

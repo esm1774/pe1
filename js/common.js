@@ -265,6 +265,19 @@ async function handleLogout() {
     showLoginPage();
 }
 
+async function exitImpersonation() {
+    try {
+        const r = await API.post('exit_impersonation');
+        if (r && r.success) {
+            window.location.href = '../admin/';
+        } else {
+            showToast(r?.error || 'فشل الخروج من الإشراف', 'error');
+        }
+    } catch (e) {
+        showToast('خطأ في الاتصال', 'error');
+    }
+}
+
 async function checkAuth() {
     const r = await API.get('check_auth');
     if (r && r.success) {
@@ -331,6 +344,16 @@ function showApp() {
 
     const roleNames = { admin: 'مدير', teacher: 'معلم', viewer: 'مشاهد', supervisor: 'مشرف/موجه', student: 'طالب', parent: 'ولي أمر' };
     if (roleEl) roleEl.textContent = roleNames[currentUser.role] || currentUser.role;
+
+    // Show Impersonation Banner if active
+    const impBanner = document.getElementById('impersonateBanner');
+    if (impBanner) {
+        if (currentUser.is_impersonating) {
+            impBanner.classList.remove('hidden');
+        } else {
+            impBanner.classList.add('hidden');
+        }
+    }
 
     // SaaS: Display school name + branding
     if (typeof refreshBranding === 'function') {

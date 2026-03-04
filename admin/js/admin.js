@@ -293,6 +293,7 @@ async function renderSchools() {
                                         <button class="action-btn edit" onclick="openEditSchoolModal(${s.id})" title="تعديل البيانات">✏️</button>
                                         <button class="action-btn sub" onclick="openSubModal(${s.id})" title="الاشتراك والميزات">💳</button>
                                         <button class="action-btn enter" onclick="impersonateSchool(${s.id})" title="دخول سريع">🔑</button>
+                                        <button class="action-btn" style="background:var(--accent-orange);color:white" onclick="openResetAdminPasswordModal(${s.id}, '${esc(s.name)}')" title="تغيير كلمة مرور المدير">🔒</button>
                                         ${s.active == 1
             ? `<button class="action-btn toggle-off" onclick="toggleSchool(${s.id}, 0)" title="إيقاف المؤقت">⏸️</button>`
             : `<button class="action-btn toggle-on" onclick="toggleSchool(${s.id}, 1)" title="تفعيل">▶️</button>`
@@ -521,6 +522,67 @@ async function impersonateSchool(id) {
         }, 500);
     } else {
         toast(r?.error || 'خطأ في الدخول', 'error');
+    }
+}
+
+async function openResetAdminPasswordModal(schoolId, schoolName) {
+    // 1. Fetch admins for this school
+    toast('جاري تحميل مدراء المدرسة...', 'info');
+    const r = await API.get(`get_school_admins&school_id=${schoolId}`);
+    if (!r || !r.success) {
+        toast(r?.error || 'خطأ في جلب المدراء', 'error');
+        return;
+    }
+
+    const admins = r.data;
+    if (admins.length === 0) {
+        toast('هذه المدرسة لا تحتوي على حساب مدير', 'error');
+        return;
+    }
+
+    const adminOptions = admins.map(a => `<option value="${a.id}">${esc(a.name)} (@${esc(a.username)})</option>`).join('');
+
+    openModal(`
+        <div class="modal-header">
+            <h3>🔒 تغيير كلمة مرور مدير مدرسة: ${esc(schoolName)}</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group-modal">
+                <label>اختر حساب المدير</label>
+                <select id="resetAdminId" class="form-select">
+                    ${adminOptions}
+                </select>
+            </div>
+            <div class="form-group-modal mt-3">
+                <label>كلمة المرور الجديدة</label>
+                <input type="password" id="resetAdminNewPassword" class="form-input" placeholder="••••••" minlength="6">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-emerald btn-sm" onclick="resetSchoolAdminPassword()">💾 تعيين كلمة المرور</button>
+            <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
+        </div>
+    `);
+}
+
+async function resetSchoolAdminPassword() {
+    const adminId = document.getElementById('resetAdminId').value;
+    const newPassword = document.getElementById('resetAdminNewPassword').value.trim();
+
+    if (!adminId) return toast('اختر المدير', 'error');
+    if (newPassword.length < 6) return toast('يجب أن تكون كلمة المرور 6 أحرف على الأقل', 'error');
+
+    const btn = document.querySelector('.modal-footer .btn-emerald');
+    if (btn) btn.disabled = true;
+
+    const r = await API.post('reset_school_admin', { user_id: adminId, new_password: newPassword });
+    if (r && r.success) {
+        toast(r.message || 'تم تغيير كلمة المرور بنجاح!', 'success');
+        closeModal();
+    } else {
+        toast(r?.error || 'حدث خطأ', 'error');
+        if (btn) btn.disabled = false;
     }
 }
 

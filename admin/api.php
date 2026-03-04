@@ -387,6 +387,42 @@ function impersonateSchool() {
 }
 
 // ============================================================
+// ADMIN PASSWORD RESET
+// ============================================================
+function getSchoolAdmins() {
+    requirePlatformAdmin();
+    $schoolId = (int)(getParam('school_id', 0));
+    if (!$schoolId) jsonError('معرف مدرسة غير صالح');
+
+    $db = getDB();
+    $stmt = $db->prepare("SELECT id, username, name, active FROM users WHERE school_id = ? AND role = 'admin'");
+    $stmt->execute([$schoolId]);
+    jsonSuccess($stmt->fetchAll());
+}
+
+function resetSchoolAdminPassword() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $userId = (int)($data['user_id'] ?? 0);
+    $newPassword = $data['new_password'] ?? '';
+
+    if (!$userId) jsonError('معرف مستخدم غير صالح');
+    if (strlen($newPassword) < 6) jsonError('يجب أن تتكون كلمة المرور من 6 أحرف على الأقل');
+
+    $db = getDB();
+    
+    // Safety check: ensure user is actually an admin
+    $stmt = $db->prepare("SELECT id FROM users WHERE id = ? AND role = 'admin'");
+    $stmt->execute([$userId]);
+    if (!$stmt->fetch()) jsonError('المستخدم ليس مدير مدرسة أو غير موجود');
+
+    $hash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+    $db->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hash, $userId]);
+    
+    jsonSuccess(null, 'تم تعيين كلمة المرور بنجاح. أبلغ المدير ببياناته الجديدة.');
+}
+
+// ============================================================
 // ROUTER
 // ============================================================
 try {
@@ -404,6 +440,8 @@ try {
         case 'plan_delete':       deletePlan(); break;
         case 'platform_stats':    getPlatformStats(); break;
         case 'impersonate':       impersonateSchool(); break;
+        case 'get_school_admins': getSchoolAdmins(); break;
+        case 'reset_school_admin': resetSchoolAdminPassword(); break;
         default: jsonError('إجراء غير معروف', 404);
     }
 } catch (PDOException $e) {
