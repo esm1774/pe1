@@ -972,16 +972,25 @@ async function openSubModal(schoolId) {
                 <div class="form-row">
                     <div class="form-group-modal">
                         <label>حالة الاشتراك</label>
-                        <select id="subStatus" class="form-select" onchange="toggleTrialDays(this.value)">
+                        <select id="subStatus" class="form-select" onchange="toggleSubscriptionUI(this.value)">
                             <option value="active"    ${school.subscription_status === 'active' ? 'selected' : ''}>✅ نشط (مدفوع)</option>
                             <option value="trial"     ${school.subscription_status === 'trial' ? 'selected' : ''}>⏳ تجريبي (مجاني)</option>
                             <option value="suspended" ${school.subscription_status === 'suspended' ? 'selected' : ''}>⛔ معلق (محجوب)</option>
                             <option value="cancelled" ${school.subscription_status === 'cancelled' ? 'selected' : ''}>🚫 ملغي</option>
                         </select>
                     </div>
+                    <div class="form-group-modal" id="subPeriodRow" style="display:${school.subscription_status === 'active' ? 'block' : 'none'}">
+                        <label>دورة الدفع</label>
+                        <select id="subPeriod" class="form-select" onchange="recalculateExpiry()">
+                            <option value="monthly">شهر واحد (Monthly)</option>
+                            <option value="yearly">سنة كاملة (Yearly)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group-modal">
                         <label>خطة التسعير</label>
-                        <select id="subPlan" class="form-select">
+                        <select id="subPlan" class="form-select" onchange="recalculateExpiry()">
                             <option value="">— الخطة الحالية —</option>
                             ${planOptions}
                         </select>
@@ -990,7 +999,7 @@ async function openSubModal(schoolId) {
                 <div class="form-row">
                     <div class="form-group-modal">
                         <label>📅 تاريخ بداية الاشتراك</label>
-                        <input type="date" id="subStartsAt" class="form-input" value="${school.subscription_starts_at || ''}" dir="ltr">
+                        <input type="date" id="subStartsAt" class="form-input" value="${school.subscription_starts_at || new Date().toISOString().split('T')[0]}" dir="ltr" onchange="recalculateExpiry()">
                     </div>
                     <div class="form-group-modal">
                         <label>📅 تاريخ انتهاء الصلاحية</label>
@@ -1001,7 +1010,7 @@ async function openSubModal(schoolId) {
                 <div id="trialDaysRow" style="display:${school.subscription_status === 'trial' ? 'block' : 'none'}">
                     <div class="form-group-modal">
                         <label>⏳ أيام الفترة التجريبية</label>
-                        <input type="number" id="subTrialDays" class="form-input" value="14" min="1" max="365">
+                        <input type="number" id="subTrialDays" class="form-input" value="14" min="1" max="365" oninput="recalculateExpiry()">
                         <small style="font-size:10px;color:var(--text-muted)">يُطبق عند تحويل الاشتراك لتجريبي</small>
                     </div>
                 </div>
@@ -1074,9 +1083,39 @@ async function updateSubscription(schoolId) {
     }
 }
 
-function toggleTrialDays(status) {
-    const row = document.getElementById('trialDaysRow');
-    if (row) row.style.display = status === 'trial' ? 'block' : 'none';
+function toggleSubscriptionUI(status) {
+    const trialRow = document.getElementById('trialDaysRow');
+    const periodRow = document.getElementById('subPeriodRow');
+    if (trialRow) trialRow.style.display = status === 'trial' ? 'block' : 'none';
+    if (periodRow) periodRow.style.display = status === 'active' ? 'block' : 'none';
+    recalculateExpiry();
+}
+
+function recalculateExpiry() {
+    const status = document.getElementById('subStatus')?.value;
+    const startsAt = document.getElementById('subStartsAt')?.value;
+    const endsAt = document.getElementById('subEndsAt');
+    if (!startsAt || !endsAt) return;
+
+    let date = new Date(startsAt);
+    if (isNaN(date.getTime())) return;
+
+    if (status === 'trial') {
+        const days = parseInt(document.getElementById('subTrialDays')?.value || 14);
+        date.setDate(date.getDate() + days);
+    } else if (status === 'active') {
+        const period = document.getElementById('subPeriod')?.value;
+        if (period === 'monthly') {
+            date.setMonth(date.getMonth() + 1);
+        } else if (period === 'yearly') {
+            date.setFullYear(date.getFullYear() + 1);
+        }
+    } else {
+        // Suspended or cancelled - usually don't touch or clear
+        return;
+    }
+
+    endsAt.value = date.toISOString().split('T')[0];
 }
 
 // ============================================================
