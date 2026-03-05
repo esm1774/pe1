@@ -1927,14 +1927,16 @@ function scheduleMatches() {
 
     $startDate    = $data['start_date']    ?? date('Y-m-d');
     $startTime    = $data['start_time']    ?? '09:00';
-    $matchDuration = (int)($data['match_duration'] ?? 60);  // minutes per match
-    $breakBetween  = (int)($data['break_between']  ?? 30);  // minutes break between matches
-    $matchesPerDay = (int)($data['matches_per_day'] ?? 4);  // max matches per day
-    $preview       = (bool)($data['preview'] ?? false);     // true = preview only, false = save
+    $matchDuration = (int)($data['match_duration'] ?? 60);
+    $breakBetween  = (int)($data['break_between']  ?? 30);
+    $matchesPerDay = (int)($data['matches_per_day'] ?? 4);
+    $roundGap      = (int)($data['round_gap'] ?? 1);
+    $playingDays   = $data['playing_days'] ?? [0,1,2,3,4]; // Default Sun-Thu
+    $preview       = (bool)($data['preview'] ?? false);
 
     $db = getDB();
 
-    // جلب كل المباريات غير المكتملة وغير الباي مرتبة حسب الجولة
+    // ... (query remains same)
     $stmt = $db->prepare("
         SELECT m.*,
                t1.team_name as team1_name,
@@ -1957,84 +1959,70 @@ function scheduleMatches() {
         jsonError('لا توجد مباريات مجدولة لتوزيعها');
     }
 
-    // ====================================================
-    // خوارزمية التوزيع العادل
-    // المبدأ: كل فريق لا يلعب مباراتين في نفس اليوم
-    // ====================================================
-    $currentDate  = new DateTime($startDate);
-    $currentTime  = $startTime;
+    $currentDate   = new DateTime($startDate);
+    $currentTime   = $startTime;
     $dayMatchCount = 0;
-    $teamLastDate  = []; // team_id => last date they played
-    $schedule     = [];
+    $teamLastDate  = [];
+    $schedule      = [];
+    $lastRound     = null;
 
-    // تجميع المباريات حسب الجولة (round)
-    $matchesByRound = [];
-    foreach ($matches as $m) {
-        $matchesByRound[$m['round_number']][] = $m;
-    }
-    ksort($matchesByRound);
-
-    // دالة مساعدة: انتقل لليوم التالي مع استبعاد الويكند
-    $nextDay = function() use (&$currentDate, &$currentTime, &$dayMatchCount, $startTime) {
+    // Helper: Move to next available playing day
+    $moveToNextPlayingDay = function() use (&$currentDate, &$currentTime, &$dayMatchCount, $startTime, $playingDays) {
         $currentDate->modify('+1 day');
-        // إذا كان الجمعة (5) أو السبت (6)، انتقل للأحد (0) أو اليوم التالي المتاح
-        while (in_array((int)$currentDate->format('w'), [5, 6])) { // 5=Friday, 6=Saturday (PHP w is 0-Sunday to 6-Saturday)
+        $tries = 0;
+        // Keep moving until we hit a day in the playingDays array
+        // PHP w: 0 (Sun) to 6 (Sat). We need to map our IDs if they differ, 
+        // but typically 0=Sun, 1=Mon... match.
+        while (!in_array((int)$currentDate->format('w'), $playingDays) && $tries < 14) {
             $currentDate->modify('+1 day');
+            $tries++;
         }
         $currentTime  = $startTime;
         $dayMatchCount = 0;
     };
 
-    // التأكد من أن البداية ليست في الويكند
-    while (in_array((int)$currentDate->format('w'), [5, 6])) {
-        $currentDate->modify('+1 day');
+    // Ensure start date is a valid playing day
+    if (!in_array((int)$currentDate->format('w'), $playingDays)) {
+        $moveToNextPlayingDay();
     }
 
-    // دالة مساعدة: احسب الوقت التالي
     $addMinutes = function($time, $minutes) {
         [$h, $m] = explode(':', $time);
         $total = (int)$h * 60 + (int)$m + $minutes;
         return sprintf('%02d:%02d', (int)($total / 60) % 24, $total % 60);
     };
 
+    // Group by round
+    $matchesByRound = [];
+    foreach ($matches as $m) $matchesByRound[$m['round_number']][] = $m;
+    ksort($matchesByRound);
+
     foreach ($matchesByRound as $round => $roundMatches) {
-        // خلط المباريات عشوائياً في الجولة الواحدة لضمان العدالة
+        // If round changed, apply gap
+        if ($lastRound !== null && $round > $lastRound) {
+            for ($i = 0; $i < $roundGap; $i++) {
+                $moveToNextPlayingDay();
+            }
+        }
+        $lastRound = $round;
+
         shuffle($roundMatches);
         
         foreach ($roundMatches as $match) {
             $t1 = $match['team1_id'];
             $t2 = $match['team2_id'];
 
-            // محاولة إيجاد يوم مناسب
-            $maxTries = 90; 
             $tries = 0;
-            while ($tries < $maxTries) {
+            while ($tries < 60) {
                 $todayStr = $currentDate->format('Y-m-d');
-                
-                // شروط اليوم المناسب:
-                // 1. الفريق لم يلعب اليوم
-                // 2. اليوم ليس ممتلئاً
-                // 3. (أفضلية) الفريق لم يلعب أمس (لتجنب الإرهاق إذا أمكن)
-                
-                $team1PlayedToday = (($teamLastDate[$t1] ?? '') === $todayStr);
-                $team2PlayedToday = (($teamLastDate[$t2] ?? '') === $todayStr);
+                $t1PlayedToday = (($teamLastDate[$t1] ?? '') === $todayStr);
+                $t2PlayedToday = (($teamLastDate[$t2] ?? '') === $todayStr);
                 $dayFull = ($dayMatchCount >= $matchesPerDay);
 
-                if (!$team1PlayedToday && !$team2PlayedToday && !$dayFull) {
-                    // تحقق من "الفجوة العادلة" - محاولة ترك يوم راحة بين المباريات إذا لم نصل للحد الأقصى
-                    $yesterday = (clone $currentDate)->modify('-1 day')->format('Y-m-d');
-                    $t1PlayedYesterday = (($teamLastDate[$t1] ?? '') === $yesterday);
-                    $t2PlayedYesterday = (($teamLastDate[$t2] ?? '') === $yesterday);
-                    
-                    if (($t1PlayedYesterday || $t1PlayedYesterday) && $tries < 5) {
-                        // نحاول تأجيلها لليوم التالي لترك فجوة، بشرط عدم التأجيل للأبد
-                        $nextDay();
-                        $tries++;
-                        continue;
-                    }
+                if (!$t1PlayedToday && !$t2PlayedToday && !$dayFull) {
                     break; 
                 }
-                $nextDay();
+                $moveToNextPlayingDay();
                 $tries++;
             }
 
@@ -2045,18 +2033,13 @@ function scheduleMatches() {
                 'match_time' => $currentTime,
                 'team1_name' => $match['team1_name'],
                 'team2_name' => $match['team2_name'],
-                'round'      => $round,
-                'slot'       => $dayMatchCount + 1,
             ];
 
-            $teamLastDate[$t1]  = $todayStr;
-            $teamLastDate[$t2]  = $todayStr;
+            $teamLastDate[$t1] = $todayStr;
+            $teamLastDate[$t2] = $todayStr;
             $dayMatchCount++;
             $currentTime = $addMinutes($currentTime, $matchDuration + $breakBetween);
         }
-
-        // بعد كل جولة نترك يوم راحة إضافي إذا أمكن
-        $nextDay();
     }
 
     // إذا معاينة فقط
@@ -2064,14 +2047,25 @@ function scheduleMatches() {
         jsonSuccess($schedule, 'معاينة الجدول المقترح');
     }
 
-    // حفظ الجدول في قاعدة البيانات
-    $updateStmt = $db->prepare("UPDATE matches SET match_date = ?, match_time = ? WHERE id = ?");
-    foreach ($schedule as $s) {
-        $updateStmt->execute([$s['match_date'], $s['match_time'], $s['match_id']]);
+    // إذا معاينة فقط
+    if ($preview) {
+        jsonSuccess($schedule);
     }
 
-    logActivity('schedule_matches', 'tournament', $tournamentId, count($schedule) . ' matches');
-    jsonSuccess($schedule, 'تم جدولة ' . count($schedule) . ' مباراة بنجاح');
+    try {
+        $db->beginTransaction();
+        $updateStmt = $db->prepare("UPDATE matches SET match_date = ?, match_time = ? WHERE id = ?");
+        foreach ($schedule as $s) {
+            $updateStmt->execute([$s['match_date'], $s['match_time'], $s['match_id']]);
+        }
+        $db->commit();
+        
+        logActivity('schedule_matches', 'tournament', $tournamentId, count($schedule) . ' matches');
+        jsonSuccess($schedule, 'تم جدولة ' . count($schedule) . ' مباراة بنجاح');
+    } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        jsonError('خطأ أثناء حفظ المواعيد: ' . $e->getMessage());
+    }
 }
 
 // ============================================================

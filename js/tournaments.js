@@ -320,45 +320,75 @@ async function renderTournamentDetail(id) {
 
 function showSchedulingForm(tournamentId) {
     const today = new Date().toISOString().split('T')[0];
+    const days = [
+        { id: 0, name: 'الأحد' },
+        { id: 1, name: 'الاثنين' },
+        { id: 2, name: 'الثلاثاء' },
+        { id: 3, name: 'الأربعاء' },
+        { id: 4, name: 'الخميس' },
+    ];
+
     showModal(`
         <div class="p-6">
             <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">📅 جدولة مواعيد البطولة</h3>
-            <p class="text-xs text-gray-500 mb-6 text-center leading-relaxed">سيقوم النظام بتوزيع المباريات آلياً بطريقة عادلة تضمن عدم تكرار لعب الفريق في نفس اليوم، مع استبعاد أيام الجمعة والسبت.</p>
+            <p class="text-[10px] text-gray-500 mb-6 text-center leading-relaxed">سيقوم النظام بتوزيع المباريات آلياً بطريقة عادلة تضمن عدم تكرار لعب الفريق في نفس اليوم، مع الالتزام بالأيام المختارة.</p>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">تاريخ البدء</label>
-                    <input type="date" id="sched_start_date" value="${today}" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">تاريخ البدء</label>
+                    <input type="date" id="sched_start_date" value="${today}" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">وقت أول مباراة</label>
-                    <input type="time" id="sched_start_time" value="08:00" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">وقت البدء (الفسحة مثلاً)</label>
+                    <input type="time" id="sched_start_time" value="10:00" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">مباراة / يوم</label>
-                    <input type="number" id="sched_matches_per_day" value="4" min="1" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">عدد المباريات يومياً</label>
+                    <input type="number" id="sched_matches_per_day" value="4" min="1" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">مدة المباراة (دقيقة)</label>
-                    <input type="number" id="sched_duration" value="20" min="5" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">يوم راحة بين الأدوار</label>
+                    <input type="number" id="sched_round_gap" value="1" min="0" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-700 mb-2">أيام اللعب المتاحة</label>
+                <div class="flex flex-wrap gap-2">
+                    ${days.map(d => `
+                        <label class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-colors">
+                            <input type="checkbox" class="sched-day-chk" value="${d.id}" checked>
+                            <span class="text-xs font-bold text-gray-700">${d.name}</span>
+                        </label>
+                    `).join('')}
                 </div>
             </div>
 
             <div class="flex gap-3">
-                <button onclick="doScheduleMatches(${tournamentId})" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition">تطبيق الجدولة الآلية</button>
-                <button onclick="closeModal()" class="flex-1 bg-gray-100 py-3 rounded-xl font-bold">إلغاء</button>
+                <button onclick="doScheduleMatches(${tournamentId})" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition active:scale-95 shadow-lg shadow-emerald-100">تطبيق الجدولة الآلية</button>
+                <button onclick="closeModal()" class="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-gray-600">إلغاء</button>
             </div>
         </div>
     `);
 }
 
 async function doScheduleMatches(tournamentId) {
+    const dayChks = document.querySelectorAll('.sched-day-chk:checked');
+    const playingDays = Array.from(dayChks).map(chk => parseInt(chk.value));
+
+    if (playingDays.length === 0) {
+        showToast('يجب اختيار يوم واحد على الأقل للعب', 'warning');
+        return;
+    }
+
     const data = {
         tournament_id: tournamentId,
         start_date: document.getElementById('sched_start_date').value,
         start_time: document.getElementById('sched_start_time').value,
         matches_per_day: document.getElementById('sched_matches_per_day').value,
-        match_duration: document.getElementById('sched_duration').value,
+        round_gap: document.getElementById('sched_round_gap').value,
+        playing_days: playingDays,
+        match_duration: 30, // Default duration if not specified
         break_between: 5
     };
 
@@ -368,6 +398,8 @@ async function doScheduleMatches(tournamentId) {
         showToast('تمت الجدولة بنجاح ✅');
         closeModal();
         renderMatchesTab(tournamentId);
+    } else {
+        showToast(r?.error || 'خطأ في الجدولة', 'error');
     }
 }
 
