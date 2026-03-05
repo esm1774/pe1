@@ -135,7 +135,7 @@ async function renderStudentProfilePage() {
             <button onclick="profileTab='info';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'info' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📋 البيانات</button>
             <button onclick="profileTab='measurements';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'measurements' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📏 القياسات</button>
             <button onclick="profileTab='pfitness';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pfitness' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">💪 اللياقة</button>
-            <button onclick="profileTab='badges';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'badges' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏅 الأوسمة</button>
+            ${hasFeature('badges') ? `<button onclick="profileTab='badges';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'badges' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏅 الأوسمة</button>` : ''}
             <button onclick="profileTab='health';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'health' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏥 الصحة</button>
             <button onclick="profileTab='pattendance';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pattendance' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📅 الحضور</button>
         </div>
@@ -197,7 +197,7 @@ async function renderProfileTab(sid) {
                     <p class="text-lg font-bold mt-1">${d.totalScore} / ${d.totalMax}</p>
                 </div>
                 
-                ${canEdit() ? `
+                ${canEdit() && hasFeature('certificates') ? `
                 <div class="mt-6">
                     <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2">📜 شهادات التفوق والتقدير</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -409,8 +409,8 @@ async function renderProfileTab(sid) {
                 </div>
                 ${canEdit() ? `
                 <div class="flex flex-wrap gap-2">
-                    <button onclick="showAwardBadgeForm(${sid})" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-100 flex items-center justify-center gap-2 text-sm"><span>✨</span> منح وسام جديد</button>
-                    <button onclick="showSportsCertificate('excellence', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-amber-500 text-white px-6 py-3 rounded-2xl font-black hover:bg-amber-600 transition shadow-xl shadow-amber-100 flex items-center justify-center gap-2 text-sm cursor-pointer"><span>📜</span> شهادة تفوق</button>
+                    ${hasFeature('badges') ? `<button onclick="showAwardBadgeForm(${sid})" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-100 flex items-center justify-center gap-2 text-sm"><span>✨</span> منح وسام جديد</button>` : ''}
+                    ${hasFeature('certificates') ? `<button onclick="showSportsCertificate('excellence', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-amber-500 text-white px-6 py-3 rounded-2xl font-black hover:bg-amber-600 transition shadow-xl shadow-amber-100 flex items-center justify-center gap-2 text-sm cursor-pointer"><span>📜</span> شهادة تفوق</button>` : ''}
                 </div>` : ''}
             </div>
 
