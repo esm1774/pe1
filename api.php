@@ -11,6 +11,15 @@ require_once 'config.php';
 // Resolve current tenant (school) context
 Tenant::resolve();
 
+// SaaS Security: If school found but inactive, block access unless Platform Admin
+if (Tenant::isSaasMode() && !Tenant::isPlatformAdmin()) {
+    $school = Tenant::school();
+    if ($school && $school['active'] == 0) {
+        http_response_code(403);
+        die(json_encode(['success' => false, 'error' => 'هذا الحساب معطل حالياً، يرجى مراجعة مدير المنصة']));
+    }
+}
+
 // Set JSON headers ONLY for non-file-download actions
 $action = getParam('action', '');
 if ($action !== 'students_template') {

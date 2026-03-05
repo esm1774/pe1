@@ -1,0 +1,33 @@
+# Enforce School Deactivation
+
+When a platform administrator disables a school, the school and all its users (staff, students, parents) should immediately lose access to the system. Currently, the "active" status in the `schools` table is not consistently checked.
+
+## Proposed Changes
+
+### [Tenant Resolution]
+#### [MODIFY] [tenant.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/includes/tenant.php)
+- Update `Tenant::resolve()` to ensure that even if a `school_id` is found in the session, the school is still active.
+- Update `Tenant::findById()` or `Tenant::school()` to verify the `active` status.
+
+### [Subscription & Middleware]
+#### [MODIFY] [subscription.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/includes/subscription.php)
+- Update `Subscription::isActive()` to check the `active` column in the `schools` table.
+
+### [Authentication]
+#### [MODIFY] [auth.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/api/auth.php)
+- Update [login()](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/api/auth.php#49-176) to verify the school is active before allowing any user to authenticate.
+- Update [checkAuth()](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/js/common.js#287-306) to ensure the user's school is still active.
+
+## Verification Plan
+
+### Automated Tests
+- Scripted test to:
+  1. Disable a school via the platform admin API.
+  2. Attempt to log in as a user from that school.
+  3. Attempt to access a protected API endpoint with an existing session from that school.
+  4. Ensure both attempts fail with a relative error message.
+
+### Manual Verification
+- Ask the user to disable a school in the dashboard and verify that:
+  - The login page for that school shows an error.
+  - Logged-in users are redirected or shown an error on their next action.

@@ -20,10 +20,18 @@ class Tenant {
 
         // Priority 1: Session (already logged in)
         if (isset($_SESSION['school_id'])) {
-            self::$schoolId = (int)$_SESSION['school_id'];
-            // Pre-load school object if needed
-            self::school();
-            return;
+            $sid = (int)$_SESSION['school_id'];
+            $school = self::findById($sid);
+            if ($school && $school['active'] == 1) {
+                self::$schoolId = $sid;
+                self::$school = $school;
+                return;
+            } else {
+                // School deactivated or not found - clear session
+                unset($_SESSION['school_id']);
+                unset($_SESSION['user_id']);
+                if (session_status() === PHP_SESSION_ACTIVE) session_destroy();
+            }
         }
 
         // Priority 2: URL Slug (e.g., example.com/school1)
@@ -178,7 +186,7 @@ class Tenant {
     private static function findBySlug(string $slug): ?array {
         try {
             $db = getDB();
-            $stmt = $db->prepare("SELECT * FROM schools WHERE slug = ? AND active = 1 LIMIT 1");
+            $stmt = $db->prepare("SELECT * FROM schools WHERE slug = ? LIMIT 1");
             $stmt->execute([$slug]);
             $school = $stmt->fetch();
             return $school ?: null;

@@ -16,10 +16,10 @@ class Subscription {
 
         try {
             $db = getDB();
-            $stmt = $db->prepare("SELECT subscription_status, trial_ends_at, subscription_starts_at, subscription_ends_at FROM schools WHERE id = ?");
+            $stmt = $db->prepare("SELECT active, subscription_status, trial_ends_at, subscription_starts_at, subscription_ends_at FROM schools WHERE id = ?");
             $stmt->execute([$schoolId]);
             $school = $stmt->fetch();
-            if (!$school) return false;
+            if (!$school || $school['active'] == 0) return false;
 
             $status = $school['subscription_status'];
             $today = date('Y-m-d');

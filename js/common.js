@@ -171,6 +171,10 @@ const API = {
                     showLoginPage();
                     return null;
                 }
+                if (r.status === 403) {
+                    handleDeactivation(result);
+                    return null;
+                }
                 if (r.status === 503 && result.error === 'maintenance') {
                     handleMaintenance(result);
                     return null;
@@ -299,6 +303,14 @@ async function checkAuth() {
         }
         showApp();
     } else {
+        if (r && r.error) {
+            const errorEl = document.getElementById('loginError');
+            if (errorEl) {
+                errorEl.textContent = r.error;
+                errorEl.classList.remove('hidden');
+                showLoginPage();
+            }
+        }
         // Try loading schools list for login page
         loadSchoolsList();
     }
@@ -900,6 +912,34 @@ function handleMaintenance(data) {
 
     const app = document.getElementById('mainApp');
     if (app) app.classList.add('hidden');
+
+    // Disable any background tasks
+    if (window.announcementTimer) clearInterval(window.announcementTimer);
+}
+
+/**
+ * DEACTIVATION HANDLER
+ */
+function handleDeactivation(data) {
+    const overlay = document.getElementById('deactivationOverlay');
+    if (!overlay) return;
+
+    if (data.error) {
+        document.getElementById('deactivationMessage').innerText = data.error;
+    }
+
+    overlay.style.display = 'flex';
+
+    // Hide all other main components
+    const login = document.getElementById('loginPage');
+    if (login) login.classList.add('hidden');
+
+    const app = document.getElementById('mainApp');
+    if (app) app.classList.add('hidden');
+
+    // Hide maintenance if both active?
+    const maintenance = document.getElementById('maintenanceOverlay');
+    if (maintenance) maintenance.style.display = 'none';
 
     // Disable any background tasks
     if (window.announcementTimer) clearInterval(window.announcementTimer);

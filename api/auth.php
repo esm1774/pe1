@@ -26,6 +26,11 @@ function checkAuth() {
             if (!empty($user['school_id']) && Tenant::isSaasMode()) {
                 $school = Tenant::school();
                 if ($school) {
+                    if ($school['active'] == 0) {
+                        session_destroy();
+                        jsonResponse(['success' => false, 'error' => 'هذا الحساب معطل حالياً، يرجى مراجعة مدير المنصة'], 403);
+                        return;
+                    }
                     $user['school_name'] = $school['name'];
                     $user['school_slug'] = $school['slug'];
                     $user['school_logo'] = $school['logo_url'];
@@ -62,10 +67,11 @@ function login() {
     $schoolIdResolved = Tenant::id(); // From subdomain or session
 
     if (!empty($schoolSlug) && Tenant::isSaasMode()) {
-        $stmt = $db->prepare("SELECT id FROM schools WHERE slug = ? AND active = 1");
+        $stmt = $db->prepare("SELECT id, active FROM schools WHERE slug = ?");
         $stmt->execute([$schoolSlug]);
         $school = $stmt->fetch();
         if ($school) {
+            if ($school['active'] == 0) jsonError('هذه المدرسة معطلة حالياً، يرجى مراجعة مدير المنصة');
             $schoolIdResolved = (int)$school['id'];
         } else {
             jsonError('المدرسة غير موجودة');
