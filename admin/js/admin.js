@@ -1003,7 +1003,7 @@ async function openSubModal(schoolId) {
                     </div>
                     <div class="form-group-modal">
                         <label>📅 تاريخ انتهاء الصلاحية</label>
-                        <input type="date" id="subEndsAt" class="form-input" value="${school.subscription_ends_at || school.trial_ends_at || ''}" dir="ltr">
+                        <input type="date" id="subEndsAt" class="form-input" value="${school.subscription_status === 'trial' ? (school.trial_ends_at || '') : (school.subscription_ends_at || '')}" dir="ltr">
                         <small style="font-size:10px;color:var(--text-muted)">سيُوقف النظام تلقائياً بعد هذا التاريخ</small>
                     </div>
                 </div>
