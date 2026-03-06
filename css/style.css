@@ -102,6 +102,32 @@
     border-color: var(--border-color) !important;
 }
 
+/* Fix for hover contrast in Dark Mode */
+[data-theme="dark"] .hover\:bg-gray-50:hover,
+[data-theme="dark"] .hover\:bg-slate-50:hover,
+[data-theme="dark"] .hover\:bg-blue-50:hover,
+[data-theme="dark"] .hover\:bg-green-50:hover,
+[data-theme="dark"] .hover\:bg-emerald-50:hover,
+[data-theme="dark"] .hover\:bg-gray-100:hover {
+    background-color: var(--input-bg) !important;
+}
+
+/* Fix for table categorization headers in Dark Mode */
+[data-theme="dark"] .bg-green-50 {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] .bg-yellow-50 {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .bg-gray-50 {
+    background-color: rgba(148, 163, 184, 0.1) !important;
+    color: var(--text-muted) !important;
+}
+
 /* ============================================
    BASE STYLES
    ============================================ */
