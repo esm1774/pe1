@@ -158,18 +158,20 @@ function getAttendance() {
     $session = $stmt->fetch();
     if (!$session) jsonError('الجلسة غير موجودة أو لا تملك صلاحية الوصول', 404);
 
-    // سجل الحضور مع أسماء الطلاب
+    // سجل الحضور المحدث: يشمل جميع أعضاء الفريق + أي طالب تم إضافته يدوياً لهذه الجلسة
     $stmt = $db->prepare("
-        SELECT ta.*, s.name AS student_name, s.student_number,
+        SELECT s.id AS student_id, s.name AS student_name, s.student_number,
                CONCAT(g.name, ' - ', c.name) AS class_name,
-               tm.jersey_number, tm.position, tm.status AS member_status
-        FROM training_attendance ta
-        JOIN students s ON ta.student_id = s.id
+               tm.jersey_number, tm.position, tm.status AS member_status,
+               ta.id AS attendance_id, ta.status, ta.performance, ta.notes
+        FROM students s
+        LEFT JOIN team_members tm ON tm.student_id = s.id AND tm.team_id = ?
+        LEFT JOIN training_attendance ta ON ta.student_id = s.id AND ta.session_id = ?
         LEFT JOIN classes c ON s.class_id = c.id
         LEFT JOIN grades  g ON c.grade_id  = g.id
-        LEFT JOIN team_members tm ON tm.team_id = ? AND tm.student_id = s.id
-        WHERE ta.session_id = ?
-        ORDER BY tm.jersey_number, s.name
+        WHERE (tm.team_id IS NOT NULL AND tm.status IN ('active', 'substitute'))
+           OR (ta.session_id IS NOT NULL)
+        ORDER BY (tm.team_id IS NULL) ASC, tm.status ASC, tm.jersey_number ASC, s.name ASC
     ");
     $stmt->execute([$session['team_id'], $sessionId]);
     $attendance = $stmt->fetchAll();

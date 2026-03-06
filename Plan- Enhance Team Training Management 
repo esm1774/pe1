@@ -1,0 +1,40 @@
+# Plan: Enhance Team Training Management
+
+This plan addresses the inability to edit training sessions and the difficulty of adding students to a training session after it has been created.
+
+## Proposed Changes
+
+### [Backend] Sports Teams Module
+#### [MODIFY] [training.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/modules/sports_teams/core/training.php)
+- Update [getAttendance()](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/modules/sports_teams/core/training.php#148-182) to perform a `LEFT JOIN` from `team_members` to `training_attendance`. This ensures that any student currently in the team will automatically appear in the attendance list, even if they joined the team after the session was created.
+- Ensure [updateSession()](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/modules/sports_teams/core/training.php#73-115) correctly handles all fields passed from the frontend.
+
+### [Frontend] Sports Teams Module
+#### [MODIFY] [sports_teams.js](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/js/sports_teams.js)
+- **Edit Training Logic**:
+    - Add an "Edit" (✏️) button to each session card in [renderTrainingTab](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/js/sports_teams.js#373-431).
+    - Modify [showSessionForm](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/js/sports_teams.js#1147-1190) to accept a `sessionId`. If provided, it will fetch the session data and switch the modal to "Edit Mode".
+    - Update [saveSession](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/js/sports_teams.js#1191-1208) to call `session_update` when an ID is present.
+- **Add Students to Training**:
+    - Add an "+ إضافة طالب" button to the attendance page ([openAttendance](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/js/sports_teams.js#1216-1290)).
+    - This button will open a student selection modal (similar to the one used when creating a team) to allow adding any student to the current training session's attendance list.
+    - When a student is selected, call `attendance_save` for that specific student to create their initial record.
+
+## Verification Plan
+
+### Manual Verification
+1. **Edit Training**:
+    - Open a team's training tab.
+    - Click the new "Edit" button on an existing session.
+    - Change the title, date, or venue.
+    - Save and verify the changes are reflected in the list and database.
+2. **Sync Team Members**:
+    - Create a training session for a team.
+    - Add a new student to the team.
+    - Open the attendance for the previously created training.
+    - Verify that the new student now appears in the list (automatically synced via the new SQL join).
+3. **Manual Student Addition**:
+    - Open the attendance for a training session.
+    - Click "+ إضافة طالب".
+    - Search and select a student who is NOT in the team.
+    - Verify they are added to the attendance list and their status can be saved.

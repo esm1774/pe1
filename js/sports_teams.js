@@ -414,7 +414,8 @@ async function renderTrainingTab(teamId, container) {
                         <div class="flex gap-1">
                             <button onclick="openAttendance(${s.id})" class="bg-green-100 text-green-700 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-green-200 cursor-pointer">📋 الحضور</button>
                             ${canEdit() ? `
-                            <button onclick="deleteSessionAction(${s.id},${teamId})" class="text-red-400 hover:text-red-600 cursor-pointer px-2">🗑️</button>
+                            <button onclick="showSessionForm(${teamId}, ${s.id})" class="text-blue-500 hover:text-blue-700 cursor-pointer px-2" title="تعديل">✏️</button>
+                            <button onclick="deleteSessionAction(${s.id},${teamId})" class="text-red-400 hover:text-red-600 cursor-pointer px-2" title="حذف">🗑️</button>
                             ` : ''}
                         </div>
                     </div>
@@ -1147,38 +1148,51 @@ async function removeMemberAction(memberId) {
 // ============================================================
 // SESSION FORM
 // ============================================================
-function showSessionForm(teamId) {
+async function showSessionForm(teamId, sessionId = null) {
+    let session = null;
+    if (sessionId) {
+        // We can either fetch it or find it if we have it in state, 
+        // but fetching is safer to ensure fresh data.
+        const r = await STAPI.get('attendance_get', { session_id: sessionId });
+        if (r?.success) session = r.data.session;
+    }
+
     showModal(`
     <div class="p-6">
-        <h3 class="text-xl font-bold mb-4">+ جلسة تدريب جديدة</h3>
+        <h3 class="text-xl font-bold mb-4">${session ? '✏️ تعديل' : '+'} جلسة تدريب ${session ? '' : 'جديدة'}</h3>
+        <input type="hidden" id="sId" value="${sessionId || ''}">
         <div class="space-y-4">
             <div>
                 <label class="block font-semibold text-gray-700 mb-1">عنوان الجلسة</label>
-                <input type="text" id="sTitle" value="تدريب" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                <input type="text" id="sTitle" value="${session ? esc(session.title) : 'تدريب'}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
             </div>
             <div class="grid grid-cols-3 gap-3">
                 <div>
                     <label class="block font-semibold text-gray-700 mb-1">التاريخ *</label>
-                    <input type="date" id="sDate" value="${new Date().toISOString().split('T')[0]}"
+                    <input type="date" id="sDate" value="${session ? session.session_date : new Date().toISOString().split('T')[0]}"
                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block font-semibold text-gray-700 mb-1">من</label>
-                    <input type="time" id="sStart" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                    <input type="time" id="sStart" value="${session?.start_time || ''}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block font-semibold text-gray-700 mb-1">إلى</label>
-                    <input type="time" id="sEnd" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                    <input type="time" id="sEnd" value="${session?.end_time || ''}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
                 </div>
             </div>
             <div>
                 <label class="block font-semibold text-gray-700 mb-1">المكان</label>
-                <input type="text" id="sVenue" placeholder="الملعب / القاعة ..." class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                <input type="text" id="sVenue" value="${session ? esc(session.venue || '') : ''}" placeholder="الملعب / القاعة ..." class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
             </div>
             <div>
                 <label class="block font-semibold text-gray-700 mb-1">محور التدريب</label>
-                <input type="text" id="sFocus" placeholder="مثال: تدريب على الأركنة والضربات الحرة"
+                <input type="text" id="sFocus" value="${session ? esc(session.focus || '') : ''}" placeholder="مثال: تدريب على الأركنة والضربات الحرة"
                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block font-semibold text-gray-700 mb-1">ملاحظات</label>
+                <textarea id="sNotes" rows="2" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" placeholder="ملاحظات إضافية...">${session ? esc(session.notes || '') : ''}</textarea>
             </div>
             <div class="flex gap-3 pt-2">
                 <button onclick="saveSession(${teamId})" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 cursor-pointer">حفظ</button>
@@ -1189,20 +1203,34 @@ function showSessionForm(teamId) {
 }
 
 async function saveSession(teamId) {
+    const id = document.getElementById('sId').value;
     const date = document.getElementById('sDate').value;
     if (!date) { showToast('التاريخ مطلوب', 'error'); return; }
 
-    const r = await STAPI.post('session_create', {
+    const data = {
         team_id: teamId,
         title: document.getElementById('sTitle').value || 'تدريب',
         session_date: date,
         start_time: document.getElementById('sStart').value || null,
         end_time: document.getElementById('sEnd').value || null,
         venue: document.getElementById('sVenue').value || null,
-        focus: document.getElementById('sFocus').value || null
-    });
+        focus: document.getElementById('sFocus').value || null,
+        notes: document.getElementById('sNotes').value || null
+    };
 
-    if (r?.success) { closeModal(); showToast('تم إنشاء الجلسة'); stOpenTab('training', teamId); }
+    let r;
+    if (id) {
+        data.id = id;
+        r = await STAPI.post('session_update', data);
+    } else {
+        r = await STAPI.post('session_create', data);
+    }
+
+    if (r?.success) {
+        closeModal();
+        showToast(id ? 'تم تحديث الجلسة' : 'تم إنشاء الجلسة');
+        stOpenTab('training', teamId);
+    }
     else showToast(r?.error || 'خطأ', 'error');
 }
 
@@ -1255,7 +1283,10 @@ async function openAttendance(sessionId) {
                     <tbody>
                         ${attendance.map(a => `
                         <tr class="border-t border-gray-100" data-student="${a.student_id}">
-                            <td class="px-3 py-3 font-semibold">${esc(a.student_name)}</td>
+                            <td class="px-3 py-3 font-semibold">
+                                ${esc(a.student_name)}
+                                ${!a.member_status ? '<span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg mr-2">خارج الفريق</span>' : ''}
+                            </td>
                             <td class="px-3 py-3 text-sm text-gray-500">${esc(a.class_name || '')}</td>
                             <td class="px-3 py-3 text-center">
                                 <select class="atnd-status border-2 border-gray-200 rounded-xl px-2 py-1 text-sm focus:outline-none focus:border-green-500">
@@ -1278,14 +1309,70 @@ async function openAttendance(sessionId) {
             </div>
 
             ${canEdit() ? `
-            <div class="mt-6 flex gap-3">
+            <div class="mt-6 flex flex-wrap gap-3">
                 <button onclick="saveAttendanceAction(${sessionId},${session.team_id})"
-                        class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 cursor-pointer">
+                        class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 cursor-pointer shadow-lg shadow-green-100 transition active:scale-95">
                     💾 حفظ الحضور
+                </button>
+                <button onclick="showAddTrainingMemberForm(${sessionId}, ${session.team_id})"
+                        class="bg-blue-100 text-blue-700 px-6 py-3 rounded-xl font-bold hover:bg-blue-200 cursor-pointer transition">
+                    + إضافة طالب للجلسة
                 </button>
             </div>` : ''}
         </div>
     </div>`;
+}
+
+async function showAddTrainingMemberForm(sessionId, teamId) {
+    // Reuse available_students logic. For training, we might want students from the same school
+    const r = await STAPI.get('available_students');
+    const students = r?.data || [];
+
+    showModal(`
+    <div class="p-6">
+        <h3 class="text-xl font-bold mb-4">+ إضافة طالب يدوياً لهذه الجلسة</h3>
+        <p class="text-xs text-gray-500 mb-4">ملاحظة: الطلاب المضافون للفريق يظهرون تلقائياً. استخدم هذا لمن يشاركون في هذا التدريب فقط.</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block font-semibold text-gray-700 mb-1">اختر الطالب *</label>
+                <input type="text" id="tmSearch" oninput="filterTrainingMemberList(this.value)"
+                       placeholder="ابحث باسم الطالب..."
+                       class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none mb-2">
+                <select id="tmStudent" size="8" class="w-full border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                    ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}">${esc(s.name)} — ${esc(s.class_name || '')} (${s.student_number})</option>`).join('')}
+                </select>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="addTrainingMemberAction(${sessionId}, ${teamId})" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 cursor-pointer">إضافة للقائمة</button>
+                <button onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 cursor-pointer">إلغاء</button>
+            </div>
+        </div>
+    </div>`);
+}
+
+function filterTrainingMemberList(query) {
+    document.querySelectorAll('#tmStudent option').forEach(opt => {
+        opt.style.display = opt.dataset.name?.includes(query) || !query ? '' : 'none';
+    });
+}
+
+async function addTrainingMemberAction(sessionId, teamId) {
+    const studentId = document.getElementById('tmStudent').value;
+    if (!studentId) { showToast('اختر طالباً', 'error'); return; }
+
+    // Just save their attendance as 'present' initially
+    const r = await STAPI.post('attendance_save', {
+        session_id: sessionId,
+        records: [{ student_id: studentId, status: 'present' }]
+    });
+
+    if (r?.success) {
+        closeModal();
+        showToast('تم إضافة الطالب لجلسة التدريب');
+        openAttendance(sessionId);
+    } else {
+        showToast(r?.error || 'خطأ', 'error');
+    }
 }
 
 async function saveAttendanceAction(sessionId, teamId) {
