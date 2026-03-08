@@ -422,6 +422,25 @@ function ensureSchema() {
         $db->prepare("INSERT IGNORE INTO `platform_settings` (setting_key, setting_value) VALUES ('maintenance_mode', '0')")->execute();
         $db->prepare("INSERT IGNORE INTO `platform_settings` (setting_key, setting_value) VALUES ('maintenance_message', 'المنصة في صيانة حالياً، سنعود قريباً.')")->execute();
 
+        $db->exec("CREATE TABLE IF NOT EXISTS `blog_posts` (
+            `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `school_id`      INT UNSIGNED DEFAULT NULL,
+            `title`          VARCHAR(255) NOT NULL,
+            `slug`           VARCHAR(255) NOT NULL,
+            `content`        LONGTEXT NOT NULL,
+            `excerpt`        TEXT DEFAULT NULL,
+            `image_path`     VARCHAR(255) DEFAULT NULL,
+            `category`       VARCHAR(100) DEFAULT 'general',
+            `status`         ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
+            `published_at`   DATETIME DEFAULT NULL,
+            `created_by`     INT UNSIGNED DEFAULT NULL,
+            `created_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY `uk_blog_slug` (`slug`),
+            INDEX `idx_blog_status` (`status`, `published_at`),
+            INDEX `idx_blog_school` (`school_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
     } catch (Exception $e) {
         if (defined('DEBUG_MODE') && DEBUG_MODE) {
             error_log('[ensureSchema Error] ' . $e->getMessage());

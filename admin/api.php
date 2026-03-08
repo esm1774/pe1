@@ -497,6 +497,11 @@ try {
         case 'advanced_analytics':   getAdvancedAnalytics(); break;
         case 'maintenance_get':      getMaintenanceSettings(); break;
         case 'maintenance_save':     saveMaintenanceSettings(); break;
+        
+        case 'blog_posts':           getBlogPosts(); break;
+        case 'blog_save':            saveBlogPost(); break;
+        case 'blog_delete':          deleteBlogPost(); break;
+
         default: jsonError('إجراء غير معروف', 404);
     }
 } catch (PDOException $e) {
@@ -627,4 +632,53 @@ function getAdvancedAnalytics() {
         'alert_schools' => $alertSchools,
         'subscription_distribution' => $subDist
     ]);
+}
+
+// ============================================================
+// BLOG MANAGEMENT
+// ============================================================
+function getBlogPosts() {
+    requirePlatformAdmin();
+    $db = getDB();
+    $posts = $db->query("SELECT * FROM blog_posts ORDER BY created_at DESC")->fetchAll();
+    jsonSuccess($posts);
+}
+
+function saveBlogPost() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    validateRequired($data, ['title', 'slug', 'content']);
+    $db = getDB();
+
+    $id = $data['id'] ?? null;
+    $title = sanitize($data['title']);
+    $slug = sanitize($data['slug']);
+    $category = sanitize($data['category'] ?? 'general');
+    $status = sanitize($data['status'] ?? 'draft');
+    $imagePath = sanitize($data['image_path'] ?? '');
+    $excerpt = sanitize($data['excerpt'] ?? '');
+    $content = $data['content']; // Allow HTML but manage with care
+
+    // Ensure slug uniqueness
+    $stmt = $db->prepare("SELECT id FROM blog_posts WHERE slug = ? AND id != ?");
+    $stmt->execute([$slug, $id ?? 0]);
+    if ($stmt->fetch()) jsonError('الرابط الصديق (slug) مستخدم بالفعل');
+
+    if ($id) {
+        $db->prepare("UPDATE blog_posts SET title=?, slug=?, category=?, status=?, image_path=?, excerpt=?, content=? WHERE id=?")
+           ->execute([$title, $slug, $category, $status, $imagePath, $excerpt, $content, $id]);
+    } else {
+        $db->prepare("INSERT INTO blog_posts (title, slug, category, status, image_path, excerpt, content, published_at) VALUES (?,?,?,?,?,?,?,?)")
+           ->execute([$title, $slug, $category, $status, $imagePath, $excerpt, $content, ($status === 'published' ? date('Y-m-d H:i:s') : null)]);
+    }
+    jsonSuccess(null, 'تم حفظ المقال بنجاح');
+}
+
+function deleteBlogPost() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) jsonError('معرف غير صالح');
+    getDB()->prepare("DELETE FROM blog_posts WHERE id = ?")->execute([$id]);
+    jsonSuccess(null, 'تم حذف المقال');
 }

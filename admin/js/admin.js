@@ -42,6 +42,7 @@ const API = {
 let adminUser = null;
 let currentPage = 'dashboard';
 let cachedPlans = [];
+let quill = null;
 
 // ============================================================
 // THEME
@@ -153,7 +154,8 @@ function navigate(page) {
         announcements: renderAnnouncements,
         audit_logs: renderGlobalLogs,
         analytics: renderAdvancedAnalytics,
-        settings: renderPlatformSettings
+        settings: renderPlatformSettings,
+        blog: renderBlog
     };
 
     if (renderers[page]) renderers[page]();
@@ -1572,6 +1574,200 @@ async function savePlatformSettings() {
 
     btn.disabled = false;
     btn.innerText = '💾 حفظ الإعدادات العامة';
+}
+
+// ============================================================
+// BLOG MANAGEMENT
+// ============================================================
+async function renderBlog() {
+    const mc = document.getElementById('mainContent');
+    mc.innerHTML = '<div class="spinner"></div>';
+
+    const r = await API.get('blog_posts');
+    if (!r || !r.success) {
+        mc.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>خطأ في جلب المقالات</p></div>';
+        return;
+    }
+
+    const posts = r.data;
+    mc.innerHTML = `
+        <div class="page-header">
+            <h1>📰 المدونة والدروس</h1>
+            <p>إدارة المقالات، الشروحات، وأخبار المنصة المنشورة على صفحة الهبوط.</p>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h3>📋 قائمة المقالات (${posts.length})</h3>
+                <button class="btn btn-emerald btn-sm" onclick="openPostModal()">➕ إضافة مقال جديد</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المقال</th>
+                            <th>التصنيف</th>
+                            <th>الحالة</th>
+                            <th>تاريخ النشر</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${posts.length === 0 ? '<tr><td colspan="6"><div class="empty-state"><div class="icon">📰</div><p>لا توجد مقالات بعد</p></div></td></tr>' : ''}
+                        ${posts.map(p => `
+                            <tr>
+                                <td>${p.id}</td>
+                                <td>
+                                    <strong>${esc(p.title)}</strong>
+                                    <div style="font-size:10px;color:var(--text-muted)">/${esc(p.slug)}</div>
+                                </td>
+                                <td><span class="badge" style="background:var(--bg-glass);color:var(--text-primary)">${esc(p.category)}</span></td>
+                                <td>${p.status === 'published' ? '<span class="badge badge-active">منشور</span>' : '<span class="badge badge-trial">مسودة</span>'}</td>
+                                <td style="font-size:12px;color:var(--text-muted)">${p.published_at || p.created_at.split(' ')[0]}</td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="action-btn edit" onclick="openPostModal(${p.id})" title="تعديل">✏️</button>
+                                        <a href="../post.php?slug=${p.slug}" target="_blank" class="action-btn enter" style="text-decoration:none;display:flex;align-items:center;justify-content:center" title="معاينة">👁️</a>
+                                        <button class="action-btn delete" onclick="deletePost(${p.id}, '${esc(p.title)}')" title="حذف">🗑️</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function openPostModal(id = null) {
+    let post = { title: '', slug: '', content: '', excerpt: '', category: 'الدروس', status: 'published', image_path: '' };
+
+    if (id) {
+        const r = await API.get('blog_posts');
+        post = r.data.find(p => p.id == id) || post;
+    }
+
+    openModal(`
+        <div class="modal-header">
+            <h3>${id ? '✏️ تعديل مقال' : '➕ إضافة مقال جديد'}</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:80vh;overflow-y:auto">
+            <input type="hidden" id="postId" value="${id || ''}">
+            <div class="form-group-modal">
+                <label>عنوان المقال *</label>
+                <input type="text" id="postTitle" class="form-input" value="${esc(post.title)}" oninput="generateSlug(this.value)">
+            </div>
+            <div class="form-group-modal">
+                <label>الرابط الصديق (Slug) *</label>
+                <input type="text" id="postSlug" class="form-input" value="${esc(post.slug)}" dir="ltr">
+            </div>
+            <div class="form-row">
+                <div class="form-group-modal">
+                    <label>التصنيف</label>
+                    <select id="postCategory" class="form-select">
+                        <option value="الدروس" ${post.category === 'الدروس' ? 'selected' : ''}>الدروس</option>
+                        <option value="أخبار المنصة" ${post.category === 'أخبار المنصة' ? 'selected' : ''}>أخبار المنصة</option>
+                        <option value="نصائح" ${post.category === 'نصائح' ? 'selected' : ''}>نصائح وتوجيهات</option>
+                    </select>
+                </div>
+                <div class="form-group-modal">
+                    <label>الحالة</label>
+                    <select id="postStatus" class="form-select">
+                        <option value="published" ${post.status === 'published' ? 'selected' : ''}>منشور</option>
+                        <option value="draft" ${post.status === 'draft' ? 'selected' : ''}>مسودة</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group-modal">
+                <label>رابط الصورة البارزة (URL)</label>
+                <input type="text" id="postImage" class="form-input" value="${esc(post.image_path || '')}" placeholder="https://..." dir="ltr">
+            </div>
+            <div class="form-group-modal">
+                <label>ملخص قصير (Excerpt)</label>
+                <textarea id="postExcerpt" class="form-input" rows="2">${esc(post.excerpt || '')}</textarea>
+            </div>
+            <div class="form-group-modal editor-wrapper">
+                <label>المحتوى الكامل (المحرر المرئي)</label>
+                <div id="postEditor"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-emerald btn-sm" onclick="savePost()">💾 حفظ المقال</button>
+            <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
+        </div>
+    `, 'lg');
+
+    // Initialize Quill
+    quill = new Quill('#postEditor', {
+        theme: 'snow',
+        placeholder: 'اكتب محتوى المقال هنا...',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'direction': 'rtl' }],
+                ['link', 'image'],
+                ['clean']
+            ]
+        }
+    });
+
+    if (post.content) {
+        quill.root.innerHTML = post.content;
+    }
+}
+
+function generateSlug(title) {
+    const slugEl = document.getElementById('postSlug');
+    if (slugEl && (!slugEl.value || document.getElementById('postId').value === '')) {
+        slugEl.value = title.toLowerCase()
+            .replace(/[^\w\s\u0621-\u064A]/gi, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+    }
+}
+
+async function savePost() {
+    const data = {
+        id: document.getElementById('postId').value || null,
+        title: document.getElementById('postTitle').value.trim(),
+        slug: document.getElementById('postSlug').value.trim(),
+        category: document.getElementById('postCategory').value,
+        status: document.getElementById('postStatus').value,
+        image_path: document.getElementById('postImage').value.trim(),
+        excerpt: document.getElementById('postExcerpt').value.trim(),
+        content: quill.root.innerHTML
+    };
+
+    if (!data.title || !data.slug || !data.content) {
+        return toast('يرجى ملء العنوان والرابط والمحتوى', 'error');
+    }
+
+    const r = await API.post('blog_save', data);
+    if (r && r.success) {
+        toast('تم حفظ المقال بنجاح');
+        closeModal();
+        renderBlog();
+    } else {
+        toast(r?.error || 'خطأ في الحفظ', 'error');
+    }
+}
+
+async function deletePost(id, title) {
+    if (!confirm(`هل أنت متأكد من حذف المقال "${title}" نهائياً؟`)) return;
+
+    const r = await API.post('blog_delete', { id });
+    if (r && r.success) {
+        toast('تم حذف المقال');
+        renderBlog();
+    } else {
+        toast(r?.error || 'خطأ في الحذف', 'error');
+    }
 }
 
 // ============================================================
