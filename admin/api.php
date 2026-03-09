@@ -190,6 +190,7 @@ function savePlan() {
     $active       = isset($data['active']) ? (int)($data['active']) : 1;
     $sortOrder    = (int)($data['sort_order'] ?? 0);
     $features     = $data['features'] ?? '{}';
+    $featuresList = sanitize($data['features_list'] ?? '');
 
     if (is_array($features)) $features = json_encode($features, JSON_UNESCAPED_UNICODE);
 
@@ -198,11 +199,11 @@ function savePlan() {
     }
 
     if ($id) {
-        $db->prepare("UPDATE plans SET name=?, name_en=?, slug=?, description=?, price_monthly=?, price_yearly=?, max_students=?, max_teachers=?, max_classes=?, features=?, is_default=?, active=?, sort_order=? WHERE id=?")
-           ->execute([$name, $nameEn, $slug, $description, $priceMonthly, $priceYearly, $maxStudents, $maxTeachers, $maxClasses, $features, $isDefault, $active, $sortOrder, $id]);
+        $db->prepare("UPDATE plans SET name=?, name_en=?, slug=?, description=?, price_monthly=?, price_yearly=?, max_students=?, max_teachers=?, max_classes=?, features=?, features_list=?, is_default=?, active=?, sort_order=? WHERE id=?")
+           ->execute([$name, $nameEn, $slug, $description, $priceMonthly, $priceYearly, $maxStudents, $maxTeachers, $maxClasses, $features, $featuresList, $isDefault, $active, $sortOrder, $id]);
     } else {
-        $db->prepare("INSERT INTO plans (name, name_en, slug, description, price_monthly, price_yearly, max_students, max_teachers, max_classes, features, is_default, active, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
-           ->execute([$name, $nameEn, $slug, $description, $priceMonthly, $priceYearly, $maxStudents, $maxTeachers, $maxClasses, $features, $isDefault, $active, $sortOrder]);
+        $db->prepare("INSERT INTO plans (name, name_en, slug, description, price_monthly, price_yearly, max_students, max_teachers, max_classes, features, features_list, is_default, active, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+           ->execute([$name, $nameEn, $slug, $description, $priceMonthly, $priceYearly, $maxStudents, $maxTeachers, $maxClasses, $features, $featuresList, $isDefault, $active, $sortOrder]);
         $id = $db->lastInsertId();
     }
     jsonSuccess(['id' => (int)$id], 'تم حفظ الخطة بنجاح');
@@ -499,8 +500,16 @@ try {
         case 'maintenance_save':     saveMaintenanceSettings(); break;
         
         case 'blog_posts':           getBlogPosts(); break;
+        case 'blog_post':            getBlogPost(); break;
         case 'blog_save':            saveBlogPost(); break;
         case 'blog_delete':          deleteBlogPost(); break;
+        case 'blog_categories':      getBlogCategories(); break;
+        case 'blog_category_save':   saveBlogCategory(); break;
+        case 'blog_category_delete': deleteBlogCategory(); break;
+
+        case 'get_media':            getMedia(); break;
+        case 'upload_media':         uploadMedia(); break;
+        case 'delete_media':         deleteMedia(); break;
 
         default: jsonError('إجراء غير معروف', 404);
     }
@@ -637,11 +646,46 @@ function getAdvancedAnalytics() {
 // ============================================================
 // BLOG MANAGEMENT
 // ============================================================
+
+/**
+ * purifyBlogHtml — strips XSS vectors & Base64 images from Quill HTML.
+ * A lightweight alternative to HTMLPurifier for this use case.
+ */
+function purifyBlogHtml(string $html): string
+{
+    // 1. Remove Base64 embedded images (src="data:...") — main cause of max_allowed_packet
+    $html = preg_replace('/<img([^>]*?)\ssrc=\s*[\'"](data:[^\'"]*)[\'"]([^>]*?)>/i', '', $html);
+
+    // 2. Allow only safe HTML tags (Quill output)
+    $allowedTags = '<p><br><b><strong><i><em><u><s><strike><h1><h2><h3><h4><h5><h6>'.
+                   '<ol><ul><li><blockquote><pre><code><a><img><span><div>';
+    $html = strip_tags($html, $allowedTags);
+
+    // 3. Remove dangerous attributes (onclick, onerror, javascript:, etc.)
+    $html = preg_replace('/\s(on\w+|style)\s*=\s*[\'"[^\'"]]*[\'"]*/i', '', $html);
+    $html = preg_replace('/javascript\s*:/i', '#', $html);
+
+    return trim($html);
+}
+
 function getBlogPosts() {
     requirePlatformAdmin();
     $db = getDB();
-    $posts = $db->query("SELECT * FROM blog_posts ORDER BY created_at DESC")->fetchAll();
+    // Return without content (big field) for listing performance
+    $posts = $db->query("SELECT id,title,slug,category,status,image_path,excerpt,published_at,publish_at,sort_order,views,created_at FROM blog_posts ORDER BY sort_order DESC, publish_at DESC, created_at DESC")->fetchAll();
     jsonSuccess($posts);
+}
+
+function getBlogPost() {
+    requirePlatformAdmin();
+    $id = (int)getParam('id', 0);
+    if (!$id) jsonError('معرف غير صالح');
+    $db = getDB();
+    $stmt = $db->prepare("SELECT * FROM blog_posts WHERE id = ?");
+    $stmt->execute([$id]);
+    $post = $stmt->fetch();
+    if (!$post) jsonError('المقال غير موجود');
+    jsonSuccess($post);
 }
 
 function saveBlogPost() {
@@ -650,14 +694,21 @@ function saveBlogPost() {
     validateRequired($data, ['title', 'slug', 'content']);
     $db = getDB();
 
-    $id = $data['id'] ?? null;
-    $title = sanitize($data['title']);
-    $slug = sanitize($data['slug']);
-    $category = sanitize($data['category'] ?? 'general');
-    $status = sanitize($data['status'] ?? 'draft');
-    $imagePath = sanitize($data['image_path'] ?? '');
-    $excerpt = sanitize($data['excerpt'] ?? '');
-    $content = $data['content']; // Allow HTML but manage with care
+    $id         = $data['id'] ?? null;
+    $title      = sanitize($data['title']);
+    $slug       = sanitize($data['slug']);
+    $category   = sanitize($data['category'] ?? 'general');
+    $status     = sanitize($data['status'] ?? 'draft');
+    $imagePath  = sanitize($data['image_path'] ?? '');
+    $excerpt    = sanitize($data['excerpt'] ?? '');
+    $publishAt  = !empty($data['publish_at']) ? sanitize($data['publish_at']) : null;
+    $sortOrder  = isset($data['sort_order']) ? (int)$data['sort_order'] : 0;
+    $content    = purifyBlogHtml($data['content']); // ✅ Sanitize HTML, strip Base64 images
+
+    // Guard: reject if content is empty after purification
+    if (empty($content)) {
+        jsonError('المحتوى فارغ أو يحتوي على بيانات غير مسموحة (مثل صور Base64). يرجى استخدام مكتبة الوسائط لإدراج الصور.');
+    }
 
     // Ensure slug uniqueness
     $stmt = $db->prepare("SELECT id FROM blog_posts WHERE slug = ? AND id != ?");
@@ -665,11 +716,11 @@ function saveBlogPost() {
     if ($stmt->fetch()) jsonError('الرابط الصديق (slug) مستخدم بالفعل');
 
     if ($id) {
-        $db->prepare("UPDATE blog_posts SET title=?, slug=?, category=?, status=?, image_path=?, excerpt=?, content=? WHERE id=?")
-           ->execute([$title, $slug, $category, $status, $imagePath, $excerpt, $content, $id]);
+        $db->prepare("UPDATE blog_posts SET title=?, slug=?, category=?, status=?, image_path=?, excerpt=?, publish_at=?, sort_order=?, content=? WHERE id=?")
+           ->execute([$title, $slug, $category, $status, $imagePath, $excerpt, $publishAt, $sortOrder, $content, $id]);
     } else {
-        $db->prepare("INSERT INTO blog_posts (title, slug, category, status, image_path, excerpt, content, published_at) VALUES (?,?,?,?,?,?,?,?)")
-           ->execute([$title, $slug, $category, $status, $imagePath, $excerpt, $content, ($status === 'published' ? date('Y-m-d H:i:s') : null)]);
+        $db->prepare("INSERT INTO blog_posts (title, slug, category, status, image_path, excerpt, publish_at, sort_order, content, published_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+           ->execute([$title, $slug, $category, $status, $imagePath, $excerpt, $publishAt, $sortOrder, $content, ($status === 'published' ? date('Y-m-d H:i:s') : null)]);
     }
     jsonSuccess(null, 'تم حفظ المقال بنجاح');
 }
@@ -681,4 +732,124 @@ function deleteBlogPost() {
     if (!$id) jsonError('معرف غير صالح');
     getDB()->prepare("DELETE FROM blog_posts WHERE id = ?")->execute([$id]);
     jsonSuccess(null, 'تم حذف المقال');
+}
+
+function getBlogCategories() {
+    requirePlatformAdmin();
+    $db = getDB();
+    $categories = $db->query("SELECT * FROM blog_categories ORDER BY name ASC")->fetchAll();
+    jsonSuccess($categories);
+}
+
+function saveBlogCategory() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    validateRequired($data, ['name']);
+    $db = getDB();
+
+    $id = $data['id'] ?? null;
+    $name = sanitize($data['name']);
+
+    $stmt = $db->prepare("SELECT id FROM blog_categories WHERE name = ? AND id != ?");
+    $stmt->execute([$name, $id ?? 0]);
+    if ($stmt->fetch()) jsonError('اسم التصنيف مستخدم بالفعل');
+
+    if ($id) {
+        $db->prepare("UPDATE blog_categories SET name=? WHERE id=?")->execute([$name, $id]);
+    } else {
+        $db->prepare("INSERT INTO blog_categories (name) VALUES (?)")->execute([$name]);
+    }
+    jsonSuccess(null, 'تم حفظ التصنيف');
+}
+
+function deleteBlogCategory() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) jsonError('معرف غير صالح');
+    getDB()->prepare("DELETE FROM blog_categories WHERE id = ?")->execute([$id]);
+    jsonSuccess(null, 'تم حذف التصنيف');
+}
+
+
+// ============================================================
+// MEDIA LIBRARY
+// ============================================================
+function getMedia() {
+    requirePlatformAdmin();
+    $db = getDB();
+    $media = $db->query("SELECT * FROM media_library ORDER BY created_at DESC")->fetchAll();
+    jsonSuccess($media);
+}
+
+function uploadMedia() {
+    requirePlatformAdmin();
+
+    if (empty($_FILES['file'])) {
+        jsonError('لم يتم إرسال أي ملف');
+    }
+
+    $file    = $_FILES['file'];
+    $maxSize = 3 * 1024 * 1024; // 3 MB
+
+    if ($file['size'] > $maxSize) {
+        jsonError('حجم الصورة يتجاوز الحد المسموح (3 MB). يرجى ضغط الصورة أولاً.');
+    }
+
+    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime  = $finfo->file($file['tmp_name']);
+    if (!in_array($mime, $allowedMimes)) {
+        jsonError('نوع الملف غير مسموح. يُقبل فقط: JPG, PNG, WEBP, GIF');
+    }
+
+    $extMap   = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+    $ext      = $extMap[$mime] ?? 'jpg';
+    $filename = 'media_' . time() . '_' . bin2hex(random_bytes(5)) . '.' . $ext;
+    $uploadDir = __DIR__ . '/../uploads/media/';
+    $savePath  = $uploadDir . $filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $savePath)) {
+        jsonError('فشل في رفع الملف. تحقق من صلاحيات المجلد.');
+    }
+
+    $dimensions = @getimagesize($savePath);
+    $width  = $dimensions ? $dimensions[0] : null;
+    $height = $dimensions ? $dimensions[1] : null;
+
+    $db = getDB();
+    $db->prepare("INSERT INTO media_library (filename, original_name, file_path, file_size, mime_type, width, height) VALUES (?,?,?,?,?,?,?)")
+       ->execute([$filename, $file['name'], 'uploads/media/' . $filename, $file['size'], $mime, $width, $height]);
+
+    $id = $db->lastInsertId();
+    jsonSuccess([
+        'id'        => (int)$id,
+        'filename'  => $filename,
+        'file_path' => 'uploads/media/' . $filename,
+        'file_size' => $file['size'],
+        'width'     => $width,
+        'height'    => $height,
+        'mime_type' => $mime,
+    ], 'تم رفع الصورة بنجاح');
+}
+
+function deleteMedia() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id   = (int)($data['id'] ?? 0);
+    if (!$id) jsonError('معرف غير صالح');
+
+    $db   = getDB();
+    $stmt = $db->prepare("SELECT file_path FROM media_library WHERE id = ?");
+    $stmt->execute([$id]);
+    $media = $stmt->fetch();
+    if (!$media) jsonError('الملف غير موجود');
+
+    $physicalPath = __DIR__ . '/../' . $media['file_path'];
+    if (file_exists($physicalPath)) {
+        unlink($physicalPath);
+    }
+
+    $db->prepare("DELETE FROM media_library WHERE id = ?")->execute([$id]);
+    jsonSuccess(null, 'تم حذف الصورة بنجاح');
 }

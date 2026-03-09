@@ -10,9 +10,14 @@ if (empty($slug)) {
 
 // Fetch Post from DB
 $db = getDB();
-$stmt = $db->prepare("SELECT * FROM blog_posts WHERE slug = ? AND (status = 'published' OR ? = 'admin') LIMIT 1");
-// Basic security: if user is logged in as admin, they can preview drafts
 $user_role = $_SESSION['user_role'] ?? 'guest';
+
+$stmt = $db->prepare("
+    SELECT * FROM blog_posts 
+    WHERE slug = ? 
+    AND (? = 'admin' OR (status = 'published' AND (publish_at IS NULL OR publish_at <= NOW()))) 
+    LIMIT 1
+");
 $stmt->execute([$slug, $user_role]);
 $post = $stmt->fetch();
 
@@ -20,10 +25,31 @@ if (!$post) {
     die("المقال غير موجود أو غير منشور حالياً.");
 }
 
+// Increment Views (if not admin and not already viewed in this session)
+if ($user_role !== 'admin' && !isset($_SESSION['viewed_post_' . $post['id']])) {
+    $db->prepare("UPDATE blog_posts SET views = views + 1 WHERE id = ?")->execute([$post['id']]);
+    $post['views'] = ($post['views'] ?? 0) + 1; // Update locally for display
+    $_SESSION['viewed_post_' . $post['id']] = true;
+}
+
 // SEO Metadata
 $pageTitle = $post['title'] . " | PE Smart School";
 $pageDesc = $post['excerpt'] ?? mb_substr(strip_tags($post['content']), 0, 160);
 $pageImage = $post['image_path'] ?? (BASE_URL . '/assets/img/default-blog.jpg');
+
+// Check Reading Time
+$wordCount = str_word_count(strip_tags($post['content']));
+$readTimeMinutes = max(1, ceil($wordCount / 200)); // Average 200 words/min
+
+// Related Posts
+$relatedStmt = $db->prepare("
+    SELECT * FROM blog_posts 
+    WHERE category = ? AND id != ? AND status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())
+    ORDER BY sort_order DESC, COALESCE(publish_at, created_at) DESC LIMIT 2
+");
+$relatedStmt->execute([$post['category'], $post['id']]);
+$relatedPosts = $relatedStmt->fetchAll();
+
 
 ?>
 <!DOCTYPE html>
@@ -42,7 +68,8 @@ $pageImage = $post['image_path'] ?? (BASE_URL . '/assets/img/default-blog.jpg');
     <meta property="og:url" content="<?php echo BASE_URL . '/post.php?slug=' . $post['slug']; ?>">
 
     <!-- Tailwind & Fonts -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (Production Optimization) -->
+    <link rel="stylesheet" href="assets/css/main.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -63,6 +90,10 @@ $pageImage = $post['image_path'] ?? (BASE_URL . '/assets/img/default-blog.jpg');
         article img { border-radius: 2rem; margin: 2rem 0; width: 100%; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
         article h2 { font-size: 1.875rem; font-weight: 800; margin-top: 2.5rem; margin-bottom: 1.25rem; color: #1e293b; }
         article p { line-height: 1.8; margin-bottom: 1.5rem; font-weight: 500; color: #475569; }
+        article ol { list-style-type: decimal; padding-inline-start: 1.5rem; margin-bottom: 1.5rem; }
+        article ul { list-style-type: disc; padding-inline-start: 1.5rem; margin-bottom: 1.5rem; }
+        article li { margin-bottom: 0.5rem; line-height: 1.8; color: #475569; }
+        article blockquote { border-right: 4px solid #10b981; padding: 1rem 1.5rem; margin: 2rem 0; background: #f8fafc; font-style: italic; }
     </style>
 </head>
 <body class="bg-white text-slate-800">
@@ -70,7 +101,7 @@ $pageImage = $post['image_path'] ?? (BASE_URL . '/assets/img/default-blog.jpg');
     <!-- Header / Navbar -->
     <header class="px-4 py-4">
         <nav class="max-w-7xl mx-auto glass-panel rounded-full px-6 py-3 flex items-center justify-between shadow-lg">
-            <a href="welcome.html" class="flex items-center gap-3">
+            <a href="welcome.php" class="flex items-center gap-3">
                 <div class="w-10 h-10 emerald-gradient rounded-full flex items-center justify-center text-white shadow-md">
                     <i data-lucide="activity" class="w-5 h-5"></i>
                 </div>
@@ -82,7 +113,7 @@ $pageImage = $post['image_path'] ?? (BASE_URL . '/assets/img/default-blog.jpg');
                     العودة للمدونة
                 </a>
             </div>
-            <a href="welcome.html" class="px-6 py-2 text-sm font-black text-slate-800 bg-slate-100 rounded-full">الرئيسية</a>
+            <a href="welcome.php" class="px-6 py-2 text-sm font-black text-slate-800 bg-slate-100 rounded-full">الرئيسية</a>
         </nav>
     </header>
 
@@ -116,6 +147,16 @@ $pageImage = $post['image_path'] ?? (BASE_URL . '/assets/img/default-blog.jpg');
                     <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">تاريخ النشر</p>
                     <p class="text-sm font-black text-slate-700"><?php echo date('d M, Y', strtotime($post['created_at'])); ?></p>
                 </div>
+                <div class="mr-auto flex items-center gap-4 text-slate-400">
+                    <span class="flex items-center gap-1" title="وقت القراءة المتوقع">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        <span class="text-xs font-bold"><?php echo $readTimeMinutes; ?> دقائق حد أقصى للقراءة</span>
+                    </span>
+                    <span class="flex items-center gap-1" title="عدد المشاهدات">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                        <span class="text-xs font-bold"><?php echo number_format($post['views'] ?? 0); ?> قراءة</span>
+                    </span>
+                </div>
             </div>
 
             <!-- Featured Image -->
@@ -124,13 +165,31 @@ $pageImage = $post['image_path'] ?? (BASE_URL . '/assets/img/default-blog.jpg');
             <?php endif; ?>
 
             <!-- Content -->
-            <div class="prose prose-lg max-w-none prose-slate">
                 <?php 
-                    // Allowing some HTML for basic formatting
-                    echo nl2br($post['content']); 
+                    // Content from Quill.js is HTML, no nl2br needed
+                    echo $post['content']; 
                 ?>
             </div>
 
+            <!-- Related Posts -->
+            <?php if (!empty($relatedPosts)): ?>
+            <section class="mt-20 pt-10 border-t border-slate-100">
+                <h3 class="text-2xl font-black text-slate-800 mb-8">مقالات ذات صلة بـ "<?php echo htmlspecialchars($post['category']); ?>"</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <?php foreach ($relatedPosts as $rp): ?>
+                        <a href="post.php?slug=<?php echo $rp['slug']; ?>" class="group block bg-white border border-slate-100 rounded-3xl p-4 hover:shadow-xl transition-all duration-300">
+                            <div class="aspect-[16/9] mb-4 overflow-hidden rounded-2xl relative">
+                                <img src="<?php echo htmlspecialchars($rp['image_path'] ?: 'assets/img/default-blog.jpg'); ?>" alt="<?php echo htmlspecialchars($rp['title']); ?>" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                                <div class="absolute top-3 right-3 bg-white/90 backdrop-blur text-emerald-600 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+                                    <?php echo htmlspecialchars($rp['category']); ?>
+                                </div>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-800 group-hover:text-emerald-600 transition line-clamp-2"><?php echo htmlspecialchars($rp['title']); ?></h4>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+            <?php endif; ?>
             <!-- Share Section -->
             <section class="mt-20 p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100 text-center">
                 <h3 class="text-xl font-black text-slate-800 mb-6">أعجبك المقال؟ شاركه مع زملائك</h3>

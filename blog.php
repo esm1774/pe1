@@ -7,9 +7,17 @@ $pageDesc = "استكشف أحدث المقالات، الشروحات التع�
 
 // Fetch Posts from DB
 $db = getDB();
-$stmt = $db->prepare("SELECT * FROM blog_posts WHERE status = 'published' AND (published_at <= NOW() OR published_at IS NULL) ORDER BY created_at DESC");
-$stmt->execute();
-$posts = $stmt->fetchAll();
+
+// Fetch active categories
+$categories = $db->query("SELECT * FROM blog_categories ORDER BY name ASC")->fetchAll();
+
+// Fetch published posts respecting schedule
+$postsQuery = "
+    SELECT * FROM blog_posts 
+    WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW()) 
+    ORDER BY sort_order DESC, COALESCE(publish_at, created_at) DESC
+";
+$posts = $db->query($postsQuery)->fetchAll();
 
 ?>
 <!DOCTYPE html>
@@ -21,7 +29,8 @@ $posts = $stmt->fetchAll();
     <meta name="description" content="<?php echo $pageDesc; ?>">
     
     <!-- Tailwind & Fonts -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (Production Optimization) -->
+    <link rel="stylesheet" href="assets/css/main.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -48,16 +57,16 @@ $posts = $stmt->fetchAll();
     <!-- Header / Navbar -->
     <header class="sticky top-0 z-50 px-4 py-4">
         <nav class="max-w-7xl mx-auto glass-panel rounded-full px-6 py-3 flex items-center justify-between shadow-lg">
-            <a href="welcome.html" class="flex items-center gap-3">
+            <a href="welcome.php" class="flex items-center gap-3">
                 <div class="w-10 h-10 emerald-gradient rounded-full flex items-center justify-center text-white shadow-md">
                     <i data-lucide="activity" class="w-5 h-5"></i>
                 </div>
                 <span class="text-xl font-black text-slate-800">PE Smart</span>
             </a>
             <div class="hidden md:flex items-center gap-6 text-sm font-bold">
-                <a href="welcome.html#features" class="hover:text-emerald-600 transition">المقومات</a>
-                <a href="welcome.html#blog" class="text-emerald-600">المدونة</a>
-                <a href="welcome.html#pricing" class="hover:text-emerald-600 transition">الأسعار</a>
+                <a href="welcome.php#features" class="hover:text-emerald-600 transition">المقومات</a>
+                <a href="welcome.php#blog" class="text-emerald-600">المدونة</a>
+                <a href="welcome.php#pricing" class="hover:text-emerald-600 transition">الأسعار</a>
             </div>
             <a href="index.html" class="px-6 py-2 text-sm font-black text-white emerald-gradient rounded-full shadow-lg">دخول النظام</a>
         </nav>

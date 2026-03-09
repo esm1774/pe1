@@ -134,6 +134,11 @@
                             <span class="icon">📰</span> المدونة والدروس
                         </button>
                     </li>
+                    <li>
+                        <button class="sidebar-link" onclick="navigate('media')" data-page="media">
+                            <span class="icon">🖼️</span> مكتبة الوسائط
+                        </button>
+                    </li>
                 </ul>
             </aside>
 
@@ -147,6 +152,12 @@
     <!-- MODAL -->
     <div id="modalOverlay" class="modal-overlay" onclick="event.target===this && closeModal()">
         <div class="modal" id="modalContent"></div>
+    </div>
+
+    <!-- MEDIA PICKER (separate overlay to avoid replacing blog post form) -->
+    <div id="mediaPickerOverlay" class="modal-overlay" onclick="event.target===this && closeMediaPicker()"
+        style="z-index:1010">
+        <div class="modal" id="mediaPickerContent" style="max-width:720px"></div>
     </div>
 
     <!-- TOAST -->

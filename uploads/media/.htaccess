@@ -1,0 +1,16 @@
+# ================================================
+# Security: Prevent execution of scripts in uploads
+# ================================================
+
+# Block PHP and other script execution
+<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|aspx|sh|cgi|exe|bat)$">
+    Deny from all
+</FilesMatch>
+
+# Only allow image files
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico)$">
+    Allow from all
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes

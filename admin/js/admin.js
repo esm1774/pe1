@@ -155,7 +155,8 @@ function navigate(page) {
         audit_logs: renderGlobalLogs,
         analytics: renderAdvancedAnalytics,
         settings: renderPlatformSettings,
-        blog: renderBlog
+        blog: renderBlog,
+        media: renderMedia
     };
 
     if (renderers[page]) renderers[page]();
@@ -273,7 +274,7 @@ async function renderSchools() {
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="blogTableBody">
                         ${schools.length === 0 ? '<tr><td colspan="9"><div class="empty-state"><div class="icon">🏫</div><p>لا توجد مدارس بعد</p></div></td></tr>' : ''}
                         ${schools.map(s => `
                             <tr>
@@ -702,7 +703,7 @@ async function renderPlans() {
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="blogTableBody">
                         ${plans.map(p => {
         const features = p.features ? JSON.parse(p.features) : {};
         const activeFeatures = Object.keys(ALL_FEATURES).filter(f => features[f]);
@@ -785,6 +786,12 @@ function openPlanModal(editId) {
                 <div class="form-group-modal">
                     <label>وصف الخطة</label>
                     <textarea id="planDesc" class="form-input" rows="2" placeholder="وصف مختصر يظهر لعملائك...">${plan ? esc(plan.description || '') : ''}</textarea>
+                </div>
+                <!-- قائمة المميزات للعرض -->
+                <div class="form-group-modal">
+                    <label>🎁 قائمة المميزات (تظهر في الواجهة الرئيسية)</label>
+                    <textarea id="planFeaturesList" class="form-input" rows="5" placeholder="اكتب كل ميزة في سطر منفصل...">${plan ? esc(plan.features_list || '') : ''}</textarea>
+                    <small style="font-size:10px;color:var(--text-muted)">💡 اكتب كل ميزة في سطر جديد ليتم عرضها كقائمة نقاط.</small>
                 </div>
                 <div style="display:flex;gap:20px">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
@@ -885,7 +892,8 @@ async function savePlan() {
         is_default: document.getElementById('planIsDefault').checked ? 1 : 0,
         active: document.getElementById('planActive').checked ? 1 : 0,
         sort_order: document.getElementById('planSortOrder').value,
-        features: features
+        features: features,
+        features_list: document.getElementById('planFeaturesList').value.trim()
     };
 
     if (!data.name || !data.slug) return toast('اسم الخطة والمعرف مطلوبان', 'error');
@@ -1196,7 +1204,7 @@ async function renderAnnouncements() {
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="blogTableBody">
                         ${announcements.length === 0 ? '<tr><td colspan="7"><div class="empty-state"><div class="icon">📢</div><p>لا توجد إعلانات حالياً</p></div></td></tr>' : ''}
                         ${announcements.map(a => `
                             <tr>
@@ -1362,7 +1370,7 @@ async function renderGlobalLogs() {
                             <th>IP</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="blogTableBody">
                         ${logs.length === 0 ? '<tr><td colspan="6" class="text-center">لا توجد سجلات حالياً</td></tr>' : ''}
                         ${logs.map(log => `
                             <tr>
@@ -1447,7 +1455,7 @@ async function renderAdvancedAnalytics() {
                                 <th>إجراء</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="blogTableBody">
                             ${alert_schools.length === 0 ? '<tr><td colspan="4" class="text-muted">جميع المدارس ضمن الحدود الآمنة</td></tr>' : ''}
                             ${alert_schools.map(s => `
                                 <tr>
@@ -1583,13 +1591,16 @@ async function renderBlog() {
     const mc = document.getElementById('mainContent');
     mc.innerHTML = '<div class="spinner"></div>';
 
-    const r = await API.get('blog_posts');
+    const [r, catR] = await Promise.all([API.get('blog_posts'), API.get('blog_categories')]);
     if (!r || !r.success) {
         mc.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>خطأ في جلب المقالات</p></div>';
         return;
     }
 
     const posts = r.data;
+    window.allBlogPosts = posts; // store for filtering
+    const categories = catR?.data || [];
+
     mc.innerHTML = `
         <div class="page-header">
             <h1>📰 المدونة والدروس</h1>
@@ -1597,9 +1608,17 @@ async function renderBlog() {
         </div>
 
         <div class="panel">
-            <div class="panel-header">
-                <h3>📋 قائمة المقالات (${posts.length})</h3>
-                <button class="btn btn-emerald btn-sm" onclick="openPostModal()">➕ إضافة مقال جديد</button>
+            <div class="panel-header" style="flex-wrap:wrap;gap:10px">
+                <h3>📋 قائمة المقالات (<span id="blogCount">${posts.length}</span>)</h3>
+                <div style="display:flex;gap:10px;flex:1;justify-content:flex-end">
+                    <input type="text" id="blogSearch" class="form-input" placeholder="🔍 بحث في المقالات..." style="max-width:250px" oninput="filterBlogPosts()">
+                    <select id="blogCategoryFilter" class="form-select" style="max-width:200px" onchange="filterBlogPosts()">
+                        <option value="">كل التصنيفات</option>
+                        ${categories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('')}
+                    </select>
+                    <button class="btn btn-outline btn-sm" onclick="openCategoriesModal()">🏷️ إدارة التصنيفات</button>
+                    <button class="btn btn-emerald btn-sm" onclick="openPostModal()">➕ إضافة مقال</button>
+                </div>
             </div>
             <div class="table-wrapper">
                 <table>
@@ -1613,7 +1632,7 @@ async function renderBlog() {
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="blogTableBody">
                         ${posts.length === 0 ? '<tr><td colspan="6"><div class="empty-state"><div class="icon">📰</div><p>لا توجد مقالات بعد</p></div></td></tr>' : ''}
                         ${posts.map(p => `
                             <tr>
@@ -1645,9 +1664,14 @@ async function openPostModal(id = null) {
     let post = { title: '', slug: '', content: '', excerpt: '', category: 'الدروس', status: 'published', image_path: '' };
 
     if (id) {
-        const r = await API.get('blog_posts');
-        post = r.data.find(p => p.id == id) || post;
+        // Fetch only the requested post to avoid pulling all posts' content
+        const r = await API.get('blog_post&id=' + id);
+        post = r.data || post;
     }
+
+    const catRes = await API.get('blog_categories');
+    const categories = catRes?.data || [];
+    const catOptions = categories.map(c => `<option value="${esc(c.name)}" ${post.category === c.name ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
 
     openModal(`
         <div class="modal-header">
@@ -1668,9 +1692,8 @@ async function openPostModal(id = null) {
                 <div class="form-group-modal">
                     <label>التصنيف</label>
                     <select id="postCategory" class="form-select">
-                        <option value="الدروس" ${post.category === 'الدروس' ? 'selected' : ''}>الدروس</option>
-                        <option value="أخبار المنصة" ${post.category === 'أخبار المنصة' ? 'selected' : ''}>أخبار المنصة</option>
-                        <option value="نصائح" ${post.category === 'نصائح' ? 'selected' : ''}>نصائح وتوجيهات</option>
+                        ${catOptions}
+                        ${categories.length === 0 ? '<option value="general">عام</option>' : ''}
                     </select>
                 </div>
                 <div class="form-group-modal">
@@ -1681,9 +1704,23 @@ async function openPostModal(id = null) {
                     </select>
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group-modal">
+                    <label>تاريخ النشر (للجدولة)</label>
+                    <input type="datetime-local" id="postPublishAt" class="form-input" value="${post.publish_at ? post.publish_at.replace(' ', 'T').substring(0, 16) : ''}" dir="ltr">
+                </div>
+                <div class="form-group-modal">
+                    <label>أولوية الترتيب</label>
+                    <input type="number" id="postSortOrder" class="form-input" value="${post.sort_order || 0}">
+                </div>
+            </div>
             <div class="form-group-modal">
-                <label>رابط الصورة البارزة (URL)</label>
-                <input type="text" id="postImage" class="form-input" value="${esc(post.image_path || '')}" placeholder="https://..." dir="ltr">
+                <label>رابط الصورة البارزة</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="text" id="postImage" class="form-input" value="${esc(post.image_path || '')}" placeholder="أو اكتب رابط URL مباشرة..." dir="ltr" style="flex:1">
+                    <button type="button" class="btn btn-cyan btn-sm" onclick="openMediaPicker('postImage','postImagePreview')" style="white-space:nowrap">🖼️ مكتبة</button>
+                </div>
+                <div id="postImagePreview" style="margin-top:8px">${post.image_path ? `<img src="${esc(post.image_path)}" style="max-height:80px;border-radius:8px;object-fit:cover">` : ''}</div>
             </div>
             <div class="form-group-modal">
                 <label>ملخص قصير (Excerpt)</label>
@@ -1700,26 +1737,87 @@ async function openPostModal(id = null) {
         </div>
     `, 'lg');
 
-    // Initialize Quill
+    // Initialize Quill with CUSTOM IMAGE HANDLER (blocks Base64, uses Media Library)
     quill = new Quill('#postEditor', {
         theme: 'snow',
         placeholder: 'اكتب محتوى المقال هنا...',
         modules: {
-            toolbar: [
-                [{ 'header': [1, 2, 3, false] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                ['blockquote', 'code-block'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'direction': 'rtl' }],
-                ['link', 'image'],
-                ['clean']
-            ]
+            toolbar: {
+                container: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    [{ 'direction': 'rtl' }],
+                    ['link', 'image'],
+                    ['clean']
+                ],
+                handlers: {
+                    image: quillImagePickerHandler
+                }
+            }
         }
     });
 
     if (post.content) {
         quill.root.innerHTML = post.content;
     }
+}
+
+// Custom Quill image handler: opens Media Library instead of Base64 upload
+async function quillImagePickerHandler() {
+    const r = await API.get('get_media');
+    const media = r?.data || [];
+
+    const gridHtml = media.map(m => `
+        <div onclick="insertQuillImage('${m.file_path}')"
+             style="cursor:pointer;border:2px solid var(--border-glass);border-radius:10px;overflow:hidden;transition:all 0.2s"
+             onmouseover="this.style.borderColor='var(--accent-emerald)';this.style.transform='scale(1.03)'"
+             onmouseout="this.style.borderColor='var(--border-glass)';this.style.transform=''">
+            <div style="height:90px;overflow:hidden">
+                <img src="../${m.file_path}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+            </div>
+            <div style="padding:4px 6px;font-size:9px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.original_name}</div>
+        </div>`).join('');
+
+    const tipHtml = media.length > 0 ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">${gridHtml}</div>` :
+        `<div style="text-align:center;padding:40px;color:var(--text-muted)"><div style="font-size:48px;opacity:0.3">🖼️</div><p>لا توجد صور — ارفع صورة أولاً</p></div>`;
+
+    const html = `
+        <div class="modal-header">
+            <h3>🖼️ إدراج صورة من المكتبة</h3>
+            <button class="modal-close" onclick="closeMediaPicker()">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+            <div style="background:rgba(16,185,129,0.09);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--accent-emerald)">
+                💡 الصور تُرفع لمكتبة الوسائط ثم تُدرج برابط — هذا يمنع حفظ الصور داخل قاعدة البيانات.
+            </div>
+            <div style="margin-bottom:12px">
+                <button class="btn btn-cyan btn-sm" onclick="closeMediaPicker();closeModal();navigate('media')">📤 رفع صورة جديدة</button>
+            </div>
+            ${tipHtml}
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline btn-sm" onclick="closeMediaPicker()">إغلاق</button>
+        </div>
+    `;
+
+    const overlay = document.getElementById('mediaPickerOverlay');
+    const cnt = document.getElementById('mediaPickerContent');
+    if (overlay && cnt) { cnt.innerHTML = html; overlay.classList.add('active'); }
+}
+
+function insertQuillImage(filePath) {
+    const base = window.location.origin;
+    const rootPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/admin/'));
+    const fullUrl = base + rootPath + '/' + filePath;
+    if (quill) {
+        const range = quill.getSelection(true);
+        quill.insertEmbed(range.index, 'image', fullUrl);
+        quill.setSelection(range.index + 1);
+    }
+    closeMediaPicker();
+    toast('✅ تم إدراج الصورة في المحرر');
 }
 
 function generateSlug(title) {
@@ -1732,6 +1830,112 @@ function generateSlug(title) {
     }
 }
 
+
+// ============================================================
+// BLOG CATEGORIES & FILTERING
+// ============================================================
+function filterBlogPosts() {
+    const q = document.getElementById('blogSearch').value.toLowerCase();
+    const c = document.getElementById('blogCategoryFilter').value;
+    const posts = window.allBlogPosts || [];
+    const filtered = posts.filter(p => {
+        const matchQ = p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q);
+        const matchC = c ? p.category === c : true;
+        return matchQ && matchC;
+    });
+
+    document.getElementById('blogCount').textContent = filtered.length;
+    const tbody = document.getElementById('blogTableBody');
+    if (!tbody) return;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>لا توجد مقالات مطابقة للبحث</p></div></td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(p => `
+        <tr>
+            <td>${p.id}</td>
+            <td>
+                <strong>${esc(p.title)}</strong>
+                <div style="font-size:10px;color:var(--text-muted)">/${esc(p.slug)}</div>
+            </td>
+            <td><span class="badge" style="background:var(--bg-glass);color:var(--text-primary)">${esc(p.category)}</span></td>
+            <td>${p.status === 'published' ? '<span class="badge badge-active">منشور</span>' : '<span class="badge badge-trial">مسودة</span>'}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${p.published_at || p.created_at.split(' ')[0]}</td>
+            <td>
+                <div class="action-btns">
+                    <button class="action-btn edit" onclick="openPostModal(${p.id})" title="تعديل">✏️</button>
+                    <a href="../post.php?slug=${p.slug}" target="_blank" class="action-btn enter" style="text-decoration:none;display:flex;align-items:center;justify-content:center" title="معاينة">👁️</a>
+                    <button class="action-btn delete" onclick="deletePost(${p.id}, '${esc(p.title)}')" title="حذف">🗑️</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function openCategoriesModal() {
+    const r = await API.get('blog_categories');
+    const categories = r?.data || [];
+    openModal(`
+        <div class="modal-header">
+            <h3>🏷️ إدارة التصنيفات</h3>
+            <button class="modal-close" onclick="closeModal(); renderBlog()">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+            <div style="display:flex;gap:8px;margin-bottom:15px">
+                <input type="text" id="newCategoryName" class="form-input" placeholder="اسم التصنيف الجديد..." style="flex:1">
+                <button class="btn btn-emerald" onclick="saveCategory()">إضافة</button>
+            </div>
+            <table style="width:100%;text-align:right" class="custom-table">
+                <tbody>
+                    ${categories.map(c => `
+                        <tr style="border-bottom:1px solid #eee">
+                            <td style="padding:10px 0">${esc(c.name)}</td>
+                            <td style="padding:10px 0;text-align:left">
+                                <button class="action-btn edit" onclick="editCategory(${c.id}, '${esc(c.name)}')">✏️</button>
+                                <button class="action-btn delete" onclick="deleteCategory(${c.id}, '${esc(c.name)}')">🗑️</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                    ${categories.length === 0 ? '<tr><td colspan="2" style="text-align:center;padding:20px;color:#999">لا توجد تصنيفات</td></tr>' : ''}
+                </tbody>
+            </table>
+        </div>
+    `, 'md');
+}
+
+async function saveCategory(id = null, name = null) {
+    const catName = name || document.getElementById('newCategoryName')?.value?.trim();
+    if (!catName) return toast('يرجى إدخال اسم التصنيف', 'error');
+
+    const r = await API.post('blog_category_save', { id, name: catName });
+    if (r && r.success) {
+        toast('تم الحفظ بنجاح');
+        openCategoriesModal(); // reload modal
+    } else {
+        toast(r?.error || 'خطأ في الحفظ', 'error');
+    }
+}
+
+function editCategory(id, oldName) {
+    const newName = prompt('تعديل اسم التصنيف:', oldName);
+    if (newName && newName.trim() !== oldName) {
+        saveCategory(id, newName.trim());
+    }
+}
+
+async function deleteCategory(id, name) {
+    if (!confirm(`هل أنت متأكد من حذف التصنيف "${name}"؟`)) return;
+    const r = await API.post('blog_category_delete', { id });
+    if (r && r.success) {
+        toast('تم الحذف بنجاح');
+        openCategoriesModal(); // reload modal
+    } else {
+        toast(r?.error || 'خطأ في الحذف', 'error');
+    }
+}
+
 async function savePost() {
     const data = {
         id: document.getElementById('postId').value || null,
@@ -1741,6 +1945,8 @@ async function savePost() {
         status: document.getElementById('postStatus').value,
         image_path: document.getElementById('postImage').value.trim(),
         excerpt: document.getElementById('postExcerpt').value.trim(),
+        publish_at: document.getElementById('postPublishAt').value,
+        sort_order: document.getElementById('postSortOrder').value,
         content: quill.root.innerHTML
     };
 
@@ -1783,3 +1989,230 @@ document.addEventListener('keydown', e => {
 // ============================================================
 checkAuth();
 console.log('✅ Super Admin Panel loaded');
+// ============================================================
+// MEDIA LIBRARY - Appended by system
+// ============================================================
+
+async function renderMedia() {
+    const mc = document.getElementById('mainContent');
+    mc.innerHTML = '<div class="spinner"></div>';
+
+    const r = await API.get('get_media');
+    if (!r || !r.success) {
+        mc.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>خطأ في جلب الوسائط</p></div>';
+        return;
+    }
+
+    const media = r.data;
+    const totalSize = media.reduce((acc, m) => acc + (m.file_size || 0), 0);
+    const formatSize = bytes => bytes < 1024 * 1024
+        ? (bytes / 1024).toFixed(1) + ' KB'
+        : (bytes / 1024 / 1024).toFixed(2) + ' MB';
+
+    mc.innerHTML = `
+        <div class="page-header">
+            <h1>🖼️ مكتبة الوسائط</h1>
+            <p>رفع وإدارة صور المدونة والمقالات.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:24px">
+            <div style="background:var(--bg-card);border:1px solid var(--border-glass);border-radius:var(--radius-lg);padding:16px;text-align:center">
+                <div style="font-size:24px;font-weight:900;color:var(--accent-emerald)">${media.length}</div>
+                <div style="font-size:12px;color:var(--text-muted)">إجمالي الصور</div>
+            </div>
+            <div style="background:var(--bg-card);border:1px solid var(--border-glass);border-radius:var(--radius-lg);padding:16px;text-align:center">
+                <div style="font-size:24px;font-weight:900;color:var(--accent-cyan)">${formatSize(totalSize)}</div>
+                <div style="font-size:12px;color:var(--text-muted)">إجمالي الحجم</div>
+            </div>
+            <div style="background:var(--bg-card);border:1px solid var(--border-glass);border-radius:var(--radius-lg);padding:16px;text-align:center">
+                <div style="font-size:24px;font-weight:900;color:var(--accent-orange)">3 MB</div>
+                <div style="font-size:12px;color:var(--text-muted)">الحد الأقصى للصورة</div>
+            </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:24px">
+            <div class="panel-header"><h3>📤 رفع صورة جديدة</h3></div>
+            <div class="panel-body" style="padding:20px">
+                <div id="mediaDropZone" style="border:2px dashed var(--border-glass);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s"
+                    ondragover="event.preventDefault();this.style.borderColor='var(--accent-emerald)';this.style.background='rgba(16,185,129,0.05)'"
+                    ondragleave="this.style.borderColor='var(--border-glass)';this.style.background=''"
+                    ondrop="handleMediaDrop(event)"
+                    onclick="document.getElementById('mediaFileInput').click()">
+                    <input type="file" id="mediaFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="uploadMediaFile(this.files[0])">
+                    <div style="font-size:48px;margin-bottom:8px;opacity:0.4">📷</div>
+                    <p style="font-weight:700;color:var(--text-secondary);margin-bottom:4px">اسحب وأفلت الصورة هنا</p>
+                    <p style="font-size:11px;color:var(--text-muted)">أو اضغط للاختيار · JPG, PNG, WEBP, GIF · حد أقصى 3 MB</p>
+                </div>
+                <div id="mediaUploadProgress" style="display:none;margin-top:12px">
+                    <div style="background:var(--bg-glass);border-radius:8px;overflow:hidden;height:8px">
+                        <div id="mediaProgressBar" style="height:100%;width:0%;background:var(--accent-emerald);transition:width 0.4s;border-radius:8px"></div>
+                    </div>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:center">⌛ جاري الرفع...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header"><h3>📁 الصور المرفوعة (${media.length})</h3></div>
+            <div id="mediaGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;padding:20px">
+                ${media.length === 0 ? `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)"><div style="font-size:48px;opacity:0.3">🖼️</div><p style="margin-top:8px">لا توجد صور بعد</p></div>` : ''}
+                ${media.map(m => `
+                    <div class="media-item" id="media-item-${m.id}" style="border:1px solid var(--border-glass);border-radius:12px;overflow:hidden;position:relative;transition:all 0.2s"
+                         onmouseover="this.querySelector('.media-overlay').style.opacity='1'"
+                         onmouseout="this.querySelector('.media-overlay').style.opacity='0'">
+                        <div style="height:130px;background:#f1f5f9;overflow:hidden">
+                            <img src="../${esc(m.file_path)}" alt="${esc(m.original_name)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                        </div>
+                        <div class="media-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity 0.2s">
+                            <button onclick="copyMediaUrl('${esc(m.file_path)}')" style="background:white;color:#1e293b;border:none;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">📋 نسخ الرابط</button>
+                            <button onclick="confirmDeleteMedia(${m.id},'${esc(m.filename)}')" style="background:#ef4444;color:white;border:none;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">🗑️ حذف</button>
+                        </div>
+                        <div style="padding:8px">
+                            <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(m.original_name)}">${esc(m.original_name)}</div>
+                            <div style="font-size:9px;color:var(--text-muted);margin-top:2px">${formatSize(m.file_size)}${m.width ? ` · ${m.width}×${m.height}` : ''}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function handleMediaDrop(event) {
+    event.preventDefault();
+    const dz = document.getElementById('mediaDropZone');
+    if (dz) { dz.style.borderColor = 'var(--border-glass)'; dz.style.background = ''; }
+    const file = event.dataTransfer?.files[0];
+    if (file) uploadMediaFile(file);
+}
+
+async function uploadMediaFile(file) {
+    if (!file) return;
+    const maxSize = 3 * 1024 * 1024;
+    if (file.size > maxSize) {
+        toast(`حجم الصورة ${(file.size / 1024 / 1024).toFixed(2)} MB — يتجاوز الحد الأقصى (3 MB)`, 'error');
+        return;
+    }
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+        toast('نوع الملف غير مسموح. يُقبل فقط: JPG, PNG, WEBP, GIF', 'error');
+        return;
+    }
+
+    const progressEl = document.getElementById('mediaUploadProgress');
+    const barEl = document.getElementById('mediaProgressBar');
+    if (progressEl) progressEl.style.display = 'block';
+    if (barEl) barEl.style.width = '30%';
+
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        if (barEl) barEl.style.width = '70%';
+        const response = await fetch('api.php?action=upload_media', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (barEl) barEl.style.width = '100%';
+        setTimeout(() => { if (progressEl) progressEl.style.display = 'none'; if (barEl) barEl.style.width = '0%'; }, 800);
+        if (result.success) {
+            toast('✅ تم رفع الصورة بنجاح!');
+            renderMedia();
+        } else {
+            toast(result.error || 'خطأ في رفع الصورة', 'error');
+        }
+    } catch (e) {
+        toast('خطأ في الاتصال بالخادم', 'error');
+        if (progressEl) progressEl.style.display = 'none';
+    }
+}
+
+async function confirmDeleteMedia(id, filename) {
+    if (!confirm(`⚠️ هل تريد حذف الصورة "${filename}" نهائياً؟`)) return;
+    const r = await API.post('delete_media', { id });
+    if (r && r.success) {
+        toast('تم حذف الصورة');
+        const el = document.getElementById(`media-item-${id}`);
+        if (el) el.remove();
+    } else {
+        toast(r?.error || 'خطأ في الحذف', 'error');
+    }
+}
+
+function copyMediaUrl(filePath) {
+    const base = window.location.origin;
+    const path = window.location.pathname.replace('/admin/index.html', '');
+    const fullUrl = base + path + '/' + filePath;
+    navigator.clipboard.writeText(fullUrl).then(() => toast('✅ تم نسخ الرابط')).catch(() => {
+        prompt('انسخ الرابط يدوياً:', base + path + '/' + filePath);
+    });
+}
+
+// Open in dedicated second overlay — does NOT replace the blog post form
+async function openMediaPicker(inputId, previewId) {
+    const r = await API.get('get_media');
+    const media = r?.data || [];
+
+    const emptyMsg = `
+        <div style="text-align:center;padding:40px;color:var(--text-muted)">
+            <div style="font-size:48px;opacity:0.3">🖼️</div>
+            <p style="margin-top:8px">لا توجد صور في المكتبة بعد</p>
+            <button class="btn btn-emerald btn-sm" style="margin-top:14px" onclick="closeMediaPicker();closeModal();navigate('media')">📤 ارفع صورة الآن</button>
+        </div>`;
+
+    const gridHtml = media.map(m => `
+        <div onclick="selectMediaImage('${m.file_path}','${inputId}','${previewId}')"
+             style="cursor:pointer;border:2px solid var(--border-glass);border-radius:10px;overflow:hidden;transition:all 0.2s"
+             onmouseover="this.style.borderColor='var(--accent-emerald)';this.style.transform='scale(1.03)'"
+             onmouseout="this.style.borderColor='var(--border-glass)';this.style.transform=''">
+            <div style="height:90px;overflow:hidden">
+                <img src="../${m.file_path}" alt="${m.original_name}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+            </div>
+            <div style="padding:5px 6px;font-size:9px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.original_name}</div>
+        </div>`).join('');
+
+    const html = `
+        <div class="modal-header">
+            <h3>🖼️ اختيار صورة من المكتبة</h3>
+            <button class="modal-close" onclick="closeMediaPicker()">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+            ${media.length === 0 ? emptyMsg : `
+                <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px">اضغط على الصورة لاختيارها وإدراجها في المقال</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">${gridHtml}</div>
+            `}
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline btn-sm" onclick="closeMediaPicker()">إغلاق</button>
+            <button class="btn btn-cyan btn-sm" onclick="closeMediaPicker();closeModal();navigate('media')">📤 رفع صورة جديدة</button>
+        </div>
+    `;
+
+    // Use the DEDICATED media picker overlay, NOT the main modal
+    const overlay = document.getElementById('mediaPickerOverlay');
+    const pickerContent = document.getElementById('mediaPickerContent');
+    if (overlay && pickerContent) {
+        pickerContent.innerHTML = html;
+        overlay.classList.add('active');
+    }
+}
+
+function closeMediaPicker() {
+    const overlay = document.getElementById('mediaPickerOverlay');
+    if (overlay) overlay.classList.remove('active');
+}
+
+function selectMediaImage(filePath, inputId, previewId) {
+    // Build the correct absolute URL based on current location
+    const base = window.location.origin;
+    const adminPath = window.location.pathname; // e.g. /pe1/admin/index.html
+    const rootPath = adminPath.substring(0, adminPath.lastIndexOf('/admin/')); // /pe1
+    const fullUrl = base + rootPath + '/' + filePath;
+
+    // Update the input field & preview in the blog post form (still in the main modal)
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    if (input) input.value = fullUrl;
+    if (preview) preview.innerHTML = `<img src="${fullUrl}" style="max-height:80px;border-radius:8px;object-fit:cover;margin-top:4px">`;
+
+    closeMediaPicker();
+    toast('✅ تم اختيار الصورة');
+}
+
