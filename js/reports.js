@@ -84,6 +84,7 @@ async function renderReports() {
             <button onclick="reportType='student';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'student' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📄 تقرير الطالب</button>
             <button onclick="reportType='class';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'class' ? 'bg-green-600 text-white shadow-xl shadow-green-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">🏫 تقرير الفصل</button>
             <button onclick="reportType='compare';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'compare' ? 'bg-teal-600 text-white shadow-xl shadow-teal-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">⚖️ لوحة المقارنة</button>
+            <button onclick="reportType='grading';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'grading' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📝 كشف الدرجات النهائي</button>
         </div>
         
         <div id="reportContent" class="mb-12">${showLoading()}</div>
@@ -91,6 +92,7 @@ async function renderReports() {
 
     if (reportType === 'student') renderStudentReport();
     else if (reportType === 'class') renderClassReport();
+    else if (reportType === 'grading') renderGradingReport();
     else renderCompareReport();
 }
 
@@ -235,10 +237,42 @@ function renderStudentReportHTML(d, container) {
                     </div>
                 </div>
                 <div class="bg-gray-900 text-white p-8 rounded-[2.5rem] text-center shadow-2xl min-w-[180px] transform hover:scale-105 transition-transform">
-                    <p class="text-6xl font-black ${d.percentage >= 70 ? 'text-green-400' : d.percentage >= 50 ? 'text-yellow-400' : 'text-red-400'}">${d.percentage}%</p>
+                    <p class="text-6xl font-black ${d.percentage >= 90 ? 'text-green-400' : d.percentage >= 80 ? 'text-blue-400' : d.percentage >= 70 ? 'text-yellow-400' : 'text-red-400'}">${d.percentage}%</p>
                     <p class="text-[10px] font-black uppercase tracking-[0.2em] mt-3 opacity-60">التقييم العام للأداء</p>
+                    ${d.grading_summary ? `<p class="mt-4 px-4 py-2 bg-white/10 rounded-xl font-black text-sm">${d.grading_summary.letter}</p>` : ''}
                 </div>
             </div>
+
+            ${d.grading_summary ? `
+            <!-- Grading Summary Section -->
+            <div class="mb-12">
+                <h4 class="font-black text-gray-800 mb-8 flex items-center gap-3 text-xl">
+                    <span class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl">📝</span> التقييم الشامل والتقدير النهائي
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    <div class="bg-blue-50/50 border border-blue-100 rounded-3xl p-5 text-center">
+                        <p class="text-[10px] text-blue-400 font-black uppercase mb-1">الحضور والالتزام</p>
+                        <p class="text-2xl font-black text-blue-700">${d.grading_summary.attendance_pct}%</p>
+                        <p class="text-[9px] text-blue-400/60 font-medium">الوزن: ${d.grading_summary.weights.attendance_pct}%</p>
+                    </div>
+                    <div class="bg-emerald-50/50 border border-emerald-100 rounded-3xl p-5 text-center">
+                        <p class="text-[10px] text-emerald-400 font-black uppercase mb-1">الزي الرياضي</p>
+                        <p class="text-2xl font-black text-emerald-700">${d.grading_summary.uniform_pct}%</p>
+                        <p class="text-[9px] text-emerald-400/60 font-medium">الوزن: ${d.grading_summary.weights.uniform_pct}%</p>
+                    </div>
+                    <div class="bg-yellow-50/50 border border-yellow-100 rounded-3xl p-5 text-center">
+                        <p class="text-[10px] text-yellow-500 font-black uppercase mb-1">السلوك والمهارات</p>
+                        <p class="text-2xl font-black text-yellow-700">${d.grading_summary.behavior_skills_pct}%</p>
+                        <p class="text-[9px] text-yellow-500/60 font-medium">الوزن: ${d.grading_summary.weights.behavior_skills_pct}%</p>
+                    </div>
+                    <div class="bg-purple-50/50 border border-purple-100 rounded-3xl p-5 text-center">
+                        <p class="text-[10px] text-purple-400 font-black uppercase mb-1">اللياقة البدنية</p>
+                        <p class="text-2xl font-black text-purple-700">${d.grading_summary.fitness_pct}%</p>
+                        <p class="text-[9px] text-purple-400/60 font-medium">الوزن: ${d.grading_summary.weights.fitness_pct}%</p>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-12">
                 <!-- Measurements -->
@@ -473,7 +507,8 @@ async function generateClassReport() {
                         <th class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">الترتيب</th>
                         <th class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">اسم الطالب</th>
                         <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">النقاط</th>
-                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">النسبة</th>
+                        <th class="px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">النسبة/%</th>
+                        <th class="px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">التقدير</th>
                         <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">BMI</th>
                         <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الصحة</th>
                         <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">حضور</th>
@@ -491,8 +526,21 @@ async function generateClassReport() {
                             <div class="font-black text-gray-800 text-sm whitespace-nowrap">${esc(s.name)}</div>
                         </td>
                         <td class="px-5 py-4 text-center font-bold text-gray-600 text-sm">${s.total_score}/${s.total_max || 0}</td>
-                        <td class="px-5 py-4 text-center">
-                            <span class="px-3 py-1 rounded-lg font-black text-xs ${s.percentage >= 70 ? 'bg-green-100 text-green-700' : s.percentage >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">${s.percentage}%</span>
+                        <td class="px-4 py-4 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="w-12 bg-gray-100 rounded-full h-1.5 overflow-hidden hidden md:block">
+                                    <div class="h-full ${s.percentage >= 90 ? 'bg-green-500' : s.percentage >= 70 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${s.percentage}%"></div>
+                                </div>
+                                <span class="font-black text-gray-800">${s.percentage}%</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-center">
+                            <span class="inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black ${s.letter === 'ممتاز' ? 'bg-green-100 text-green-700' :
+            s.letter === 'جيد جداً' ? 'bg-blue-100 text-blue-700' :
+                s.letter === 'جيد' ? 'bg-yellow-100 text-yellow-700' :
+                    s.letter === 'مقبول' ? 'bg-orange-100 text-orange-700' :
+                        'bg-red-100 text-red-700'
+        }">${s.letter || '-'}</span>
                         </td>
                         <td class="px-5 py-4 text-center">
                             ${s.latest_bmi ? `<span class="badge bmi-${s.bmi_category || 'normal'} !text-[10px] font-black">${s.latest_bmi}</span>` : '<span class="text-gray-300">-</span>'}
@@ -726,4 +774,155 @@ async function _doSendReport(elementId, title) {
         showToast('خطأ أثناء توليد الـ PDF', 'error');
         console.error('PDF Generation Error:', e);
     }
+}
+
+
+// ============================================================
+// GRADING REPORT
+// ============================================================
+async function renderGradingReport() {
+    const cl = await API.get('classes');
+
+    document.getElementById('reportContent').innerHTML = `
+    <div class="fade-in">
+        <div class="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-5 md:p-8 mb-8 md:mb-10 no-print">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">اختيار الفصل المستهدف</label>
+                    <select id="gradingReportClass" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl focus:bg-white focus:border-indigo-500 focus:outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer">
+                        <option value="">-- اضغط للاختيار --</option>
+                        ${(cl?.data || []).map(c => `<option value="${c.id}">${esc(c.full_name || c.name)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">من تاريخ</label>
+                    <input type="date" id="gradingDateStart" value="${new Date().getFullYear() + '-' + String(new Date().getMonth()).padStart(2, '0') + '-01'}" class="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 focus:outline-none font-bold text-gray-700">
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">إلى تاريخ</label>
+                    <input type="date" id="gradingDateEnd" value="${new Date().toISOString().split('T')[0]}" class="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 focus:outline-none font-bold text-gray-700">
+                </div>
+                <div class="pt-1 flex gap-2">
+                    <button onclick="generateGradingReport()" class="flex-1 bg-indigo-600 text-white px-2 py-3.5 rounded-2xl font-black hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
+                        <span class="text-xl">📊</span> استخراج
+                    </button>
+                    <button onclick="window.print()" class="w-16 bg-gray-900 text-white p-3.5 rounded-2xl font-black hover:bg-black transition shadow-lg flex items-center justify-center">
+                        🖨️
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="reportOutput">
+            <div class="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-gray-100">
+                <div class="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 grayscale opacity-30">📋</div>
+                <p class="text-gray-400 font-black text-xl">يرجى تحديد الفصل والفترة لاستخراج كشف الدرجات</p>
+                <p class="text-gray-300 text-sm mt-1">يعتمد هذا الكشف على أوزان التقييم المخصصة للمدرسة من الإدارة</p>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function generateGradingReport() {
+    const classId = document.getElementById('gradingReportClass').value;
+    const start = document.getElementById('gradingDateStart').value;
+    const end = document.getElementById('gradingDateEnd').value;
+
+    if (!classId) {
+        showToast('يرجى اختيار الفصل', 'error');
+        return;
+    }
+
+    const reportOutput = document.getElementById('reportOutput');
+    reportOutput.innerHTML = showLoading();
+
+    const r = await API.get('report_grading', {
+        class_id: classId,
+        start_date: start,
+        end_date: end
+    });
+
+    if (!r || !r.success) {
+        reportOutput.innerHTML = '<p class="text-red-500 text-center py-8">فشل استخراج التقرير</p>';
+        return;
+    }
+
+    const { weights, students } = r.data;
+    const className = document.getElementById('gradingReportClass').options[document.getElementById('gradingReportClass').selectedIndex].text;
+
+    reportOutput.innerHTML = `
+    <div class="bg-white rounded-[2rem] shadow-2xl border border-gray-100 p-6 md:p-10 fade-in">
+        <div class="flex justify-between items-center mb-6 pb-6 border-b border-gray-100">
+            <div>
+                <h3 class="text-2xl font-black text-gray-800">📊 كشف الدرجات النهائي للتربية البدنية</h3>
+                <p class="text-indigo-600 font-bold mt-1">الفصل: ${className} | الفترة: ${start} إلى ${end}</p>
+            </div>
+            <div class="text-left hidden md:block">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">توزيع الدرجات المعتمد (100٪)</p>
+                <div class="flex gap-2">
+                    <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-blue-100">حضور: ${weights.attendance_pct}%</span>
+                    <span class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-emerald-100">زي: ${weights.uniform_pct}%</span>
+                    <span class="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-yellow-100">سلوك/مشاركة: ${weights.behavior_skills_pct}%</span>
+                    <span class="bg-purple-50 text-purple-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-purple-100">لياقة: ${weights.fitness_pct}%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto pb-4">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50/50">
+                        <th class="px-4 py-3 text-right font-black text-gray-500 rounded-r-xl">م</th>
+                        <th class="px-4 py-3 text-right font-black text-gray-500 border-x border-gray-100">الطالب</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="الحضور والغياب">الحضور (${weights.attendance_pct}٪)</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="الزي الرياضي">الزي (${weights.uniform_pct}٪)</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="السلوك والمشاركة">السلوك (${weights.behavior_skills_pct}٪)</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="اختبارات اللياقة">اللياقة (${weights.fitness_pct}٪)</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-800 border-l border-gray-100 bg-gray-100">الدرجة النهائية</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-500 rounded-l-xl">التقدير</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    ${students.map((s, i) => `
+                    <tr class="hover:bg-indigo-50/30 transition-colors">
+                        <td class="px-4 py-3 text-gray-400 font-bold">${i + 1}</td>
+                        <td class="px-4 py-3 font-black text-gray-800 border-x border-gray-50">${esc(s.name)}</td>
+                        <td class="px-4 py-3 text-center font-bold text-gray-600 border-l border-gray-50">
+                            ${s.total_days > 0 ? `<span class="${s.attendance_pct >= 80 ? 'text-green-600' : 'text-orange-500'}">${s.attendance_pct}%</span>` : '<span class="text-gray-300">-</span>'}
+                        </td>
+                        <td class="px-4 py-3 text-center font-bold text-gray-600 border-l border-gray-50">
+                            ${s.total_days > 0 ? `<span class="${s.uniform_pct >= 80 ? 'text-emerald-600' : 'text-red-500'}">${s.uniform_pct}%</span>` : '<span class="text-gray-300">-</span>'}
+                        </td>
+                        <td class="px-4 py-3 text-center font-bold text-gray-600 border-l border-gray-50">
+                            ${s.total_days > 0 ? `<span class="text-yellow-600">${s.behavior_skills_pct}%</span>` : '<span class="text-gray-300">-</span>'}
+                        </td>
+                        <td class="px-4 py-3 text-center font-bold justify-center border-l border-gray-50">
+                            <span class="text-purple-600">${s.fitness_pct}%</span>
+                        </td>
+                        <td class="px-4 py-3 text-center font-black border-l border-gray-50 bg-gray-50/50 text-indigo-700 text-lg">
+                            ${s.final_grade}
+                        </td>
+                        <td class="px-4 py-3 text-center font-black">
+                            <span class="inline-flex px-3 py-1 rounded-full items-center justify-center whitespace-nowrap text-xs font-bold ${s.letter === 'ممتاز' ? 'bg-green-100 text-green-700 ring-1 ring-green-200' :
+            s.letter === 'جيد جداً' ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-200' :
+                s.letter === 'جيد' ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200' :
+                    s.letter === 'مقبول' ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-200' :
+                        'bg-red-100 text-red-700 ring-1 ring-red-200'
+        }">
+                                ${s.letter}
+                            </span>
+                        </td>
+                    </tr>
+                    `).join('')}
+                    ${students.length === 0 ? `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400 font-bold">لاتوجد بيانات طلاب لهذا الفصل</td></tr>` : ''}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-8 flex justify-between items-center no-print">
+             <button onclick="sendReportEmail('reportOutput', 'كشف درجات الفصل ${className}')" class="bg-indigo-100 text-indigo-700 px-6 py-2 rounded-xl font-bold hover:bg-indigo-200 transition flex items-center gap-2">
+                📧 إرسال للأرشيف PDF
+             </button>
+             <p class="text-[10px] text-gray-400 uppercase tracking-widest font-black">PE Smart System • ${new Date().toLocaleDateString('ar-SA')}</p>
+        </div>
+    </div>`;
 }

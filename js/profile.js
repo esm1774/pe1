@@ -100,9 +100,10 @@ async function renderStudentProfilePage() {
                         <p class="text-base md:text-2xl font-black text-red-600">${m.resting_heart_rate || '-'}</p>
                         <p class="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-tighter">النبض ❤️</p>
                     </div>
-                     <div class="bg-indigo-50/50 rounded-2xl p-2.5 md:p-4 text-center border border-indigo-50 shadow-sm">
+                     <div class="bg-indigo-50/50 rounded-2xl p-2.5 md:p-4 text-center border border-indigo-50 shadow-sm relative group">
                         <p class="text-base md:text-2xl font-black text-indigo-700">${d.percentage}%</p>
-                        <p class="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-tighter">اللياقة 💪</p>
+                        <p class="text-[7px] md:text-[10px] font-black text-gray-400 uppercase tracking-tighter">التقييم الشامل 💪</p>
+                        ${d.grading_summary ? `<span class="absolute -top-2 -right-2 bg-indigo-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-sm">${d.grading_summary.letter}</span>` : ''}
                     </div>
                     ` : `
                     <div class="col-span-full bg-gray-50 rounded-2xl p-4 text-center border border-dashed border-gray-200">
@@ -191,10 +192,11 @@ async function renderProfileTab(sid) {
                     <div class="bg-red-50 rounded-xl p-3 text-center"><p class="text-2xl font-bold text-red-600">${d.attendance.absent}</p><p class="text-xs text-gray-600">غياب</p></div>
                     <div class="bg-yellow-50 rounded-xl p-3 text-center"><p class="text-2xl font-bold text-yellow-600">${d.attendance.late}</p><p class="text-xs text-gray-600">تأخر</p></div>
                 </div>
-                <div class="bg-gradient-to-l from-green-500 to-emerald-600 rounded-xl p-4 text-white text-center">
+                <div class="bg-gradient-to-l from-indigo-600 to-blue-700 rounded-xl p-4 text-white text-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full -mr-8 -mt-8"></div>
                     <p class="text-4xl font-black">${d.percentage}%</p>
-                    <p class="text-sm opacity-80">التقييم العام للياقة</p>
-                    <p class="text-lg font-bold mt-1">${d.totalScore} / ${d.totalMax}</p>
+                    <p class="text-sm opacity-80">التقييم العام الشامل</p>
+                    ${d.grading_summary ? `<p class="text-lg font-bold mt-1 bg-white/20 rounded-lg py-1">${d.grading_summary.letter}</p>` : ''}
                 </div>
                 
                 ${canEdit() && hasFeature('certificates') ? `

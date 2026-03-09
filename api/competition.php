@@ -198,6 +198,72 @@ function getStudentReport() {
         if ($r['score'] !== null) { $totalScore += $r['score']; $totalMax += $r['max_score']; }
     }
 
+    // --- NEW: WEIGHTED GRADING CALCULATION ---
+    $startDate = getParam('start_date', date('Y-m-01'));
+    $endDate = getParam('end_date', date('Y-m-t'));
+
+    // 1. Get School Weights
+    $wStmt = $db->prepare("SELECT * FROM school_grading_weights WHERE school_id = ?");
+    $wStmt->execute([$sid]);
+    $weights = $wStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$weights) {
+        $weights = ['attendance_pct' => 20, 'uniform_pct' => 20, 'behavior_skills_pct' => 20, 'fitness_pct' => 40];
+    }
+
+    // 2. Attendance, Uniform, Behavior & Skills Data
+    $aStmt = $db->prepare("
+        SELECT 
+            COUNT(*) as total_days,
+            SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_days,
+            SUM(CASE WHEN status = 'late' OR status = 'excused' THEN 0.5 ELSE 0 END) as late_days,
+            SUM(CASE WHEN uniform_status = 'full' THEN 3 WHEN uniform_status = 'partial' THEN 2 WHEN uniform_status = 'wrong' THEN 1 ELSE 0 END) as uniform_score,
+            SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as max_uniform_score,
+            SUM(COALESCE(behavior_stars, 0)) as behavior_score,
+            SUM(CASE WHEN behavior_stars > 0 THEN 3 ELSE 0 END) as max_behavior_score,
+            SUM(COALESCE(skills_stars, 0)) as skills_score,
+            SUM(CASE WHEN skills_stars > 0 THEN 3 ELSE 0 END) as max_skills_score
+        FROM attendance 
+        WHERE student_id = ? AND attendance_date BETWEEN ? AND ?
+    ");
+    $aStmt->execute([$studentId, $startDate, $endDate]);
+    $attData = $aStmt->fetch(PDO::FETCH_ASSOC);
+    
+    $totalDays = (int)$attData['total_days'];
+    $attPercent = $totalDays > 0 ? (($attData['present_days'] + $attData['late_days']) / $totalDays) * 100 : 100;
+    $uniPercent = (int)$attData['max_uniform_score'] > 0 ? ((float)$attData['uniform_score'] / (float)$attData['max_uniform_score']) * 100 : 100;
+    
+    $earnedStars = (float)$attData['behavior_score'] + (float)$attData['skills_score'];
+    $maxStars = (float)$attData['max_behavior_score'] + (float)$attData['max_skills_score'];
+    $behSkillPercent = $maxStars > 0 ? ($earnedStars / $maxStars) * 100 : 100;
+
+    // 3. Fitness Score (Weighted)
+    $fitPercent = $totalMax > 0 ? ($totalScore / $totalMax) * 100 : 100;
+
+    // 4. Final Weighted Grade
+    $finalScore = 
+        ($attPercent * ($weights['attendance_pct'] / 100)) +
+        ($uniPercent * ($weights['uniform_pct'] / 100)) +
+        ($behSkillPercent * ($weights['behavior_skills_pct'] / 100)) +
+        ($fitPercent * ($weights['fitness_pct'] / 100));
+
+    $letter = '';
+    if ($finalScore >= 90) $letter = 'ممتاز';
+    else if ($finalScore >= 80) $letter = 'جيد جداً';
+    else if ($finalScore >= 70) $letter = 'جيد';
+    else if ($finalScore >= 60) $letter = 'مقبول';
+    else $letter = 'ضعيف';
+
+    $gradingSummary = [
+        'weights' => $weights,
+        'attendance_pct' => round($attPercent, 1),
+        'uniform_pct' => round($uniPercent, 1),
+        'behavior_skills_pct' => round($behSkillPercent, 1),
+        'fitness_pct' => round($fitPercent, 1),
+        'final_grade' => round($finalScore, 1),
+        'letter' => $letter,
+        'total_days' => $totalDays
+    ];
+
     $stmt = $db->prepare("SELECT SUM(CASE WHEN status='present' THEN 1 ELSE 0 END) as present_count,
         SUM(CASE WHEN status='absent' THEN 1 ELSE 0 END) as absent_count,
         SUM(CASE WHEN status='late' THEN 1 ELSE 0 END) as late_count FROM attendance WHERE student_id = ?");
@@ -207,7 +273,8 @@ function getStudentReport() {
     jsonSuccess([
         'student' => $student, 'measurement' => $measurement, 'health' => $health,
         'fitness' => $fitnessResults, 'totalScore' => (int)$totalScore, 'totalMax' => (int)$totalMax,
-        'percentage' => $totalMax > 0 ? round($totalScore / $totalMax * 100) : 0,
+        'percentage' => round($finalScore), // Return final weighted score as overall percentage
+        'grading_summary' => $gradingSummary,
         'attendance' => [
             'present' => (int)($att['present_count'] ?? 0),
             'absent' => (int)($att['absent_count'] ?? 0),
@@ -272,12 +339,46 @@ function getClassReport() {
         }
     }
 
+    // --- NEW: WEIGHTED CLASS CALCULATION ---
+    $weightsStmt = $db->prepare("SELECT * FROM school_grading_weights WHERE school_id = ?");
+    $weightsStmt->execute([$sid]);
+    $weights = $weightsStmt->fetch(PDO::FETCH_ASSOC) ?: ['attendance_pct' => 20, 'uniform_pct' => 20, 'behavior_skills_pct' => 20, 'fitness_pct' => 40];
+    
+    $startDate = date('Y-m-01');
+    $endDate = date('Y-m-t');
+
     foreach ($students as &$s) {
-        $s['percentage'] = $s['total_max'] > 0 ? round($s['total_score'] / $s['total_max'] * 100) : 0;
+        $stId = $s['id'];
+
+        // Fitness Score
+        $fitStmt = $db->prepare("SELECT SUM(sf.score) as earned, SUM(ft.max_score) as max FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id = ft.id WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+        $fitStmt->execute([$stId, $startDate, $endDate]);
+        $f = $fitStmt->fetch();
+        $fitPct = ($f['max'] > 0) ? ($f['earned'] / $f['max']) * 100 : 100;
+
+        // Attendance & Others
+        $aStmt = $db->prepare("SELECT COUNT(*) as days, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_earned, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_earned, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_max, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as stars_earned, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as stars_max FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
+        $aStmt->execute([$stId, $startDate, $endDate]);
+        $a = $aStmt->fetch();
+
+        $attPct = ($a['days'] > 0) ? ($a['att_earned'] / $a['days']) * 100 : 100;
+        $uniPct = ($a['uni_max'] > 0) ? ($a['uni_earned'] / $a['uni_max']) * 100 : 100;
+        $starPct = ($a['stars_max'] > 0) ? ($a['stars_earned'] / $a['stars_max']) * 100 : 100;
+
+        $final = ($attPct * ($weights['attendance_pct']/100)) + ($uniPct * ($weights['uniform_pct']/100)) + ($starPct * ($weights['behavior_skills_pct']/100)) + ($fitPct * ($weights['fitness_pct']/100));
+        
+        $s['percentage'] = round($final);
+        
+        if ($final >= 90) $s['letter'] = 'ممتاز';
+        else if ($final >= 80) $s['letter'] = 'جيد جداً';
+        else if ($final >= 70) $s['letter'] = 'جيد';
+        else if ($final >= 60) $s['letter'] = 'مقبول';
+        else $s['letter'] = 'ضعيف';
     }
+
     $avgPct = count($students) > 0 ? round(array_sum(array_column($students, 'percentage')) / count($students), 1) : 0;
 
-    jsonSuccess(['class' => $class, 'students' => $students, 'classAverage' => $avgPct, 'totalStudents' => count($students)]);
+    jsonSuccess(['class' => $class, 'students' => $students, 'classAverage' => $avgPct, 'totalStudents' => count($students), 'weights' => $weights]);
 }
 
 function getCompareReport() {
@@ -295,10 +396,56 @@ function getCompareReport() {
         WHERE c.active = 1 $schoolFilter GROUP BY c.id HAVING students_count > 0 ORDER BY avg_score DESC
     ")->fetchAll();
 
-    $maxAvg = !empty($classes) ? max(array_column($classes, 'avg_score')) : 1;
+    // --- NEW: WEIGHTED COMPARISON CALCULATION ---
+    $weightsStmt = $db->prepare("SELECT * FROM school_grading_weights WHERE school_id = ?");
+    $weightsStmt->execute([$sid]);
+    $weights = $weightsStmt->fetch(PDO::FETCH_ASSOC) ?: ['attendance_pct' => 20, 'uniform_pct' => 20, 'behavior_skills_pct' => 20, 'fitness_pct' => 40];
+
+    $startDate = date('Y-m-01');
+    $endDate = date('Y-m-t');
+
     foreach ($classes as &$c) {
-        $c['percentage'] = $maxAvg > 0 ? round(($c['avg_score'] / 10) * 100, 1) : 0;
-        $c['bar_width'] = $maxAvg > 0 ? round(($c['avg_score'] / $maxAvg) * 100) : 0;
+        $cid = $c['id'];
+        
+        // We calculate the average of all students in this class
+        $stStmt = $db->prepare("SELECT id FROM students WHERE class_id = ? AND active = 1");
+        $stStmt->execute([$cid]);
+        $stIds = $stStmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        if (empty($stIds)) {
+            $c['percentage'] = 0;
+            $c['bar_width'] = 0;
+            continue;
+        }
+
+        $classTotal = 0;
+        foreach ($stIds as $stId) {
+            // Fitness
+            $fit = $db->prepare("SELECT SUM(sf.score) as earned, SUM(ft.max_score) as max FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id = ft.id WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+            $fit->execute([$stId, $startDate, $endDate]);
+            $fr = $fit->fetch();
+            $fitP = ($fr['max'] > 0) ? ($fr['earned'] / $fr['max']) * 100 : 100;
+
+            // Attendance & Others
+            $att = $db->prepare("SELECT COUNT(*) as days, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_e, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_e, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_m, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as s_e, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as s_m FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
+            $att->execute([$stId, $startDate, $endDate]);
+            $ar = $att->fetch();
+
+            $attP = ($ar['days'] > 0) ? ($ar['att_e'] / $ar['days']) * 100 : 100;
+            $uniP = ($ar['uni_m'] > 0) ? ($ar['uni_e'] / $ar['uni_m']) * 100 : 100;
+            $starP = ($ar['s_m'] > 0) ? ($ar['s_e'] / $ar['s_m']) * 100 : 100;
+
+            $classTotal += ($attP * ($weights['attendance_pct']/100)) + ($uniP * ($weights['uniform_pct']/100)) + ($starP * ($weights['behavior_skills_pct']/100)) + ($fitP * ($weights['fitness_pct']/100));
+        }
+        
+        $c['percentage'] = round($classTotal / count($stIds), 1);
+        $c['bar_width'] = $c['percentage']; // Bar width is 1:1 with percentage now (max 100)
     }
+
+    // Sort by percentage descending
+    usort($classes, function($a, $b) {
+        return $b['percentage'] <=> $a['percentage'];
+    });
+
     jsonSuccess($classes);
 }

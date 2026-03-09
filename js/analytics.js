@@ -26,14 +26,14 @@ async function renderAnalytics() {
     const { timeline, classComparison, heatmap, top10, insights } = r.data;
 
     mc.innerHTML = `
-            < div class="fade-in" >
+        <div class="fade-in">
         <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
                     <span class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-xl text-white shadow-lg">📊</span>
                     لوحة التحليلات المتقدمة
                 </h2>
-                <p class="text-gray-500 mt-1 text-sm mr-12 font-bold">رسومات بيانية وتحليل للأداء عبر الزمن والمقارنات الدقيقة.</p>
+                <p class="text-gray-500 mt-1 text-sm mr-12 font-bold">رسومات بيانية وتحليل للأداء الشامل (الموزون) عبر الزمن والمقارنات الدقيقة.</p>
             </div>
             <div>
                 <!-- Could add export buttons or timeframe filters here later -->
@@ -47,11 +47,11 @@ async function renderAnalytics() {
                 <div class="text-4xl font-black mt-2">${insights.avgAttendance30d}%</div>
             </div>
             <div class="bg-gradient-to-tr from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-xl hover:-translate-y-1 transition duration-300">
-                <p class="text-xs font-bold opacity-80 mb-1">أفضل فصل في تقييم اللياقة</p>
+                <p class="text-xs font-bold opacity-80 mb-1">أفضل فصل في التقييم الشامل</p>
                 <div class="text-xl font-black mt-2 truncate">${esc(insights.bestClass)}</div>
             </div>
             <div class="bg-gradient-to-tr from-orange-500 to-red-600 rounded-2xl p-5 text-white shadow-xl hover:-translate-y-1 transition duration-300">
-                <p class="text-xs font-bold opacity-80 mb-1">أفضل طالب (بطل اللياقة)</p>
+                <p class="text-xs font-bold opacity-80 mb-1">أفضل طالب (التقييم العام)</p>
                 <div class="text-xl font-black mt-2 truncate">${top10.length > 0 ? esc(top10[0].name) : '-'}</div>
             </div>
             <div class="bg-gradient-to-tr from-purple-500 to-pink-600 rounded-2xl p-5 text-white shadow-xl hover:-translate-y-1 transition duration-300">
@@ -155,7 +155,7 @@ function initCharts(timeline, classComparison, heatmap) {
         data: {
             labels: timeline.labels.map(l => l.replace('-', '/')),
             datasets: [{
-                label: 'معدل التفاعل/الحضور %',
+                label: 'معدل التقييم الشامل الموزون %',
                 data: timeline.data,
                 borderColor: '#6366f1',
                 backgroundColor: gradientLine,
@@ -190,7 +190,7 @@ function initCharts(timeline, classComparison, heatmap) {
         data: {
             labels: classComparison.labels,
             datasets: [{
-                label: 'متوسط الأداء أو درجات اللياقة',
+                label: 'متوسط التقييم الموزون للفصل',
                 data: classComparison.data,
                 // Make the leading class green, the rest a slightly faded green
                 backgroundColor: classComparison.data.map((_, i) => i === 0 ? '#10b981' : '#6ee7b7'),

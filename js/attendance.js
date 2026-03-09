@@ -79,8 +79,10 @@ async function loadAttendanceList() {
                 <tr class="bg-gray-50/70 border-b border-gray-100">
                     <th class="px-8 py-6 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">الطالب</th>
                     <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الصحة</th>
-                    <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الحالة</th>
-                    <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-72">التحضير الرسمي</th>
+                    <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-48">التحضير الرسمي</th>
+                    <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-48">الزي الرياضي</th>
+                    <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">المهارة</th>
+                    <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">السلوك</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -102,27 +104,60 @@ async function loadAttendanceList() {
                 ? `<div class="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full text-[10px] font-black border border-red-100 cursor-help" title="${esc(s.health_summary || '')}">⚠️ ${s.health_alerts} تنبيه</div>`
                 : '<div class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">✓</div>'}
                         </td>
-                        <td class="px-8 py-6 text-center">
-                            <span class="status-badge px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${st === 'present' ? 'bg-emerald-100 text-emerald-700' :
-                st === 'absent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-            }">
-                                ${st === 'present' ? 'حاضر' : st === 'absent' ? 'غائب' : 'متأخر'}
-                            </span>
-                        </td>
-                        <td class="px-8 py-6">
-                            <div class="flex items-center justify-center gap-2 bg-gray-50 p-1.5 rounded-[1.2rem] border border-gray-100 shadow-inner">
-                                <label class="flex-1 cursor-pointer">
+                        <td class="px-4 py-6">
+                            <div class="flex items-center justify-center gap-1 bg-gray-50 p-1.5 rounded-[1.2rem] border border-gray-100 shadow-inner text-xs">
+                                <label class="flex-1 cursor-pointer" title="حاضر">
                                     <input type="radio" name="att_${s.student_id}" value="present" ${st === 'present' ? 'checked' : ''} class="peer hidden" ${!canEdit() ? 'disabled' : ''}>
-                                    <div class="py-3 text-center rounded-xl font-black text-[10px] peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:shadow-lg transition-all text-gray-400 hover:text-gray-600">حاضر</div>
+                                    <div class="py-2 text-center rounded-xl font-black peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:shadow-lg transition-all text-gray-400 hover:text-gray-600">ح</div>
                                 </label>
-                                <label class="flex-1 cursor-pointer">
+                                <label class="flex-1 cursor-pointer" title="غائب">
                                     <input type="radio" name="att_${s.student_id}" value="absent" ${st === 'absent' ? 'checked' : ''} class="peer hidden" ${!canEdit() ? 'disabled' : ''}>
-                                    <div class="py-3 text-center rounded-xl font-black text-[10px] peer-checked:bg-red-600 peer-checked:text-white peer-checked:shadow-lg transition-all text-gray-400 hover:text-gray-600">غائب</div>
+                                    <div class="py-2 text-center rounded-xl font-black peer-checked:bg-red-600 peer-checked:text-white peer-checked:shadow-lg transition-all text-gray-400 hover:text-gray-600">غ</div>
                                 </label>
-                                <label class="flex-1 cursor-pointer">
+                                <label class="flex-1 cursor-pointer" title="متأخر">
                                     <input type="radio" name="att_${s.student_id}" value="late" ${st === 'late' ? 'checked' : ''} class="peer hidden" ${!canEdit() ? 'disabled' : ''}>
-                                    <div class="py-3 text-center rounded-xl font-black text-[10px] peer-checked:bg-amber-500 peer-checked:text-white peer-checked:shadow-lg transition-all text-gray-400 hover:text-gray-600">متأخر</div>
+                                    <div class="py-2 text-center rounded-xl font-black peer-checked:bg-amber-500 peer-checked:text-white peer-checked:shadow-lg transition-all text-gray-400 hover:text-gray-600">ت</div>
                                 </label>
+                            </div>
+                        </td>
+                        <td class="px-4 py-6 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <label class="cursor-pointer text-center group" title="كامل">
+                                    <input type="radio" name="uni_${s.student_id}" value="full" ${s.uniform_status === 'full' ? 'checked' : ''} class="peer hidden" ${!canEdit() ? 'disabled' : ''}>
+                                    <div class="px-2 py-1 rounded-lg bg-gray-50 border border-gray-100 text-emerald-600 peer-checked:bg-emerald-600 peer-checked:border-emerald-600 peer-checked:text-white transition-all text-xs font-black flex flex-col items-center">
+                                        👕<span class="text-[8px] mt-0.5 opacity-50 group-hover:opacity-100 peer-checked:opacity-100">كامل</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer text-center group" title="ناقص">
+                                    <input type="radio" name="uni_${s.student_id}" value="partial" ${s.uniform_status === 'partial' ? 'checked' : ''} class="peer hidden" ${!canEdit() ? 'disabled' : ''}>
+                                    <div class="px-2 py-1 rounded-lg bg-gray-50 border border-gray-100 text-amber-500 peer-checked:bg-amber-500 peer-checked:border-amber-500 peer-checked:text-white transition-all text-xs font-black flex flex-col items-center">
+                                        👕<span class="text-[8px] mt-0.5 opacity-50 group-hover:opacity-100 peer-checked:opacity-100">ناقص</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer text-center group" title="مخالف">
+                                    <input type="radio" name="uni_${s.student_id}" value="wrong" ${s.uniform_status === 'wrong' ? 'checked' : ''} class="peer hidden" ${!canEdit() ? 'disabled' : ''}>
+                                    <div class="px-2 py-1 rounded-lg bg-gray-50 border border-gray-100 text-red-500 peer-checked:bg-red-500 peer-checked:border-red-500 peer-checked:text-white transition-all text-xs font-black flex flex-col items-center">
+                                        👕<span class="text-[8px] mt-0.5 opacity-50 group-hover:opacity-100 peer-checked:opacity-100">مخالف</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer text-center group" title="بدون زي">
+                                    <input type="radio" name="uni_${s.student_id}" value="missing" ${s.uniform_status === 'missing' ? 'checked' : ''} class="peer hidden" ${!canEdit() ? 'disabled' : ''}>
+                                    <div class="px-2 py-1 rounded-lg bg-gray-50 border border-gray-100 text-gray-500 peer-checked:bg-gray-600 peer-checked:border-gray-600 peer-checked:text-white transition-all text-xs font-black flex flex-col items-center">
+                                        ❌<span class="text-[8px] mt-0.5 opacity-50 group-hover:opacity-100 peer-checked:opacity-100">بدون</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </td>
+                        <td class="px-4 py-6 text-center">
+                            <div class="flex items-center justify-center rating-stars" dir="ltr">
+                                ${[1, 2, 3].map(v => `<span class="cursor-pointer text-xl transition-colors ${s.skills_stars >= v ? 'text-amber-400' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'skills', ${v})">★</span>`).join('')}
+                                <input type="hidden" id="skills_${s.student_id}" value="${s.skills_stars || 0}">
+                            </div>
+                        </td>
+                        <td class="px-4 py-6 text-center">
+                            <div class="flex items-center justify-center rating-stars" dir="ltr">
+                                ${[1, 2, 3].map(v => `<span class="cursor-pointer text-xl transition-colors ${s.behavior_stars >= v ? 'text-blue-500' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'behavior', ${v})">★</span>`).join('')}
+                                <input type="hidden" id="behavior_${s.student_id}" value="${s.behavior_stars || 0}">
                             </div>
                         </td>
                     </tr>
@@ -152,19 +187,62 @@ async function loadAttendanceList() {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3 bg-gray-50 p-2 rounded-[1.5rem] border border-gray-100 shadow-inner">
-                    <label class="cursor-pointer">
-                        <input type="radio" name="m_att_${s.student_id}" value="present" ${st === 'present' ? 'checked' : ''} class="peer hidden" onchange="syncMobileRadio(${s.student_id}, 'present')" ${!canEdit() ? 'disabled' : ''}>
-                        <div class="py-4 text-center rounded-2xl font-black text-[10px] peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:shadow-xl transition-all text-gray-400">حاضر</div>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input type="radio" name="m_att_${s.student_id}" value="absent" ${st === 'absent' ? 'checked' : ''} class="peer hidden" onchange="syncMobileRadio(${s.student_id}, 'absent')" ${!canEdit() ? 'disabled' : ''}>
-                        <div class="py-4 text-center rounded-2xl font-black text-[10px] peer-checked:bg-red-600 peer-checked:text-white peer-checked:shadow-xl transition-all text-gray-400">غائب</div>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input type="radio" name="m_att_${s.student_id}" value="late" ${st === 'late' ? 'checked' : ''} class="peer hidden" onchange="syncMobileRadio(${s.student_id}, 'late')" ${!canEdit() ? 'disabled' : ''}>
-                        <div class="py-4 text-center rounded-2xl font-black text-[10px] peer-checked:bg-amber-500 peer-checked:text-white peer-checked:shadow-xl transition-all text-gray-400">متأخر</div>
-                    </label>
+                <!-- Mobile: Attendance -->
+                <div class="mb-4">
+                    <p class="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">التحضير الرسمي</p>
+                    <div class="grid grid-cols-3 gap-2 bg-gray-50 p-1.5 rounded-[1.5rem] border border-gray-100 shadow-inner">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="m_att_${s.student_id}" value="present" ${st === 'present' ? 'checked' : ''} class="peer hidden" onchange="syncMobileRadio(${s.student_id}, 'present')" ${!canEdit() ? 'disabled' : ''}>
+                            <div class="py-2.5 text-center rounded-2xl font-black text-[10px] peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:shadow-xl transition-all text-gray-400">حاضر</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="m_att_${s.student_id}" value="absent" ${st === 'absent' ? 'checked' : ''} class="peer hidden" onchange="syncMobileRadio(${s.student_id}, 'absent')" ${!canEdit() ? 'disabled' : ''}>
+                            <div class="py-2.5 text-center rounded-2xl font-black text-[10px] peer-checked:bg-red-600 peer-checked:text-white peer-checked:shadow-xl transition-all text-gray-400">غائب</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="m_att_${s.student_id}" value="late" ${st === 'late' ? 'checked' : ''} class="peer hidden" onchange="syncMobileRadio(${s.student_id}, 'late')" ${!canEdit() ? 'disabled' : ''}>
+                            <div class="py-2.5 text-center rounded-2xl font-black text-[10px] peer-checked:bg-amber-500 peer-checked:text-white peer-checked:shadow-xl transition-all text-gray-400">متأخر</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Mobile: Uniform -->
+                <div class="mb-4">
+                    <p class="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">الزي الرياضي</p>
+                    <div class="grid grid-cols-4 gap-2">
+                        <label class="cursor-pointer text-center">
+                            <input type="radio" name="m_uni_${s.student_id}" value="full" ${s.uniform_status === 'full' ? 'checked' : ''} class="peer hidden" onchange="syncMobileUniform(${s.student_id}, 'full')" ${!canEdit() ? 'disabled' : ''}>
+                            <div class="py-2 rounded-xl border-2 border-emerald-100 bg-emerald-50 text-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 transition-all font-bold text-lg">👕<div class="text-[9px] mt-1 font-black leading-none">كامل</div></div>
+                        </label>
+                        <label class="cursor-pointer text-center">
+                            <input type="radio" name="m_uni_${s.student_id}" value="partial" ${s.uniform_status === 'partial' ? 'checked' : ''} class="peer hidden" onchange="syncMobileUniform(${s.student_id}, 'partial')" ${!canEdit() ? 'disabled' : ''}>
+                            <div class="py-2 rounded-xl border-2 border-amber-100 bg-amber-50 text-amber-500 peer-checked:bg-amber-500 peer-checked:text-white peer-checked:border-amber-500 transition-all font-bold text-lg">👕<div class="text-[9px] mt-1 font-black leading-none">ناقص</div></div>
+                        </label>
+                        <label class="cursor-pointer text-center">
+                            <input type="radio" name="m_uni_${s.student_id}" value="wrong" ${s.uniform_status === 'wrong' ? 'checked' : ''} class="peer hidden" onchange="syncMobileUniform(${s.student_id}, 'wrong')" ${!canEdit() ? 'disabled' : ''}>
+                            <div class="py-2 rounded-xl border-2 border-red-100 bg-red-50 text-red-500 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-500 transition-all font-bold text-lg">👕<div class="text-[9px] mt-1 font-black leading-none">مخالف</div></div>
+                        </label>
+                        <label class="cursor-pointer text-center">
+                            <input type="radio" name="m_uni_${s.student_id}" value="missing" ${s.uniform_status === 'missing' ? 'checked' : ''} class="peer hidden" onchange="syncMobileUniform(${s.student_id}, 'missing')" ${!canEdit() ? 'disabled' : ''}>
+                            <div class="py-2 rounded-xl border-2 border-gray-200 bg-gray-100 text-gray-500 peer-checked:bg-gray-600 peer-checked:text-white peer-checked:border-gray-600 transition-all font-bold text-lg">❌<div class="text-[9px] mt-1 font-black leading-none">بدون</div></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Mobile: Stars -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
+                        <span class="text-[10px] font-black text-gray-500 mb-1">المهارة والمشاركة</span>
+                        <div class="rating-stars text-xl" dir="ltr">
+                            ${[1, 2, 3].map(v => `<span class="cursor-pointer transition-colors ${s.skills_stars >= v ? 'text-amber-400' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'skills', ${v}, true)">★</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
+                        <span class="text-[10px] font-black text-gray-500 mb-1">السلوك الرياضي</span>
+                        <div class="rating-stars text-xl" dir="ltr">
+                            ${[1, 2, 3].map(v => `<span class="cursor-pointer transition-colors ${s.behavior_stars >= v ? 'text-blue-500' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'behavior', ${v}, true)">★</span>`).join('')}
+                        </div>
+                    </div>
                 </div>
             </div>
             `;
@@ -193,12 +271,26 @@ async function saveAttendance() {
         const sid = row.dataset.studentId;
         if (processedIds.has(sid)) return;
 
-        // Check desktop or mobile radio
-        const checked = document.querySelector(`input[name="att_${sid}"]:checked`) ||
+        // Check attendance status
+        const attRadio = document.querySelector(`input[name="att_${sid}"]:checked`) ||
             document.querySelector(`input[name="m_att_${sid}"]:checked`);
 
-        if (checked) {
-            records.push({ student_id: sid, status: checked.value });
+        if (attRadio) {
+            // Check uniform
+            const uniRadio = document.querySelector(`input[name="uni_${sid}"]:checked`) ||
+                document.querySelector(`input[name="m_uni_${sid}"]:checked`);
+
+            // Check stars
+            const skillsVal = document.getElementById(`skills_${sid}`) ? document.getElementById(`skills_${sid}`).value : 0;
+            const behaviorVal = document.getElementById(`behavior_${sid}`) ? document.getElementById(`behavior_${sid}`).value : 0;
+
+            records.push({
+                student_id: sid,
+                status: attRadio.value,
+                uniform_status: uniRadio ? uniRadio.value : null,
+                skills_stars: skillsVal,
+                behavior_stars: behaviorVal
+            });
             processedIds.add(sid);
         }
     });
@@ -216,4 +308,44 @@ async function saveAttendance() {
     } else if (r) {
         showToast(r.error, 'error');
     }
+}
+
+// Flexible Grading Sync Functions
+function syncMobileUniform(sid, val) {
+    const desktopRadio = document.querySelector(`input[name="uni_${sid}"][value="${val}"]`);
+    if (desktopRadio) desktopRadio.checked = true;
+}
+
+function setStars(element, sid, type, val, isMobile = false) {
+    if (!canEdit()) return;
+
+    // Select the hidden input
+    const input = document.getElementById(`${type}_${sid}`);
+    if (input) {
+        // Toggle logic: clicking same star turns it off
+        if (parseInt(input.value) === val) {
+            val = 0;
+        }
+        input.value = val;
+    }
+
+    // Update visual stars dynamically (find parent, update children)
+    const container = element.parentElement;
+    const allStars = container.querySelectorAll('span');
+    allStars.forEach((star, idx) => {
+        if (idx < val) {
+            star.classList.remove('text-gray-300');
+            star.classList.add(type === 'skills' ? 'text-amber-400' : 'text-blue-500');
+        } else {
+            star.classList.add('text-gray-300');
+            star.classList.remove('text-amber-400', 'text-blue-500');
+        }
+    });
+
+    // Also update the counterpart view (desktop vs mobile)
+    const counterpartSelector = isMobile ? `input#${type}_${sid}` : `.lg\\:hidden input#${type}_${sid}`; // Basic workaround
+    // Let's rely on re-rendering for cross-sync or we just mutate both on submit. 
+    // Since IDs are unique across the page, one hidden input per ID is safer.
+    // The current template generates ONE input per ID inside Desktop block, and mobile manipulates the Desktop ID.
+    // Notice mobile template didn't render hidden inputs, so it edits the desktop one safely.
 }

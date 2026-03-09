@@ -160,7 +160,8 @@ function esc($str) {
                 <a href="#features" class="hover:text-emerald-600 transition-colors">المقومات الشاملة</a>
                 <a href="#analytics" class="hover:text-emerald-600 transition-colors">التحليلات والصحة</a>
                 <a href="#tournaments" class="hover:text-emerald-600 transition-colors">محرك البطولات</a>
-                <a href="#blog" class="hover:text-emerald-600 transition-colors">المدونة والدروس</a>
+                <a href="#blog" class="hover:text-emerald-600 transition-colors">المدونة</a>
+                <a href="#faq" class="hover:text-emerald-600 transition-colors">أسئلة شائعة</a>
                 <a href="#pricing" class="hover:text-emerald-600 transition-colors">الأسعار</a>
             </div>
 
@@ -346,6 +347,103 @@ function esc($str) {
             </div>
         </div>
     </section>
+    
+    <!-- Deep Section 0: Analytics & Health (Light/White) -->
+    <section id="analytics" class="py-24 px-4 bg-white relative z-20">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
+            <div class="flex-1 reveal">
+                <span class="text-indigo-500 font-bold tracking-widest text-sm uppercase mb-4 block">الذكاء العملي</span>
+                <h2 class="text-4xl md:text-5xl font-black text-slate-900 mb-6 leading-tight">
+                    تحليلات صحية دقيقة <br> <span class="text-indigo-600">لرعاية رياضية شاملة</span>
+                </h2>
+                <div class="space-y-8">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 shadow-sm border border-indigo-100 flex-shrink-0">
+                            <i data-lucide="line-chart" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-black text-slate-800 mb-2">لوحة التحليلات المتقدمة</h4>
+                            <p class="text-slate-500 font-bold leading-relaxed">رسوم بيانية تفاعلية تعرض تطور أداء المدرسة، خرائط حرارية للحضور (Heatmaps)، ومقارنات ذكية بين الفصول بناءً على الأوزان الرياضية.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 shadow-sm border border-rose-100 flex-shrink-0">
+                            <i data-lucide="heart" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-black text-slate-800 mb-2">رصد المؤشرات الحيوية (BMI)</h4>
+                            <p class="text-slate-500 font-bold leading-relaxed">تتبع آلي لمؤشر كتلة الجسم، الطول، والوزن مع تصنيف صحي تلقائي وتنبيهات فورية للمعلمين عن حالات السمنة أو النحافة الزائدة.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100 flex-shrink-0">
+                            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-black text-slate-800 mb-2">نظام التنبيه الصحي المبكر</h4>
+                            <p class="text-slate-500 font-bold leading-relaxed">سجل مدمج للحالات الصحية والأمراض المزمنة يظهر للمعلم أثناء التحضير الميداني لضمان سلامة الطلاب وتجنب الإجهاد الزائد.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 w-full reveal">
+                <div class="relative group">
+                    <!-- Abstract Analytics UI Representation -->
+                    <div class="absolute inset-0 bg-indigo-100 rounded-[3rem] blur-3xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                    <div class="relative glass-panel p-8 rounded-[3rem] shadow-2xl border border-white/60">
+                        <div class="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-slate-200"></div>
+                                <div class="w-3 h-3 rounded-full bg-slate-200"></div>
+                                <div class="w-3 h-3 rounded-full bg-slate-200"></div>
+                            </div>
+                            <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Live Analytics Feed</span>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <!-- Fake Stat Cards -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-indigo-600 rounded-2xl p-4 text-white shadow-lg">
+                                    <p class="text-[9px] font-bold opacity-80 uppercase">Avg Fitness</p>
+                                    <p class="text-2xl font-black">92.4%</p>
+                                    <div class="mt-2 h-1 w-full bg-white/20 rounded-full overflow-hidden">
+                                        <div class="h-full bg-white w-[92%]"></div>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Active Alerts</p>
+                                    <p class="text-2xl font-black text-rose-500">03</p>
+                                    <div class="mt-2 flex gap-1">
+                                        <div class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></div>
+                                        <div class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fake Chart Lines -->
+                            <div class="h-32 flex items-end justify-between px-2 pt-4">
+                                <div class="w-6 bg-indigo-100 h-[20%] rounded-t-lg transition-all hover:h-[30%]"></div>
+                                <div class="w-6 bg-indigo-200 h-[45%] rounded-t-lg transition-all hover:h-[55%]"></div>
+                                <div class="w-6 bg-indigo-300 h-[30%] rounded-t-lg transition-all hover:h-[40%]"></div>
+                                <div class="w-6 bg-indigo-400 h-[65%] rounded-t-lg transition-all hover:h-[75%]"></div>
+                                <div class="w-6 bg-indigo-500 h-[40%] rounded-t-lg transition-all hover:h-[50%]"></div>
+                                <div class="w-6 bg-indigo-600 h-[90%] rounded-t-lg transition-all hover:h-[100%]"></div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <span class="inline-flex py-1 px-4 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">Monthly Growth Performance</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Deep Section 1: Tournament & Brackets (Dark) -->
 
     <!-- Deep Section 1: Tournament & Brackets (Dark) -->
     <section id="tournaments" class="py-24 px-4 bg-slate-900 border-t border-slate-800 relative z-10 overflow-hidden">
@@ -615,6 +713,136 @@ function esc($str) {
             </div>
         </div>
     </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="py-24 px-4 bg-white relative overflow-hidden">
+        <div class="max-w-4xl mx-auto relative z-10">
+            <div class="text-center mb-16 reveal">
+                <span class="px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-600 font-bold text-sm mb-4 inline-block">دليلك السريع</span>
+                <h2 class="text-4xl lg:text-5xl font-black text-slate-900 mb-6 tracking-tight">الأسئلة <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500">الشائعة</span></h2>
+                <p class="text-slate-500 font-bold max-w-2xl mx-auto text-lg hover:text-slate-700 transition-colors">إجابات وافية لأكثر الأسئلة تداولاً بين المعلمين ومدراء المدارس حول استخدام المنصة.</p>
+            </div>
+
+            <div class="space-y-4 reveal" style="transition-delay: 100ms;">
+                
+                <!-- FAQ Item 1 -->
+                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">1. ما هي منصة PE Smart School؟</span>
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                        </div>
+                    </button>
+                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">هي منصة رقمية سحابية متكاملة صُممت خصيصاً لمعلمي التربية البدنية. تهدف إلى تحويل العمل الورقي التقليدي إلى نظام رقمي ذكي يساعد في إدارة الحصص، تقييم الطلاب، تنظيم البطولات المدرسية، وتتبع سجلات اللياقة البدنية بكل سهولة.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 2 -->
+                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">2. هل المنصة تعمل على الهواتف الذكية أم أجهزة الكمبيوتر فقط؟</span>
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                        </div>
+                    </button>
+                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">النظام سحابي ويعمل بكفاءة عالية على جميع الأجهزة. يمكنك استخدامه من خلال متصفح الكمبيوتر، أو من خلال الهاتف الآيفون والأندرويد أو الجهاز اللوحي (الآيباد) بكل سلاسة أثناء تواجدك في الصالة أو الملعب الرياضي.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 3 -->
+                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">3. كيف تعمل ميزة "محرك البطولات" داخل النظام؟</span>
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                        </div>
+                    </button>
+                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">يوفر النظام أداة احترافية لإنشاء البطولات المدرسية (مثل نظام الدوري المستمر أو خروج المغلوب). يمكنك تقسيم الطلاب إلى فرق، وسيقوم النظام تلقائياً بإنشاء جدول المباريات، تتبع النتائج، وتحديث الترتيب وإصدار إحصائيات أفضل اللاعبين والهدافين بناءً على خوارزميات رياضية دقيقة.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 4 -->
+                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">4. هل يمكنني تخصيص معايير التقييم لتناسب خطتي الدراسية؟</span>
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                        </div>
+                    </button>
+                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">بالتأكيد. المنصة مرنة وتسمح لك بضبط وتوزيع درجات التقييم (مثل الحضور، الزي الرياضي، المشاركة، واختبارات اللياقة البدنية) وتحديد الوزن الأكاديمي لكل معيار بما يتوافق بدقة مع القواعد واللوائح المعتمدة في مدرستك أو إدارتك التعليمية.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 5 -->
+                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">5. هل بيانات مدرستي وطلابي آمنة؟</span>
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                        </div>
+                    </button>
+                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">الأمان هو أولويتنا القصوى. جميع بيانات المدارس، المعلمين، والطلاب يتم تشفيرها وحفظها في خوادم سحابية آمنة ومدرعة، ولا يمكن لأي شخص الاطلاع عليها سوى المصرّح لهم من إدارة مدرستك.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 6 -->
+                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">6. هل أحتاج إلى خبرة تقنية سابقة لاستخدام النظام؟</span>
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                        </div>
+                    </button>
+                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">لا على الإطلاق! تم تصميم واجهة المستخدم لتكون بسيطة، واضحة، وباللغة العربية، بحيث يمكن لأي معلم أو مشرف رياضي البدء في استخدامها باحترافية منذ اليوم الأول دون الحاجة لتدريب معقد.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Simple FAQ Accordion Script
+        document.querySelectorAll('.faq-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const faqItem = button.parentElement;
+                const content = button.nextElementSibling;
+                const icon = button.querySelector('.faq-icon');
+                const isOpen = faqItem.classList.contains('active');
+
+                // Close all other open items tightly
+                document.querySelectorAll('.faq-item.active').forEach(item => {
+                    if (item !== faqItem) {
+                        item.classList.remove('active');
+                        item.querySelector('.faq-content').style.maxHeight = '0px';
+                        item.querySelector('.faq-content').classList.remove('opacity-100');
+                        item.querySelector('.faq-content').classList.add('opacity-0');
+                        item.querySelector('.faq-icon').style.transform = 'rotate(0deg)';
+                    }
+                });
+
+                if (isOpen) {
+                    faqItem.classList.remove('active');
+                    content.style.maxHeight = '0px';
+                    content.classList.remove('opacity-100');
+                    content.classList.add('opacity-0');
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    faqItem.classList.add('active');
+                    content.classList.remove('opacity-0');
+                    content.classList.add('opacity-100');
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            });
+        });
+    </script>
 
     <!-- Pricing Section -->
     <section id="pricing" class="py-24 px-4 bg-slate-50">
