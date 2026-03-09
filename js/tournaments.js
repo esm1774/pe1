@@ -496,10 +496,11 @@ async function renderTeamsTab(id) {
         <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
             <h4 class="font-bold text-gray-800">👥 الفرق المشاركة (${teams.length})</h4>
             ${canEdit() && isDraft ? `
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
                 <button onclick="showAddClassesModal(${id})" class="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-700 cursor-pointer">🏫 إضافة فصول</button>
                 <button onclick="showAddSportsTeamsModal(${id})" class="bg-teal-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-teal-700 cursor-pointer">🏅 إضافة من الفرق</button>
-                <button onclick="showAddTeamForm(${id})" class="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-700 cursor-pointer">+ فريق يدوي</button>
+                <button onclick="showTournamentLotteryWizard(${id})" class="bg-purple-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-purple-700 cursor-pointer">🎲 قرعة الفرق</button>
+                <button onclick="showAddTeamForm(${id})" class="bg-slate-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-slate-700 cursor-pointer">+ فريق يدوي</button>
             </div>
             ` : ''}
         </div>
@@ -655,10 +656,23 @@ function renderMatchCard(m, isInProgress) {
         </div>
 
         ${canEnterResult && canEdit() ? `
-        <button onclick="showMatchResultForm(${m.id}, '${esc(team1Name)}', '${esc(team2Name)}', ${m.team1_id}, ${m.team2_id})" 
-                class="w-full mt-3 bg-emerald-600 text-white py-2 rounded-lg font-semibold text-sm hover:bg-emerald-700 cursor-pointer">
-            📝 إدخال النتيجة
-        </button>
+        <div class="flex gap-2 mt-3">
+            <button onclick="showMatchResultForm(${m.id}, '${esc(team1Name)}', '${esc(team2Name)}', ${m.team1_id}, ${m.team2_id})" 
+                    class="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-semibold text-sm hover:bg-emerald-700 cursor-pointer">
+                📝 إدخال النتيجة
+            </button>
+            <button onclick="openLiveMatchPanel(${m.id})" 
+                    class="flex items-center gap-1.5 bg-red-600 text-white px-3 py-2 rounded-lg font-semibold text-sm hover:bg-red-700 cursor-pointer whitespace-nowrap">
+                📱 تحكيم الميدان
+            </button>
+        </div>
+        ` : ''}
+
+        ${isInProgress && !canEnterResult && canEdit() && !isBye ? `
+            <button onclick="openLiveMatchPanel(${m.id})" 
+                    class="w-full mt-3 bg-red-600 text-white py-2 rounded-lg font-semibold text-sm hover:bg-red-700 cursor-pointer flex items-center justify-center gap-2">
+                📱 تحكيم الميدان
+            </button>
         ` : ''}
 
         ${(isCompleted || isInProgress) && canEdit() && !isBye ? `
@@ -1867,3 +1881,227 @@ async function deleteMedia(id, matchId, t1, t2) {
     }
 }
 
+
+// ============================================================
+// TOURNAMENT LOTTERY WIZARD (قرعة الفرق للبطولات)
+// ============================================================
+
+let _tourLotterySelectedIds = new Set();
+let _tourLotteryData = {
+    students: [],
+    previewTeams: [],
+    tournamentId: null
+};
+
+async function showTournamentLotteryWizard(tournamentId) {
+    const r = await TAPI.get('available_potential_students');
+    if (!r?.success) {
+        showToast('خطأ في جلب الطلاب المتاحين', 'error');
+        return;
+    }
+
+    _tourLotteryData.students = r.data || [];
+    _tourLotteryData.tournamentId = tournamentId;
+    _tourLotterySelectedIds = new Set();
+
+    if (_tourLotteryData.students.length === 0) {
+        showToast('لا يوجد طلاب متاحين للقرعة (تم توزيعهم أو لا يوجد فصول)', 'info');
+        return;
+    }
+
+    // Building grouped list
+    const byClass = {};
+    _tourLotteryData.students.forEach(s => {
+        const cn = s.class_name || 'غير محدد';
+        if (!byClass[cn]) byClass[cn] = [];
+        byClass[cn].push(s);
+    });
+
+    let html = '';
+    for (const [cls, list] of Object.entries(byClass)) {
+        html += `<div class="mb-4">
+            <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl flex-wrap shadow-sm border border-slate-100">
+                <span class="font-bold text-slate-700">${esc(cls)}</span>
+                <div class="flex gap-2">
+                    <button class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-bold transition" onclick="tlSelectClass('${esc(cls)}', true)">تحديد الكل</button>
+                    <button class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-1 rounded-lg font-bold transition" onclick="tlSelectClass('${esc(cls)}', false)">إلغاء</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">`;
+        list.forEach(s => {
+            html += `<label class="flex items-center gap-3 tl-student-row p-2 rounded-lg hover:bg-indigo-50/50 cursor-pointer border border-transparent hover:border-indigo-100 transition" data-class="${esc(cls)}">
+                <input type="checkbox" value="${s.id}" class="tl-student-cb w-5 h-5 cursor-pointer accent-indigo-600 rounded" onchange="tlToggleStudent(this)">
+                <span class="text-sm font-semibold text-slate-700 whitespace-nowrap overflow-hidden text-ellipsis tooltip" title="${esc(s.name)}">${esc(s.name)}</span>
+            </label>`;
+        });
+        html += `</div></div>`;
+    }
+
+    showModal(`
+        <div class="p-6 max-w-3xl w-full max-h-[90vh] flex flex-col">
+            <h3 class="text-2xl font-black text-slate-800 mb-2">🎲 قرعة الفرق (الذكية)</h3>
+            
+            <div id="tlStep1" class="flex-1 overflow-auto flex flex-col">
+                <p class="text-slate-500 mb-4 font-bold text-sm bg-indigo-50 p-3 rounded-xl text-indigo-800 border border-indigo-100">
+                    الخطوة 1: حدد الطلاب المشاركين في القرعة (<span id="tlSelCount" class="font-black text-lg px-2 rounded-md bg-white">0</span> محدد)
+                </p>
+                <div class="mb-4 flex gap-2">
+                    <button class="text-sm bg-indigo-600 text-white px-4 py-2 font-bold rounded-xl hover:bg-indigo-700 transition" onclick="tlSelectAll(true)">✅ تحديد الكل</button>
+                    <button class="text-sm bg-slate-200 text-slate-700 px-4 py-2 font-bold rounded-xl hover:bg-slate-300 transition" onclick="tlSelectAll(false)">❌ إلغاء تحديد الكل</button>
+                </div>
+                <div class="flex-1 overflow-y-auto pr-2" style="max-height: 45vh;">
+                    ${html}
+                </div>
+                <div class="mt-4 flex gap-4">
+                    <button onclick="tlGoStep2()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-lg transition shadow-lg hover:-translate-y-1">التالي: إعداد خطة الفرق ←</button>
+                    <button onclick="closeModal()" class="px-8 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-2xl transition">إلغاء</button>
+                </div>
+            </div>
+
+            <div id="tlStep2" class="hidden flex-col h-full">
+                <p class="text-slate-500 mb-4 font-bold text-sm bg-green-50 p-3 rounded-xl text-green-800 border border-green-100">
+                    الخطوة 2: إعدادات توزيع القرعة لـ <span id="tlS2Count" class="font-black">0</span> طالب
+                </p>
+                
+                <div class="bg-indigo-50 border border-indigo-100 rounded-3xl p-6 mb-4">
+                    <label class="block text-indigo-900 font-bold mb-3 text-lg">كم عدد الفرق المستهدفة؟</label>
+                    <input type="number" id="lotteryTeamsCount" min="2" max="20" value="4" 
+                        class="w-full px-4 py-4 bg-white border-2 border-indigo-200 rounded-2xl text-xl font-black focus:outline-none focus:border-indigo-500 text-center shadow-inner">
+                </div>
+
+                <div id="tourLotteryResult" class="flex-1 space-y-4 max-h-[35vh] overflow-y-auto hidden pl-2 my-4 border border-slate-200 p-4 rounded-2xl bg-white"></div>
+
+                <div class="mt-4 flex gap-4">
+                    <button onclick="tlGoStep1()" class="px-6 bg-slate-200 text-slate-700 hover:bg-slate-300 py-4 rounded-2xl font-bold transition">→ السابق</button>
+                    <button id="btnTourLotteryRun" onclick="_runTournamentLotteryPreview()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-black text-lg transition shadow-lg hover:-translate-y-1">🎲 إجراء عشوائي للقرعة</button>
+                    <button id="btnTourLotteryConfirm" onclick="_confirmTournamentLottery()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black text-lg hidden transition shadow-lg hover:-translate-y-1">✅ اعتماد وحفظ الفرق</button>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+function tlToggleStudent(cb) {
+    if (cb.checked) _tourLotterySelectedIds.add(String(cb.value));
+    else _tourLotterySelectedIds.delete(String(cb.value));
+    document.getElementById('tlSelCount').textContent = _tourLotterySelectedIds.size;
+}
+function tlSelectClass(cls, checked) {
+    document.querySelectorAll('.tl-student-row').forEach(row => {
+        if (row.getAttribute('data-class') === cls) {
+            const cb = row.querySelector('.tl-student-cb');
+            if (cb.checked !== checked) { cb.checked = checked; tlToggleStudent(cb); }
+        }
+    });
+}
+function tlSelectAll(checked) {
+    document.querySelectorAll('.tl-student-cb').forEach(cb => {
+        if (cb.checked !== checked) { cb.checked = checked; tlToggleStudent(cb); }
+    });
+}
+function tlGoStep2() {
+    if (_tourLotterySelectedIds.size < 2) return showToast('اختر طالبين على الأقل', 'error');
+    document.getElementById('tlStep1').classList.add('hidden');
+    document.getElementById('tlStep2').classList.remove('hidden');
+    document.getElementById('tlS2Count').textContent = _tourLotterySelectedIds.size;
+}
+function tlGoStep1() {
+    document.getElementById('tlStep1').classList.remove('hidden');
+    document.getElementById('tlStep2').classList.add('hidden');
+}
+
+function _runTournamentLotteryPreview() {
+    const teamsCount = parseInt(document.getElementById('lotteryTeamsCount').value) || 0;
+
+    // Filter out only selected students
+    const students = _tourLotteryData.students.filter(s => _tourLotterySelectedIds.has(String(s.id)));
+
+    if (teamsCount < 2 || teamsCount > 50) {
+        showToast('يرجى تحديد عدد فرق صحيح (2 إلى 50)', 'error');
+        return;
+    }
+    if (students.length < teamsCount) {
+        showToast('عدد الطلاب أقل من عدد الفرق المطلوب', 'error');
+        return;
+    }
+
+    // Shuffle (Fisher-Yates)
+    for (let i = students.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [students[i], students[j]] = [students[j], students[i]];
+    }
+
+    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6', '#f97316'];
+    const alphabet = 'أ ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن هـ و ي'.split(' ');
+
+    _tourLotteryData.previewTeams = Array.from({ length: teamsCount }, (_, i) => ({
+        name: `الفريق ${alphabet[i] || (i + 1)}`,
+        color: colors[i % colors.length],
+        members: []
+    }));
+
+    // Distribute
+    students.forEach((student, currIdx) => {
+        const teamIdx = currIdx % teamsCount;
+        _tourLotteryData.previewTeams[teamIdx].members.push(student);
+    });
+
+    _renderTourLotteryPreview();
+}
+
+function _renderTourLotteryPreview() {
+    const resDiv = document.getElementById('tourLotteryResult');
+    resDiv.classList.remove('hidden');
+
+    resDiv.innerHTML = _tourLotteryData.previewTeams.map((t, i) => `
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+            <div class="flex items-center gap-3 mb-3 pb-3 border-b border-slate-200">
+                <div class="w-8 h-8 rounded-full flex justify-center items-center text-white font-bold" style="background:${t.color}">
+                    ${t.members.length}
+                </div>
+                <input type="text" value="${t.name}" 
+                    class="font-black text-lg bg-transparent border-none focus:outline-none focus:border-b focus:border-indigo-300 w-full"
+                    onchange="_tourLotteryData.previewTeams[${i}].name = this.value">
+            </div>
+            <div class="flex flex-wrap gap-2">
+                ${t.members.map(m => `<span class="bg-white px-3 py-1 rounded-full text-xs font-bold text-slate-700 border border-slate-200 shadow-sm">${esc(m.name)}</span>`).join('')}
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('btnTourLotteryConfirm').classList.remove('hidden');
+    document.getElementById('btnTourLotteryRun').textContent = '🎲 إعادة القرعة';
+    document.getElementById('btnTourLotteryRun').classList.replace('flex-1', 'px-6');
+}
+
+async function _confirmTournamentLottery() {
+    const btn = document.getElementById('btnTourLotteryConfirm');
+    btn.disabled = true;
+    btn.innerHTML = 'جاري الحفظ...';
+
+    const teamsPayload = _tourLotteryData.previewTeams.map(t => ({
+        name: t.name,
+        color: t.color,
+        members: t.members.map(m => m.id)
+    }));
+
+    try {
+        const r = await TAPI.post('teams_from_lottery', {
+            tournament_id: _tourLotteryData.tournamentId,
+            teams: teamsPayload
+        });
+
+        if (r?.success) {
+            closeModal();
+            showToast(r.message || 'تم اعتماد قرعة الفرق بنجاح! ✅', 'success');
+            renderTournamentTab(_tourLotteryData.tournamentId); // Reload Teams Tab
+        } else {
+            showToast(r?.error || 'فشل في حفظ القرعة', 'error');
+        }
+    } catch (e) {
+        showToast('خطأ غير متوقع', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '✅ اعتماد الفرق';
+    }
+}

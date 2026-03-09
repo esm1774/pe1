@@ -1,6 +1,15 @@
 /**
  * Live Tournament Public Viewer v1.0
  */
+function esc(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 class TournamentPublic {
     constructor() {
         this.token = new URLSearchParams(window.location.search).get('t');
@@ -130,7 +139,7 @@ class TournamentPublic {
         this.data.recent_matches.forEach(match => {
             const isLive = match.status === 'in_progress';
             html += `
-                <div class="match-row">
+                <div class="match-row" style="${isLive ? 'border-right: 4px solid var(--danger); background: #fffcfc;' : ''}">
                     <div class="team">
                         <div class="team-icon">⚽</div>
                         <span class="team-name">${match.team1_name}</span>
@@ -138,11 +147,14 @@ class TournamentPublic {
                     </div>
                     <div class="score-box">
                         <span class="score">${match.team1_score ?? '-'} : ${match.team2_score ?? '-'}</span>
-                        <div class="flex gap-2 justify-center mt-1">
-                            <span class="match-meta">${isLive ? '<span class="live-badge">Live</span>' : match.match_date || ''}</span>
-                            ${match.media_count > 0 ? `<button onclick="App.showMatchMedia(${match.id})" class="media-btn">🖼️ ${match.media_count}</button>` : ''}
+                        <div class="flex flex-col gap-1 items-center mt-1">
+                            <span class="match-meta text-center">${isLive ? '<span class="live-badge" style="background:#ef4444; color:white; padding:1px 8px; border-radius:1rem; font-size:0.6rem; animation: pulse 2s infinite">LIVE</span>' : match.match_date || ''}</span>
+                            <div class="flex gap-2 justify-center">
+                                ${match.media_count > 0 ? `<button onclick="App.showMatchMedia(${match.id})" class="media-btn">🖼️ ${match.media_count}</button>` : ''}
+                                ${isLive || match.status === 'completed' ? `<button onclick="App.showLiveTimeline(${match.id})" class="media-btn" style="background:var(--primary); color:white; border:none">📡 المتابعة</button>` : ''}
+                            </div>
                         </div>
-                        ${match.man_of_match_name ? `<span class="match-meta clickable-player" onclick="App.openPlayerProfile(${match.man_of_match_student_id})" style="color:var(--accent)">🌟 ${match.man_of_match_name}</span>` : ''}
+                        ${match.man_of_match_name ? `<span class="match-meta clickable-player" onclick="App.openPlayerProfile(${match.man_of_match_student_id})" style="color:var(--accent); font-weight:800; font-size:0.7rem">🌟 ${esc(match.man_of_match_name)}</span>` : ''}
                     </div>
                     <div class="team">
                         <div class="team-icon">⚽</div>
@@ -536,6 +548,91 @@ class TournamentPublic {
 
         modal.innerHTML = content;
         document.body.appendChild(modal);
+    }
+
+    async showLiveTimeline(matchId) {
+        // Find match names from data
+        const match = this.data.recent_matches.find(m => m.id == matchId);
+        const t1 = match ? match.team1_name : '؟';
+        const t2 = match ? match.team2_name : '؟';
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'media-modal-overlay';
+        modal.id = 'live-timeline-modal';
+        modal.onclick = (e) => { if (e.target === modal) { clearInterval(this.timelineTimer); modal.remove(); } };
+
+        modal.innerHTML = `
+            <div class="media-modal-content" style="max-width: 450px;">
+                <button class="close-modal" onclick="clearInterval(App.timelineTimer); this.parentElement.parentElement.remove()">✕</button>
+                <div style="text-align:center; margin-bottom: 1.5rem;">
+                    <h3 style="color:var(--primary); font-weight:900;">📡 البث المباشر للأحداث</h3>
+                    <p style="font-size:0.85rem; color:var(--text-muted)">${t1} vs ${t2}</p>
+                </div>
+                <div id="timeline-flow" class="timeline-flow" style="max-height: 400px; overflow-y: auto; padding: 0.5rem;">
+                    <div style="text-align:center; padding:2rem; color:#999">جاري جلب الأحداث...</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Fetch loop
+        const fetchEvents = async () => {
+            try {
+                const res = await fetch(`${this.apiBase}?action=match_events_public&t=${this.token}&match_id=${matchId}`);
+                const result = await res.json();
+                if (result.success) {
+                    this.renderTimelineEvents(result.data);
+                }
+            } catch (e) { }
+        };
+
+        fetchEvents();
+        this.timelineTimer = setInterval(fetchEvents, 5000); // Pulse every 5s
+    }
+
+    renderTimelineEvents(events) {
+        const flow = document.getElementById('timeline-flow');
+        if (!flow) return;
+
+        if (events.length === 0) {
+            flow.innerHTML = '<div style="text-align:center; padding:2rem; color:#999">لا توجد أحداث مسجلة بعد في هذه المباراة</div>';
+            return;
+        }
+
+        // Sort descending to show latest on top
+        const sorted = [...events].reverse();
+
+        flow.innerHTML = sorted.map(ev => {
+            const { label, icon, color } = this._formatEventType(ev.event_type);
+            return `
+                <div style="display:flex; gap:1rem; margin-bottom: 1rem; position:relative; padding-bottom:1rem; border-bottom: 1px solid #f0f0f0;">
+                    <div style="font-weight:900; color:#aaa; font-size:0.8rem; min-width:30px">${ev.minute ? ev.minute + "'" : "—"}</div>
+                    <div style="flex:1">
+                        <div style="display:flex; align-items:center; gap:0.5rem; font-weight:bold; color:${color}">
+                            <span style="font-size:1.1rem">${icon}</span>
+                            <span>${label}</span>
+                        </div>
+                        <div style="font-size:0.85rem; margin-top:2px">${ev.student_name || ''}</div>
+                        ${ev.notes ? `<div style="font-size:0.7rem; color:#888; margin-top:2px italic">${ev.notes}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    _formatEventType(type) {
+        const types = {
+            'goal': { label: 'هدف!', icon: '⚽', color: '#10b981' },
+            'own_goal': { label: 'هدف عكسي', icon: '🙈', color: '#ef4444' },
+            'penalty': { label: 'ضربة جزاء', icon: '🥅', color: '#10b981' },
+            'yellow_card': { label: 'بطاقة صفراء', icon: '🟨', color: '#f59e0b' },
+            'red_card': { label: 'بطاقة حمراء', icon: '🟥', color: '#ef4444' },
+            'substitution': { label: 'تبديل', icon: '🔄', color: '#3b82f6' },
+            'man_of_match': { label: 'نجم المباراة', icon: '🌟', color: '#f59e0b' },
+            'injury': { label: 'إصابة', icon: '🩹', color: '#94a3b8' }
+        };
+        return types[type] || { label: type, icon: '📢', color: '#333' };
     }
 
     showError(msg) {

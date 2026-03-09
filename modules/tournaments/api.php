@@ -6,6 +6,8 @@
 
 require_once '../../config.php';
 require_once '../../api/notifications.php';
+require_once 'core/teams.php';
+require_once 'core/live_match.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -38,6 +40,14 @@ try {
         case 'team_remove':          removeTeam(); break;
         case 'teams_add_classes':    addClassesAsTeams(); break;
         case 'teams_randomize':      randomizeStudentTeams(); break;
+        case 'teams_from_lottery':   addTeamsFromLottery(); break;
+
+        // LIVE MATCH - لوحة تحكيم الميدان
+        case 'live_match_state':         getLiveMatchState();     break;
+        case 'live_match_event':         addMatchEvent();         break;
+        case 'live_match_delete_event':  deleteMatchEvent();      break;
+        case 'live_match_start':         startLiveMatch();        break;
+        case 'live_match_end':           endLiveMatch();          break;
 
         // MATCHES
         case 'matches_list':         getMatches(); break;
@@ -66,6 +76,7 @@ try {
         case 'player_stats_update':  updatePlayerStats();    break;
         case 'top_scorers':          getTopScorers();        break;
         case 'man_of_match_set':     setManOfMatch();        break;
+        case 'match_events_public':  getMatchEventsPublic(); break;
         case 'player_award_set':     setPlayerAward();       break;
         case 'available_students':   getTournamentStudents(); break;
         case 'available_sports_teams': getAvailableSportsTeams(); break;
@@ -92,6 +103,10 @@ try {
         // التفاعل والتحفيز (v2.1)
         case 'cheer_action':          cheerAction(); break;
         case 'player_history':        getPlayerHistory(); break;
+
+        case 'cheer_action':          cheerAction(); break;
+        case 'player_history':        getPlayerHistory(); break;
+
 
         default:
             jsonError('إجراء غير معروف', 404);
@@ -253,7 +268,7 @@ function ensureTournamentTables() {
             `match_id` INT UNSIGNED NOT NULL,
             `team_id` INT UNSIGNED NOT NULL,
             `student_id` INT UNSIGNED DEFAULT NULL,
-            `event_type` ENUM('goal', 'own_goal', 'penalty', 'yellow_card', 'red_card', 'substitution', 'injury') NOT NULL,
+            `event_type` ENUM('goal', 'own_goal', 'penalty', 'yellow_card', 'red_card', 'substitution', 'injury', 'man_of_match') NOT NULL,
             `minute` INT UNSIGNED DEFAULT NULL,
             `notes` VARCHAR(255) DEFAULT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -299,7 +314,7 @@ function ensureTournamentTables() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // ─── ترحيل الأعمدة للجداول الموجودة مسبقاً ─────────────────────────
-        $childTables = ['matches', 'tournament_teams', 'standings', 'tournament_player_stats', 'match_media'];
+        $childTables = ['matches', 'tournament_teams', 'standings', 'tournament_player_stats', 'match_media', 'match_events'];
         foreach ($childTables as $tableName) {
             $cols = array_column($db->query("SHOW COLUMNS FROM `$tableName`")->fetchAll(), 'Field');
             if (!in_array('school_id', $cols)) {
@@ -329,6 +344,10 @@ function ensureTournamentTables() {
         _addColumnIfNotExists($db, 'tournament_teams', 'cheers_count', 'INT UNSIGNED NOT NULL DEFAULT 0');
         _addColumnIfNotExists($db, 'tournament_player_stats', 'cheers_count', 'INT UNSIGNED NOT NULL DEFAULT 0');
         _addColumnIfNotExists($db, 'tournament_teams', 'sports_team_id', 'INT UNSIGNED DEFAULT NULL AFTER `class_id`');
+
+        // Update match_events enum if needed
+        $db->exec("ALTER TABLE `match_events` MODIFY COLUMN `event_type` ENUM('goal', 'own_goal', 'penalty', 'yellow_card', 'red_card', 'substitution', 'injury', 'man_of_match') NOT NULL");
+
 
     } catch (Exception $e) {
         if (DEBUG_MODE) {
@@ -1300,6 +1319,23 @@ function advanceWinnerToNext($db, $matchId, $winnerId) {
         $column = $match['next_match_slot'] === 'team1' ? 'team1_id' : 'team2_id';
         $db->prepare("UPDATE matches SET $column = ? WHERE id = ?")
            ->execute([$winnerId, $match['next_match_id']]);
+    }
+}
+
+/**
+ * إرسال الخاسر لمباراة الخاسرين (في نظام خروج المغلوب المزدوج)
+ */
+function sendLoserToLosersBracket($db, $matchId, $loserId) {
+    if (!$loserId) return;
+    
+    $stmt = $db->prepare("SELECT loser_next_match_id, loser_next_match_slot FROM matches WHERE id = ?");
+    $stmt->execute([$matchId]);
+    $match = $stmt->fetch();
+    
+    if ($match && $match['loser_next_match_id']) {
+        $slot = $match['loser_next_match_slot'] ?: 'team1';
+        $db->prepare("UPDATE matches SET $slot = ? WHERE id = ?")
+           ->execute([$loserId, $match['loser_next_match_id']]);
     }
 }
 
@@ -2630,24 +2666,93 @@ function setManOfMatch() {
     validateRequired($data, ['match_id', 'student_id', 'student_name']);
 
     $db = getDB();
-    // تحديث المباراة
-    $db->prepare("UPDATE matches SET man_of_match_student_id = ?, man_of_match_name = ? WHERE id = ?")
-       ->execute([$data['student_id'], sanitize($data['student_name']), $data['match_id']]);
+    $matchId = (int)$data['match_id'];
+    $studentId = (int)$data['student_id'];
+    $studentName = sanitize($data['student_name']);
 
-    // إضافة إحصائية للاعب
-    $stmt = $db->prepare("SELECT tournament_id, team1_id, team2_id FROM matches WHERE id = ?");
-    $stmt->execute([$data['match_id']]);
+    // Get match info to find the correct team for this student
+    $stmt = $db->prepare("SELECT tournament_id, team1_id, team2_id, school_id FROM matches WHERE id = ?");
+    $stmt->execute([$matchId]);
     $match = $stmt->fetch();
+    if (!$match) jsonError('المباراة غير موجودة');
 
-    $teamId = $match['team1_id']; 
+    // Determine student's team in this match
+    $teamId = null;
+    $checkTeam = $db->prepare("
+        SELECT team_id FROM tournament_player_stats 
+        WHERE tournament_id = ? AND student_id = ? AND team_id IN (?, ?)
+    ");
+    $checkTeam->execute([$match['tournament_id'], $studentId, $match['team1_id'], $match['team2_id']]);
+    $teamId = $checkTeam->fetchColumn();
 
+    if (!$teamId) {
+        // Fallback: check manual team selection
+        $checkManual = $db->prepare("
+            SELECT tt.id FROM tournament_teams tt
+            JOIN student_teams st ON st.tournament_team_id = tt.id
+            JOIN student_team_members stm ON st.id = stm.student_team_id
+            WHERE tt.id IN (?, ?) AND stm.student_id = ?
+        ");
+        $checkManual->execute([$match['team1_id'], $match['team2_id'], $studentId]);
+        $teamId = $checkManual->fetchColumn();
+    }
+    
+    // If still not found, we fallback to team1 just to avoid null but teamId is highly likely found
+    if (!$teamId) $teamId = $match['team1_id'];
+
+    // 1. Update match record
+    $db->prepare("UPDATE matches SET man_of_match_student_id = ?, man_of_match_name = ? WHERE id = ?")
+       ->execute([$studentId, $studentName, $matchId]);
+
+    // 2. Remove any existing MoM event for this match to avoid duplicates
+    $db->prepare("DELETE FROM match_events WHERE match_id = ? AND event_type = 'man_of_match'")->execute([$matchId]);
+
+    // 3. Add to match_events
+    $stmt = $db->prepare("
+        INSERT INTO match_events (match_id, school_id, team_id, student_id, event_type, notes)
+        VALUES (?, ?, ?, ?, 'man_of_match', 'نجم المباراة')
+    ");
+    $stmt->execute([$matchId, $match['school_id'], $teamId, $studentId]);
+
+    // 4. Update player stats
+    // Note: We might want to handle previous MoM reset if we switch players, 
+    // but the current system usually just adds. For simplicity, we just add.
     $db->prepare("
-        INSERT INTO tournament_player_stats (tournament_id, student_id, team_id, man_of_match)
-        VALUES (?, ?, ?, 1)
+        INSERT INTO tournament_player_stats (tournament_id, school_id, student_id, team_id, man_of_match)
+        VALUES (?, ?, ?, ?, 1)
         ON DUPLICATE KEY UPDATE man_of_match = man_of_match + 1
-    ")->execute([$match['tournament_id'], $data['student_id'], $teamId]);
+    ")->execute([$match['tournament_id'], $match['school_id'], $studentId, $teamId]);
 
-    jsonSuccess(null, 'تم اختيار أفضل لاعب في المباراة');
+    jsonSuccess(null, 'تم اختيار أفضل لاعب في المباراة وتسجيله في الأحداث ✅');
+}
+
+/**
+ * جلب أحداث المباراة للجمهور (Live Ticker)
+ */
+function getMatchEventsPublic() {
+    $token = getParam('t');
+    $matchId = (int)getParam('match_id');
+    if (!$token || !$matchId) jsonError('بيانات غير مكتملة');
+
+    $db = getDB();
+    // Verify token belongs to the tournament of this match
+    $stmt = $db->prepare("
+        SELECT m.id FROM matches m
+        JOIN tournaments t ON m.tournament_id = t.id
+        WHERE m.id = ? AND t.public_token = ?
+    ");
+    $stmt->execute([$matchId, $token]);
+    if (!$stmt->fetch()) jsonError('غير مصرح لك بمشاهدة هذه المباراة');
+
+    $stmt = $db->prepare("
+        SELECT me.*, s.name as student_name
+        FROM match_events me
+        LEFT JOIN students s ON me.student_id = s.id
+        WHERE me.match_id = ?
+        ORDER BY me.minute ASC, me.id ASC
+    ");
+    $stmt->execute([$matchId]);
+    jsonSuccess($stmt->fetchAll());
 }
 
 
@@ -3107,3 +3212,9 @@ function getPlayerHistory() {
         'history' => $history
     ]);
 }
+
+// ============================================================
+// CORE MODULE INCLUDES
+// ============================================================
+require_once __DIR__ . '/core/live_match.php';
+
