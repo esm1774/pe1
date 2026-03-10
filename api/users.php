@@ -202,11 +202,11 @@ function getMyProfile() {
     $uid = $_SESSION['user_id'] ?? 0;
 
     if ($role === 'parent') {
-        $stmt = $db->prepare("SELECT id, username, name, email, phone, NULL as specialization, NULL as education, NULL as experience_years, NULL as bio, NULL as birth_date, 'parent' as role, created_at FROM parents WHERE id = ?");
+        $stmt = $db->prepare("SELECT id, username, name, photo_url, email, phone, NULL as specialization, NULL as education, NULL as experience_years, NULL as bio, NULL as birth_date, 'parent' as role, created_at FROM parents WHERE id = ?");
     } elseif ($role === 'student') {
-        $stmt = $db->prepare("SELECT id, student_number as username, name, NULL as email, NULL as phone, NULL as specialization, NULL as education, NULL as experience_years, NULL as bio, date_of_birth as birth_date, 'student' as role, created_at FROM students WHERE id = ?");
+        $stmt = $db->prepare("SELECT id, student_number as username, name, photo_url, email, phone, NULL as specialization, NULL as education, NULL as experience_years, NULL as bio, date_of_birth as birth_date, 'student' as role, created_at FROM students WHERE id = ?");
     } else {
-        $stmt = $db->prepare("SELECT id, username, name, email, phone, specialization, education, experience_years, bio, birth_date, role, created_at FROM users WHERE id = ?");
+        $stmt = $db->prepare("SELECT id, username, name, photo_url, email, phone, specialization, education, experience_years, bio, birth_date, role, created_at FROM users WHERE id = ?");
     }
 
     $stmt->execute([$uid]);
@@ -234,12 +234,16 @@ function updateMyProfile() {
             $uid
         ];
     } elseif ($role === 'student') {
-        $sql = "UPDATE students SET name = ?, date_of_birth = ? WHERE id = ?";
+        $password = !empty($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
+        $sql = "UPDATE students SET name = ?, email = ?, phone = ?, date_of_birth = ?" . ($password ? ", password = ?" : "") . " WHERE id = ?";
         $params = [
             sanitize($data['name']),
-            !empty($data['birth_date']) ? sanitize($data['birth_date']) : null,
-            $uid
+            sanitize($data['email'] ?? null),
+            sanitize($data['phone'] ?? null),
+            !empty($data['birth_date']) ? sanitize($data['birth_date']) : null
         ];
+        if ($password) $params[] = $password;
+        $params[] = $uid;
     } else {
         $sql = "UPDATE users SET 
                 name = ?, 
@@ -316,5 +320,59 @@ function saveTeacherAssignments() {
     } catch (Exception $e) {
         $db->rollBack();
         throw $e;
+    }
+}
+
+/**
+ * Upload Profile Photo
+ */
+function uploadProfilePhoto() {
+    $user = requireLogin();
+    
+    if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+        jsonError('فشل رفع الملف أو لم يتم اختيار ملف.');
+    }
+
+    $file = $_FILES['photo'];
+    $allowed = ['image/jpeg', 'image/png', 'image/webp'];
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $realMime = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+
+    if (!in_array($realMime, $allowed)) {
+        jsonError('نوع الملف غير مدعوم. يرجى اختيار صورة (JPEG, PNG, WEBP).');
+    }
+
+    if ($file['size'] > 2 * 1024 * 1024) {
+        jsonError('حجم الصورة كبير جداً. الحد الأقصى 2 ميجابايت.');
+    }
+
+    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $prefix = ($user['role'] === 'student') ? 'std_' : 'usr_';
+    $filename = $prefix . $user['id'] . '_' . time() . '.' . $ext;
+    
+    $targetDir = __DIR__ . '/../uploads/profiles/';
+    $targetFile = $targetDir . $filename;
+
+    if (move_uploaded_file($file['tmp_name'], $targetFile)) {
+        $db = getDB();
+        $table = ($user['role'] === 'student') ? 'students' : 'users';
+        
+        // Delete old photo if exists
+        $stmt = $db->prepare("SELECT photo_url FROM `$table` WHERE id = ?");
+        $stmt->execute([$user['id']]);
+        $oldPhoto = $stmt->fetchColumn();
+        if ($oldPhoto && file_exists(__DIR__ . '/../' . $oldPhoto)) {
+            @unlink(__DIR__ . '/../' . $oldPhoto);
+        }
+
+        $photoUrl = 'uploads/profiles/' . $filename;
+        $db->prepare("UPDATE `$table` SET photo_url = ? WHERE id = ?")->execute([$photoUrl, $user['id']]);
+
+        logActivity('update', 'profile_photo', $user['id'], 'تم تحديث الصورة الشخصية');
+        jsonSuccess(['photo_url' => $photoUrl], 'تم تحديث الصورة الشخصية بنجاح');
+    } else {
+        jsonError('حدث خطأ أثناء حفظ الملف على الخادم.');
     }
 }

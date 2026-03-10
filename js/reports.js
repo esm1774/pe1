@@ -216,7 +216,7 @@ function renderStudentReportHTML(d, container) {
     const att = d.attendance;
 
     container.innerHTML = `
-    <div class="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 p-6 md:p-12 fade-in relative overflow-hidden">
+    <div id="printableStudentReport" class="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 p-6 md:p-12 fade-in relative overflow-hidden">
         <!-- Decoration Decor -->
         <div class="absolute top-0 right-0 w-64 h-64 bg-green-50 rounded-full -mr-32 -mt-32 opacity-40 animate-pulse"></div>
         
@@ -225,7 +225,9 @@ function renderStudentReportHTML(d, container) {
 
             <div class="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 mb-10 pb-10 border-b border-gray-50">
                 <div class="flex flex-col md:flex-row items-center gap-6 text-center md:text-right">
-                    <div class="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-[2rem] flex items-center justify-center text-5xl text-white shadow-xl shadow-green-100">👤</div>
+                    <div class="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-[2rem] flex items-center justify-center text-5xl text-white shadow-xl shadow-green-100 overflow-hidden">
+                        ${s.photo_url ? `<img src="${s.photo_url}" class="w-full h-full object-cover">` : '👤'}
+                    </div>
                     <div>
                         <h3 class="text-2xl md:text-4xl font-black text-gray-800">${esc(s.name)}</h3>
                         <p class="text-lg md:text-xl text-green-600 font-black mt-1">${esc(s.full_class_name)}</p>

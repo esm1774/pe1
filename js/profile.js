@@ -5,6 +5,8 @@
 let profileTab = 'info';
 
 async function renderStudentProfilePage() {
+    _parseStudentProfileHash();
+
     const mc = document.getElementById('mainContent');
     mc.innerHTML = showLoading();
 
@@ -49,7 +51,9 @@ async function renderStudentProfilePage() {
 
             <div class="relative z-10 flex flex-col xl:flex-row xl:items-start justify-between gap-6 md:gap-8">
                 <div class="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 text-center md:text-right">
-                    <div class="w-16 h-16 md:w-28 md:h-28 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl md:rounded-[2rem] flex items-center justify-center text-3xl md:text-5xl text-white shadow-xl border-4 border-white transform -rotate-2">👦</div>
+                    <div class="w-16 h-16 md:w-28 md:h-28 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl md:rounded-[2rem] flex items-center justify-center text-3xl md:text-5xl text-white shadow-xl border-4 border-white transform -rotate-2 overflow-hidden">
+                        ${s.photo_url ? `<img src="${s.photo_url}" class="w-full h-full object-cover">` : '👦'}
+                    </div>
                     <div class="flex-1 w-full">
                         <h2 class="text-xl md:text-3xl lg:text-4xl font-black text-gray-800 mb-1.5">${esc(s.name)}</h2>
                         <div class="flex flex-wrap justify-center md:justify-start gap-1 pb-1 mb-2 md:mb-4">
@@ -133,17 +137,45 @@ async function renderStudentProfilePage() {
 
         <!-- Navigation Tabs -->
         <div class="bg-white/95 backdrop-blur-md border-x border-gray-100 flex overflow-x-auto no-print scrollbar-hide sticky top-[56px] z-20 mx-1 rounded-t-2xl shadow-sm">
-            <button onclick="profileTab='info';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'info' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📋 البيانات</button>
-            <button onclick="profileTab='measurements';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'measurements' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📏 القياسات</button>
-            <button onclick="profileTab='pfitness';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pfitness' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">💪 اللياقة</button>
-            ${hasFeature('badges') ? `<button onclick="profileTab='badges';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'badges' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏅 الأوسمة</button>` : ''}
-            <button onclick="profileTab='health';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'health' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏥 الصحة</button>
-            <button onclick="profileTab='pattendance';renderProfileTab(${sid})" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pattendance' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📅 الحضور</button>
+            <button onclick="switchProfileTab('info')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'info' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📋 البيانات</button>
+            <button onclick="switchProfileTab('measurements')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'measurements' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📏 القياسات</button>
+            <button onclick="switchProfileTab('pfitness')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pfitness' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">💪 اللياقة</button>
+            ${hasFeature('badges') ? `<button onclick="switchProfileTab('badges')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'badges' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏅 الأوسمة</button>` : ''}
+            <button onclick="switchProfileTab('health')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'health' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏥 الصحة</button>
+            <button onclick="switchProfileTab('pattendance')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pattendance' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📅 الحضور</button>
         </div>
         <div id="profileTabContent" class="bg-white rounded-b-[2rem] shadow-2xl shadow-gray-100/50 border border-gray-100 border-t-0 p-4 md:p-10 mb-20 mx-1 scroll-mt-24"></div>
     </div>`;
 
     renderProfileTab(sid);
+}
+
+// ============================================================
+// HASH ROUTING HELPER
+// ============================================================
+function _parseStudentProfileHash() {
+    const parts = currentPage.split('/'); // e.g. ["studentProfile", "12", "health"]
+    if (parts[0] === 'studentProfile') {
+        if (parts[1]) window._profileStudentId = parseInt(parts[1]);
+        if (parts[2]) profileTab = parts[2];
+        else profileTab = 'info';
+    } else if (currentUser.role === 'student') {
+        window._profileStudentId = currentUser.id;
+    }
+}
+
+function switchProfileTab(tab) {
+    profileTab = tab;
+    const sid = window._profileStudentId;
+    if (sid) {
+        // Update URL hash without causing a full re-render of the page shell
+        // NavigateTo updates currentPage and window.location.hash
+        const newHash = `studentProfile/${sid}/${tab}`;
+        currentPage = newHash;
+        window.location.hash = newHash;
+
+        renderProfileTab(sid);
+    }
 }
 
 async function renderProfileTab(sid) {
@@ -157,7 +189,7 @@ async function renderProfileTab(sid) {
     });
 
     // Find active button
-    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(`profileTab='${profileTab}'`));
+    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(`switchProfileTab('${profileTab}')`));
     if (activeBtn) {
         activeBtn.classList.remove('text-gray-400');
         activeBtn.classList.add('active', 'text-emerald-600', 'border-emerald-600', 'border-b-4');
@@ -751,7 +783,11 @@ async function revokeBadge(id, sid) {
 /**
  * Show a beautiful digital certificate for a badge
  */
-function showBadgeCertificate(badge, studentName) {
+async function showBadgeCertificate(studentName, badge) {
+    const schoolRes = await API.get('get_school_info');
+    const s = (schoolRes && schoolRes.success) ? schoolRes.data : {};
+    const settings = s.settings || {};
+
     const dateStr = new Date(badge.awarded_at || new Date()).toLocaleDateString('ar-SA', {
         year: 'numeric',
         month: 'long',
@@ -790,10 +826,12 @@ function showBadgeCertificate(badge, studentName) {
             <!-- Draggable Sections -->
             <div id="certSectionHeader" class="draggable-element relative z-10 flex flex-col items-center mb-10 p-2 border-2 border-transparent rounded-xl transition cursor-default">
                 <div id="certLogoArea" class="w-24 h-24 mb-6 flex items-center justify-center pointer-events-none">
-                    <div id="certLogoEmoji" class="w-20 h-20 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-4xl shadow-xl">🏃</div>
-                    <img id="certLogoImage" src="" class="hidden w-24 h-24 object-contain shadow-lg rounded-xl">
+                    ${s.logo_url ?
+            `<img id="certLogoImage" src="${s.logo_url}" class="w-24 h-24 object-contain shadow-lg rounded-xl">` :
+            `<div id="certLogoEmoji" class="w-20 h-20 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-4xl shadow-xl">🏃</div>`
+        }
                 </div>
-                <h2 contenteditable="true" id="certSchoolName" class="text-2xl font-black text-emerald-900 tracking-tight uppercase outline-none px-4 rounded-lg">نظام التربية البدنية الذكي</h2>
+                <h2 contenteditable="true" id="certSchoolName" class="text-2xl font-black text-emerald-900 tracking-tight uppercase outline-none px-4 rounded-lg">${esc(s.name || 'نظام التربية البدنية الذكي')}</h2>
                 <div class="w-32 h-1 bg-emerald-600 mt-2 rounded-full pointer-events-none"></div>
             </div>
 
@@ -817,21 +855,24 @@ function showBadgeCertificate(badge, studentName) {
             </div>
 
             <div id="certSectionFooter" class="draggable-element relative z-10 mt-auto pt-10 p-2 border-2 border-transparent rounded-xl transition cursor-default">
-                <div class="flex justify-between w-full items-end gap-4 px-4">
+                <div class="flex justify-between w-full items-end gap-2 px-4">
                     <div class="flex-1 text-right">
-                        <p class="text-xs text-gray-400 font-bold uppercase mb-1">تاريخ المنح</p>
-                        <p contenteditable="true" class="text-lg font-black text-gray-700 font-mono outline-none">${dateStr}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">المعلم المسؤول</p>
+                        <p contenteditable="true" class="text-base font-black text-gray-700 outline-none">${esc(settings.teacher_name || 'المعلم المسؤول')}</p>
                     </div>
                     
-                    <div class="relative w-28 h-28 flex items-center justify-center pointer-events-none">
-                        <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-10 animate-pulse"></div>
-                        <div class="absolute inset-2 border-4 border-dashed border-yellow-500 rounded-full opacity-20"></div>
-                        <span class="text-5xl relative z-10 drop-shadow-lg">🎖️</span>
+                    <div class="flex flex-col items-center gap-1">
+                        <div class="relative w-24 h-24 flex items-center justify-center pointer-events-none">
+                            <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-10 animate-pulse"></div>
+                            <div class="absolute inset-2 border-4 border-dashed border-yellow-500 rounded-full opacity-20"></div>
+                            <span class="text-4xl relative z-10 drop-shadow-lg">🎖️</span>
+                        </div>
+                        <p contenteditable="true" class="text-[10px] font-black text-gray-400 font-mono outline-none">${dateStr}</p>
                     </div>
 
                     <div class="flex-1 text-left">
-                        <p contenteditable="true" class="text-xs text-gray-400 font-bold uppercase mb-1 outline-none">ختم الاعتماد</p>
-                        <p contenteditable="true" class="text-lg font-black text-emerald-700 italic outline-none">المعلم المسؤول</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">مدير المدرسة</p>
+                        <p contenteditable="true" class="text-base font-black text-emerald-700 italic outline-none">${esc(settings.principal_name || 'مدير المدرسة')}</p>
                     </div>
                 </div>
             </div>
@@ -952,10 +993,10 @@ function initCertificateDraggable() {
 }
 
 function printCertificate() {
-    // Before taking outerHTML, temporarily remove classes that shouldn't be in print
     const container = document.getElementById('certificateContainer');
     container.classList.remove('move-mode');
 
+    // Clone to avoid modifying the original during the process
     const certContent = container.outerHTML;
     const printWindow = window.open('', '_blank');
 
@@ -964,10 +1005,11 @@ function printCertificate() {
         <html dir="rtl" lang="ar">
         <head>
             <title>شهادة إنجاز - PE Smart School</title>
+            <base href="${window.location.origin}${window.APP_BASE || '/'}">
             <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-            <script src="https://cdn.tailwindcss.com"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
             <style>
-                body { margin: 0; padding: 0; background: #fff; font-family: 'Cairo', sans-serif; }
+                body { margin: 0; padding: 0; background: #fff; font-family: 'Cairo', sans-serif; overflow: hidden; }
                 @page { size: A4 portrait; margin: 0; }
                 #print-surface {
                     width: 210mm;
@@ -979,55 +1021,49 @@ function printCertificate() {
                     overflow: hidden;
                 }
                 #certificateContainer {
-                    width: 100% !important;
-                    height: 100% !important;
+                    width: 210mm !important;
+                    height: 297mm !important;
                     max-width: none !important;
                     margin: 0 !important;
-                    border-width: 15px !important;
-                    padding: 60px 40px !important;
+                    padding: 40px !important;
                     display: flex !important;
                     flex-direction: column !important;
-                    justify-content: flex-start !important; /* Start because we use offsets */
+                    justify-content: space-between !important;
                     box-sizing: border-box !important;
-                    min-height: auto !important;
                     background: #fff !important;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
+                    border-width: 16px !important;
                 }
-                * { box-shadow: none !important; text-shadow: none !important; }
+                /* Ensure all sections are visible */
+                .draggable-element { visibility: visible !important; opacity: 1 !important; display: block !important; }
+                #certSectionFooter { margin-top: auto !important; padding-top: 20px !important; }
+                
+                * { box-shadow: none !important; }
                 [contenteditable="true"] { outline: none !important; border: none !important; }
+                .no-print { display: none !important; }
             </style>
         </head>
-        <body onload="setTimeout(() => { window.print(); window.close(); }, 800);">
+        <body>
             <div id="print-surface">
                 ${certContent}
             </div>
             <script>
+                // Final cleanup inside the print window
                 document.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
                 const cert = document.getElementById('certificateContainer');
-                
-                // Clear move-mode artifacts
                 cert.classList.remove('move-mode');
-                document.querySelectorAll('.draggable-element').forEach(el => {
-                    el.classList.remove('moving');
-                    el.style.border = 'none';
-                });
-
-                // Clear grey boxes
-                document.querySelectorAll('.bg-indigo-600, .shadow-xl, .shadow-2xl').forEach(el => {
-                    el.style.boxShadow = 'none';
-                    if (el.innerText.length < 5) {
-                        el.style.background = 'none';
-                        el.style.border = '2px solid #6366f1';
-                        el.style.color = '#000';
-                    }
-                });
-
-                cert.style.width = '100%';
-                cert.style.height = '100%';
+                
+                // Wait for all images and fonts to load
+                window.onload = () => {
+                    setTimeout(() => {
+                        window.print();
+                        window.close();
+                    }, 1000);
+                };
             </script>
         </body>
-         </html>
+        </html>
     `);
     printWindow.document.close();
 }
@@ -1086,7 +1122,11 @@ const CERT_TYPES = {
     }
 };
 
-function showSportsCertificate(type, studentName, stats) {
+async function showSportsCertificate(type, studentName, stats) {
+    const schoolRes = await API.get('get_school_info');
+    const s = (schoolRes && schoolRes.success) ? schoolRes.data : {};
+    const settings = s.settings || {};
+
     const c = CERT_TYPES[type] || CERT_TYPES.excellence;
     const dateStr = new Date().toLocaleDateString('ar-SA', {
         year: 'numeric', month: 'long', day: 'numeric'
@@ -1129,10 +1169,12 @@ function showSportsCertificate(type, studentName, stats) {
             <!-- Draggable Sections -->
             <div id="certSectionHeader" class="draggable-element relative z-10 flex flex-col items-center mb-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
                 <div id="certLogoArea" class="w-24 h-24 mb-4 flex items-center justify-center pointer-events-none">
-                    <div id="certLogoEmoji" class="w-20 h-20 ${c.accentBg} text-white rounded-2xl flex items-center justify-center text-4xl shadow-xl">🏃</div>
-                    <img id="certLogoImage" src="" class="hidden w-24 h-24 object-contain shadow-lg rounded-xl">
+                    ${s.logo_url ?
+            `<img id="certLogoImage" src="${s.logo_url}" class="w-24 h-24 object-contain shadow-lg rounded-xl">` :
+            `<div id="certLogoEmoji" class="w-20 h-20 ${c.accentBg} text-white rounded-2xl flex items-center justify-center text-4xl shadow-xl">🏃</div>`
+        }
                 </div>
-                <h2 contenteditable="true" id="certSchoolName" class="text-2xl font-black ${c.accentColor} tracking-tight uppercase outline-none px-4 rounded-lg">نظام التربية البدنية الذكي</h2>
+                <h2 contenteditable="true" id="certSchoolName" class="text-2xl font-black ${c.accentColor} tracking-tight uppercase outline-none px-4 rounded-lg">${esc(s.name || 'نظام التربية البدنية الذكي')}</h2>
                 <div class="w-32 h-1 ${c.accentBg} mt-2 rounded-full pointer-events-none opacity-60"></div>
             </div>
 
@@ -1168,21 +1210,24 @@ function showSportsCertificate(type, studentName, stats) {
             </div>
 
             <div id="certSectionFooter" class="draggable-element relative z-10 mt-auto pt-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
-                <div class="flex justify-between w-full items-end gap-4 px-4">
+                <div class="flex justify-between w-full items-end gap-2 px-4">
                     <div class="flex-1 text-right">
-                        <p class="text-xs text-gray-400 font-bold uppercase mb-1">تاريخ المنح</p>
-                        <p contenteditable="true" class="text-lg font-black text-gray-700 font-mono outline-none">${dateStr}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">المعلم المسؤول</p>
+                        <p contenteditable="true" class="text-base font-black text-gray-700 outline-none">${esc(settings.teacher_name || 'المعلم المسؤول')}</p>
                     </div>
                     
-                    <div class="relative w-28 h-28 flex items-center justify-center pointer-events-none">
-                        <div class="absolute inset-0 ${c.accentBg} rounded-full opacity-10 animate-pulse"></div>
-                        <div class="absolute inset-2 border-4 border-dashed ${c.borderColor} rounded-full opacity-20"></div>
-                        <span class="text-5xl relative z-10 drop-shadow-lg">${c.sealEmoji}</span>
+                    <div class="flex flex-col items-center gap-1">
+                        <div class="relative w-24 h-24 flex items-center justify-center pointer-events-none">
+                            <div class="absolute inset-0 ${c.accentBg} rounded-full opacity-10 animate-pulse"></div>
+                            <div class="absolute inset-2 border-4 border-dashed ${c.borderColor} rounded-full opacity-20"></div>
+                            <span class="text-4xl relative z-10 drop-shadow-lg">${c.sealEmoji}</span>
+                        </div>
+                        <p contenteditable="true" class="text-[10px] font-black text-gray-400 font-mono outline-none">${dateStr}</p>
                     </div>
 
                     <div class="flex-1 text-left">
-                        <p contenteditable="true" class="text-xs text-gray-400 font-bold uppercase mb-1 outline-none">${c.stampText}</p>
-                        <p contenteditable="true" class="text-lg font-black ${c.accentColor} italic outline-none">المعلم المسؤول</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">مدير المدرسة</p>
+                        <p contenteditable="true" class="text-base font-black ${c.accentColor} italic outline-none">${esc(settings.principal_name || 'مدير المدرسة')}</p>
                     </div>
                 </div>
             </div>

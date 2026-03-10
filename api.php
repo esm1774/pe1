@@ -193,6 +193,7 @@ try {
         // MY PROFILE
         case 'get_my_profile':    getMyProfile(); break;
         case 'update_my_profile': updateMyProfile(); break;
+        case 'upload_profile_photo': uploadProfilePhoto(); break;
 
         // BADGES
         case 'get_badges':          getBadges(); break;

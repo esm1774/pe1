@@ -237,6 +237,9 @@ function addMatchEvent() {
     // Return updated score
     [$score1, $score2] = _calculateLiveScore($db, $matchId, $match['team1_id'], $match['team2_id']);
 
+    // Persist score to matches table for public view
+    _syncMatchScore($db, $matchId, $score1, $score2);
+
     jsonSuccess([
         'event_id'  => $eventId,
         'live_score'=> ['team1' => $score1, 'team2' => $score2],
@@ -275,6 +278,9 @@ function deleteMatchEvent() {
     }
 
     [$score1, $score2] = _calculateLiveScore($db, $event['match_id'], $event['team1_id'], $event['team2_id']);
+
+    // Persist score to matches table for public view
+    _syncMatchScore($db, $event['match_id'], $score1, $score2);
 
     jsonSuccess([
         'live_score' => ['team1' => $score1, 'team2' => $score2],
@@ -385,6 +391,14 @@ function endLiveMatch() {
 // ============================================================
 // PRIVATE HELPERS
 // ============================================================
+
+/**
+ * مزامنة النتيجة الحية مع جدول المباريات لضمان ظهورها للجمهور فوراً
+ */
+function _syncMatchScore(PDO $db, $matchId, $score1, $score2) {
+    $db->prepare("UPDATE matches SET team1_score = ?, team2_score = ? WHERE id = ?")
+       ->execute([$score1, $score2, $matchId]);
+}
 
 function _calculateLiveScore(PDO $db, int $matchId, $team1Id, $team2Id): array {
     $stmt = $db->prepare("SELECT team_id, event_type FROM match_events WHERE match_id = ?");

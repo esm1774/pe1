@@ -110,6 +110,8 @@ let tournamentFilter = 'all';
 // MAIN RENDER
 // ============================================================
 async function renderTournaments() {
+    _parseTournamentHash();
+
     const mc = document.getElementById('mainContent');
     mc.innerHTML = showLoading();
 
@@ -214,15 +216,11 @@ function renderTournamentCard(t) {
 // TOURNAMENT DETAIL
 // ============================================================
 async function openTournament(id) {
-    currentTournament = id;
-    tournamentTab = 'teams';
-    renderTournaments();
+    navigateTo(`tournaments/${id}/teams`);
 }
 
 function closeTournament() {
-    currentTournament = null;
-    tournamentTab = 'teams';
-    renderTournaments();
+    navigateTo('tournaments');
 }
 
 async function renderTournamentDetail(id) {
@@ -297,16 +295,16 @@ async function renderTournamentDetail(id) {
         </div>
 
         <!-- Tabs -->
-        <div class="bg-white rounded-t-2xl border border-gray-100 border-b-0 flex overflow-x-auto">
-            <button onclick="tournamentTab='teams';renderTournamentTab(${t.id})" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'teams' ? 'active' : ''} cursor-pointer whitespace-nowrap">👥 الفرق (${teams.length})</button>
-            <button onclick="tournamentTab='matches';renderTournamentTab(${t.id})" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'matches' ? 'active' : ''} cursor-pointer whitespace-nowrap">⚔️ المباريات</button>
+        <div class="flex border-b overflow-x-auto bg-gray-50/50">
+            <button onclick="navigateTo('tournaments/${t.id}/teams')" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'teams' ? 'active' : ''} cursor-pointer whitespace-nowrap">👥 الفرق (${teams.length})</button>
+            <button onclick="navigateTo('tournaments/${t.id}/matches')" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'matches' ? 'active' : ''} cursor-pointer whitespace-nowrap">⚔️ المباريات</button>
             ${isLeague ? `
-            <button onclick="tournamentTab='standings';renderTournamentTab(${t.id})" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'standings' ? 'active' : ''} cursor-pointer whitespace-nowrap">📊 الترتيب</button>
+            <button onclick="navigateTo('tournaments/${t.id}/standings')" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'standings' ? 'active' : ''} cursor-pointer whitespace-nowrap">📊 الترتيب</button>
             ` : ''}
             ${isElimination ? `
-            <button onclick="tournamentTab='bracket';renderTournamentTab(${t.id})" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'bracket' ? 'active' : ''} cursor-pointer whitespace-nowrap">🌳 الشجرة</button>
+            <button onclick="navigateTo('tournaments/${t.id}/bracket')" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'bracket' ? 'active' : ''} cursor-pointer whitespace-nowrap">🌳 الشجرة</button>
             ` : ''}
-            <button onclick="tournamentTab='awards';renderTournamentTab(${t.id})" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'awards' ? 'active' : ''} cursor-pointer whitespace-nowrap">⭐ الجوائز</button>
+            <button onclick="navigateTo('tournaments/${t.id}/awards')" class="tab-btn px-6 py-3 text-sm ${tournamentTab === 'awards' ? 'active' : ''} cursor-pointer whitespace-nowrap">⭐ الجوائز</button>
         </div>
         <div id="tournamentTabContent" class="bg-white rounded-b-2xl shadow-sm border border-gray-100 border-t-0 p-3 md:p-6 overflow-x-auto"></div>
     </div>`;
@@ -2103,5 +2101,19 @@ async function _confirmTournamentLottery() {
     } finally {
         btn.disabled = false;
         btn.innerHTML = '✅ اعتماد الفرق';
+    }
+}
+
+// ============================================================
+// HASH ROUTING HELPER
+// ============================================================
+function _parseTournamentHash() {
+    const parts = currentPage.split('/'); // e.g. ["tournaments", "12", "matches"]
+    if (parts[0] === 'tournaments') {
+        currentTournament = parts[1] ? parseInt(parts[1]) : null;
+        tournamentTab = parts[2] || 'teams';
+    } else {
+        currentTournament = null;
+        tournamentTab = 'teams';
     }
 }

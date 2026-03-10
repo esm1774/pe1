@@ -85,7 +85,9 @@ const PAGE_MAP = {
     reports: 'renderReports',
     users: 'renderUsers',
     parents: 'renderParents',
-    notifications: 'renderNotifications',
+    'parentDashboard': 'renderParentDashboard',
+    'studentProfile': 'renderStudentProfilePage',
+    'notifications': 'renderNotifications',
     badgesAdmin: 'renderBadgeManagementPage',
     user_profile: 'renderUserProfilePage',
     studentDashboard: 'renderStudentDashboard',
@@ -358,7 +360,17 @@ function showApp() {
     const roleEl = document.getElementById('userRoleBadge');
 
     if (nameEl) nameEl.textContent = currentUser.name;
-    if (initEl) initEl.textContent = (currentUser.name || '?').charAt(0);
+    if (initEl) {
+        if (currentUser.photo_url) {
+            initEl.innerHTML = `<img src="${currentUser.photo_url}" class="w-full h-full object-cover rounded-2xl user-avatar-img">`;
+            initEl.classList.remove('bg-green-100', 'text-green-700');
+            initEl.classList.add('p-0');
+        } else {
+            initEl.textContent = (currentUser.name || '?').charAt(0);
+            initEl.classList.add('bg-green-100', 'text-green-700');
+            initEl.classList.remove('p-0');
+        }
+    }
 
     const roleNames = { admin: 'مدير', teacher: 'معلم', viewer: 'مشاهد', supervisor: 'مشرف/موجه', student: 'طالب', parent: 'ولي أمر' };
     if (roleEl) roleEl.textContent = roleNames[currentUser.role] || currentUser.role;
@@ -421,9 +433,11 @@ function showApp() {
     });
 
     // Determine starting page (hash-based OR role-based default)
-    const hash = window.location.hash.replace('#', '');
-    if (hash && PAGE_MAP[hash]) {
-        navigateTo(hash);
+    const rawHash = window.location.hash.replace('#', '');
+    const basePage = rawHash.split('/')[0];
+
+    if (basePage && PAGE_MAP[basePage]) {
+        navigateTo(rawHash);
     } else if (currentUser.role === 'student') {
         navigateTo('studentDashboard');
     } else {
@@ -507,12 +521,6 @@ function navigateTo(page) {
         if (currentUser.role === 'parent') page = 'parentDashboard';
     }
 
-    // Students should see their Fitness Profile instead of the Staff CV
-    if (page === 'user_profile' && currentUser && currentUser.role === 'student') {
-        window._profileStudentId = currentUser.id;
-        page = 'studentProfile';
-    }
-
     // Feature-access guard: show permission-denied page if subscription lacks this feature
     const requiredFeature = PAGE_FEATURE_MAP[page];
     if (requiredFeature && typeof hasFeature === 'function' && !hasFeature(requiredFeature)) {
@@ -532,13 +540,15 @@ function navigateTo(page) {
     currentPage = page;
     window.location.hash = page;
 
+    const basePage = page.split('/')[0];
+
     // Update sidebar active state
     document.querySelectorAll('.sidebar-link').forEach(link => {
         link.classList.remove('active');
         const onclick = link.getAttribute('onclick') || '';
 
-        // Match exact page OR 'dashboard' if we redirected to studentDashboard/parentDashboard
-        if (onclick.includes("'" + page + "'") ||
+        // Match exact page OR base page OR 'dashboard' if we redirected to studentDashboard/parentDashboard
+        if (onclick.includes("'" + basePage + "'") || onclick.includes("'" + page + "'") ||
             ((page === 'studentDashboard' || page === 'parentDashboard') && onclick.includes("'dashboard'"))) {
             link.classList.add('active');
         }
@@ -561,7 +571,8 @@ function navigateTo(page) {
         }
     }
 
-    const funcName = PAGE_MAP[page];
+    const basePageForFunc = page.split('/')[0];
+    const funcName = PAGE_MAP[basePageForFunc];
     const renderer = funcName ? safeGetFunction(funcName) : null;
 
     if (renderer) {

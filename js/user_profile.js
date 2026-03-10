@@ -25,9 +25,12 @@ async function renderUserProfilePage() {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Left Column: Basic Info Card -->
             <div class="md:col-span-1 space-y-6">
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 text-center">
-                    <div class="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl mx-auto flex items-center justify-center text-4xl text-white shadow-xl mb-4">
-                        ${u.name.charAt(0)}
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 text-center group">
+                    <div class="relative w-24 h-24 mx-auto mb-4">
+                        <div class="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center text-4xl text-white shadow-xl overflow-hidden">
+                            ${u.photo_url ? `<img src="${u.photo_url}" class="w-full h-full object-cover">` : u.name.charAt(0)}
+                        </div>
+                        <button onclick="showUploadPhotoModal()" class="absolute -bottom-2 -right-2 bg-white text-blue-600 w-10 h-10 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-center hover:scale-110 transition cursor-pointer" title="تغيير الصورة">📷</button>
                     </div>
                     <h3 class="text-xl font-bold text-gray-800">${esc(u.name)}</h3>
                     <p class="text-blue-600 font-semibold mb-2">${roleNames[u.role] || u.role}</p>
@@ -57,8 +60,19 @@ async function renderUserProfilePage() {
                 </div>
             </div>
 
-            <!-- Right Column: Professional Details -->
+            <!-- Right Column: Professional Details / Student Details -->
             <div class="md:col-span-2 space-y-6">
+                ${u.role === 'student' ? `
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center py-12">
+                    <div class="text-6xl mb-6">🎓</div>
+                    <h4 class="text-2xl font-black text-gray-800 mb-2">مرحباً بك في ملفك الشخصي</h4>
+                    <p class="text-gray-500 font-bold mb-8 text-lg">هنا يمكنك إدارة بياناتك الأساسية وكلمة المرور الخاصة بك.</p>
+                    <div class="inline-flex items-center gap-3 px-6 py-3 bg-blue-50 text-blue-700 rounded-2xl font-black text-sm">
+                        <span>رقم الطالب:</span>
+                        <span class="font-mono tracking-wider">${esc(u.username)}</span>
+                    </div>
+                </div>
+                ` : `
                 <!-- Professional Summary -->
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
                     <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -88,6 +102,7 @@ async function renderUserProfilePage() {
                         <p class="text-lg font-bold text-purple-900">${u.birth_date || 'غير محدد'}</p>
                     </div>
                 </div>
+                `}
             </div>
         </div>
     </div>
@@ -114,6 +129,16 @@ async function showEditProfileModal(u) {
                     <input type="text" id="profPhone" value="${esc(u.phone || '')}" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50">
                 </div>
                 <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">تاريخ الميلاد</label>
+                    <input type="date" id="profBirth" value="${u.birth_date || ''}" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">كلمة المرور الجديدة</label>
+                    <input type="password" id="profPass" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50" placeholder="اتركها فارغة لعدم التغيير">
+                </div>
+
+                ${u.role !== 'student' ? `
+                <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">المؤهل العلمي</label>
                     <input type="text" id="profEducation" value="${esc(u.education || '')}" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50" placeholder="مثال: بكالوريوس تربية رياضية">
                 </div>
@@ -125,14 +150,11 @@ async function showEditProfileModal(u) {
                     <label class="block text-sm font-bold text-gray-700 mb-1">سنوات الخبرة</label>
                     <input type="number" id="profExp" value="${u.experience_years || ''}" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50">
                 </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">تاريخ الميلاد</label>
-                    <input type="date" id="profBirth" value="${u.birth_date || ''}" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50">
-                </div>
                 <div class="md:col-span-2">
                     <label class="block text-sm font-bold text-gray-700 mb-1">نبذة شخصية</label>
                     <textarea id="profBio" rows="4" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50" placeholder="اكتب نبذة ملخصة عن نفسك وخبراتك...">${esc(u.bio || '')}</textarea>
                 </div>
+                ` : ''}
             </div>
             <div class="flex gap-4 mt-8">
                 <button onclick="handleUpdateProfile()" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-4 rounded-2xl font-bold hover:shadow-lg transform transition active:scale-95 cursor-pointer shadow-md">💾 حفظ البيانات</button>
@@ -147,11 +169,12 @@ async function handleUpdateProfile() {
         name: document.getElementById('profName').value.trim(),
         email: document.getElementById('profEmail').value.trim(),
         phone: document.getElementById('profPhone').value.trim(),
-        education: document.getElementById('profEducation').value.trim(),
-        specialization: document.getElementById('profSpec').value.trim(),
-        experience_years: document.getElementById('profExp').value,
         birth_date: document.getElementById('profBirth').value,
-        bio: document.getElementById('profBio').value.trim()
+        password: document.getElementById('profPass').value,
+        bio: document.getElementById('profBio') ? document.getElementById('profBio').value.trim() : null,
+        education: document.getElementById('profEducation') ? document.getElementById('profEducation').value.trim() : null,
+        specialization: document.getElementById('profSpec') ? document.getElementById('profSpec').value.trim() : null,
+        experience_years: document.getElementById('profExp') ? document.getElementById('profExp').value : null
     };
 
     if (!data.name) {
@@ -169,5 +192,94 @@ async function handleUpdateProfile() {
         if (headerName) headerName.textContent = data.name;
     } else if (r) {
         showToast(r.error, 'error');
+    }
+}
+
+function showUploadPhotoModal() {
+    showModal(`
+        <div class="p-8 text-center">
+            <h3 class="text-2xl font-bold mb-6 text-gray-800">📸 تحديث الصورة الشخصية</h3>
+            
+            <div id="photoPreview" class="w-40 h-40 bg-gray-100 rounded-3xl mx-auto mb-8 flex items-center justify-center text-5xl text-gray-300 border-2 border-dashed border-gray-200 overflow-hidden">
+                🖼️
+            </div>
+
+            <label class="block mb-6">
+                <span class="sr-only">اختر صورة</span>
+                <input type="file" id="photoInput" accept="image/*" onchange="previewProfilePhoto(this)" 
+                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+            </label>
+
+            <div class="flex gap-4">
+                <button onclick="handleUploadPhoto()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 shadow-md">📤 رفع الصورة</button>
+                <button onclick="closeModal()" class="flex-1 bg-gray-100 text-gray-600 py-4 rounded-2xl font-bold hover:bg-gray-200">إلغاء</button>
+            </div>
+        </div>
+    `);
+}
+
+function previewProfilePhoto(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+            preview.classList.remove('text-5xl', 'text-gray-300');
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function handleUploadPhoto() {
+    const fileInput = document.getElementById('photoInput');
+    if (!fileInput.files || !fileInput.files[0]) {
+        showToast('يرجى اختيار صورة أولاً', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('photo', fileInput.files[0]);
+
+    // Use raw fetch for FormData, ensuring action is in query string
+    showLoading();
+    try {
+        const response = await fetch(`${API.base}?action=upload_profile_photo`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
+            }
+        });
+
+        const text = await response.text();
+        let r;
+        try {
+            r = JSON.parse(text);
+        } catch (je) {
+            console.error('Server response was not JSON:', text);
+            showToast('خطأ في استجابة الخادم أثناء الرفع', 'error');
+            return;
+        }
+
+        if (r.success) {
+            showToast(r.message);
+            // Update global currentUser state
+            if (currentUser) currentUser.photo_url = r.data.photo_url;
+
+            // Update top header avatar (initEl from common.js logic)
+            const initEl = document.getElementById('userInitialDisplay');
+            if (initEl) {
+                initEl.innerHTML = `<img src="${r.data.photo_url}" class="w-full h-full object-cover rounded-2xl user-avatar-img">`;
+                initEl.classList.remove('bg-green-100', 'text-green-700');
+                initEl.classList.add('p-0');
+            }
+
+            closeModal();
+            renderUserProfilePage();
+        } else {
+            showToast(r.error, 'error');
+        }
+    } catch (e) {
+        showToast('حدث خطأ أثناء الرفع: ' + e.message, 'error');
     }
 }

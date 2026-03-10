@@ -107,25 +107,30 @@ async function renderStudents() {
                         <tr class="hover:bg-emerald-50/30 transition-all group">
                             <td class="px-6 py-5 text-xs text-gray-400 font-bold">${i + 1}</td>
                             <td class="px-6 py-5 text-xs font-mono font-black text-gray-500">${esc(s.student_number)}</td>
-                            <td class="px-6 py-5">
+                            <td class="py-5 px-6">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center text-xl group-hover:bg-emerald-100 group-hover:rotate-6 transition-all shadow-inner">👦</div>
-                                    <span class="font-black text-gray-800 text-sm group-hover:text-emerald-700 transition">${esc(s.name)}</span>
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-50 to-green-100 text-xl flex items-center justify-center shadow-inner overflow-hidden">
+                                        ${s.photo_url ? `<img src="${s.photo_url}" class="w-full h-full object-cover">` : '👦'}
+                                    </div>
+                                    <div>
+                                        <div class="font-black text-gray-800 text-sm leading-tight">${esc(s.name)}</div>
+                                        <div class="text-[10px] text-gray-300 font-black font-mono mt-0.5 tracking-wider">#${esc(s.student_number)}</div>
+                                    </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-5"><span class="px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-tight">${esc(s.full_class_name)}</span></td>
-                            <td class="px-6 py-5 text-center text-sm font-black text-gray-600">${s.age || calcAge(s.date_of_birth)} سنة</td>
-                            <td class="px-6 py-5 text-center">
-                                ${s.health_alerts > 0
-            ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 rounded-full text-[10px] font-black border border-red-100 animate-pulse">⚠️ ${s.health_alerts} تنبيه</span>`
-            : '<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black border border-emerald-100">● مستقر</span>'}
+                            <td class="py-5 px-6">
+                                <div class="text-[11px] font-bold text-gray-600">${esc(s.phone || '---')}</div>
+                                <div class="text-[10px] text-gray-400">${esc(s.email || '---')}</div>
                             </td>
-                            <td class="px-6 py-5 text-center">
-                                <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
-                                    <button onclick="window._profileStudentId=${s.id};navigateTo('studentProfile')" class="w-9 h-9 rounded-xl bg-white text-emerald-600 border border-emerald-100 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition shadow-sm cursor-pointer" title="ملف الطالب">👤</button>
+                            <td class="py-5 px-6">
+                                <div class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-tight">${esc(s.full_class_name)}</div>
+                            </td>
+                            <td class="py-5 px-6 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="navigateTo('studentProfile/${s.id}')" class="p-2.5 bg-white border border-gray-100 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm group-hover:shadow-md" title="الملف الشخصي">👤</button>
                                     ${canEdit() ? `
-                                    <button onclick="showStudentForm(${s.id})" class="w-9 h-9 rounded-xl bg-white text-amber-500 border border-amber-100 flex items-center justify-center hover:bg-amber-500 hover:text-white transition shadow-sm cursor-pointer" title="تعديل">✏️</button>
-                                    <button onclick="deleteStudent(${s.id})" class="w-9 h-9 rounded-xl bg-white text-red-500 border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition shadow-sm cursor-pointer" title="حذف">🗑️</button>
+                                    <button onclick="showStudentForm(${s.id})" class="p-2.5 bg-white border border-gray-100 text-amber-500 rounded-xl hover:bg-amber-500 hover:text-white transition-all shadow-sm group-hover:shadow-md" title="تعديل">✏️</button>
+                                    <button onclick="deleteStudent(${s.id})" class="p-2.5 bg-white border border-gray-100 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm group-hover:shadow-md" title="حذف">🗑️</button>
                                     ` : ''}
                                 </div>
                             </td>
@@ -142,7 +147,9 @@ async function renderStudents() {
             <div class="bg-white rounded-[2rem] p-4 md:p-6 border border-gray-100 shadow-lg shadow-gray-100/30 relative group transition-all duration-300 active:scale-95 mx-1">
                 <div class="flex items-start justify-between mb-6">
                     <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-[1.5rem] bg-gradient-to-br from-emerald-50 to-green-100 text-3xl flex items-center justify-center shadow-inner">👦</div>
+                        <div class="w-14 h-14 rounded-[1.5rem] bg-gradient-to-br from-emerald-50 to-green-100 text-3xl flex items-center justify-center shadow-inner overflow-hidden">
+                            ${s.photo_url ? `<img src="${s.photo_url}" class="w-full h-full object-cover">` : '👦'}
+                        </div>
                         <div>
                             <h3 class="font-black text-gray-800 text-base leading-tight">${esc(s.name)}</h3>
                             <p class="text-[10px] text-emerald-600 font-black mt-1 uppercase tracking-tight">${esc(s.full_class_name)}</p>
@@ -166,8 +173,13 @@ async function renderStudents() {
                     </div>
                 </div>
 
+                <div class="mb-6 space-y-1">
+                    <p class="text-[10px] text-gray-400 font-bold flex items-center gap-2">📱 ${esc(s.phone || 'لا يوجد هاتف')}</p>
+                    <p class="text-[10px] text-gray-400 font-bold flex items-center gap-2">📧 ${esc(s.email || 'لا يوجد بريد')}</p>
+                </div>
+
                 <div class="flex gap-3">
-                    <button onclick="window._profileStudentId=${s.id};navigateTo('studentProfile')" class="flex-1 py-4 bg-emerald-600 text-white rounded-[1.2rem] font-black text-xs hover:bg-emerald-700 transition shadow-lg shadow-emerald-100">استعراض الملف</button>
+                    <button onclick="navigateTo('studentProfile/${s.id}')" class="flex-1 py-4 bg-emerald-600 text-white rounded-[1.2rem] font-black text-xs hover:bg-emerald-700 transition shadow-lg shadow-emerald-100">استعراض الملف</button>
                     ${canEdit() ? `
                     <button onclick="showStudentForm(${s.id})" class="w-14 h-14 flex items-center justify-center bg-gray-50 text-amber-500 rounded-[1.2rem] hover:bg-amber-500 hover:text-white transition-all border border-gray-100 shadow-sm">✏️</button>
                     <button onclick="deleteStudent(${s.id})" class="w-14 h-14 flex items-center justify-center bg-gray-50 text-red-500 rounded-[1.2rem] hover:bg-red-500 hover:text-white transition-all border border-gray-100 shadow-sm">🗑️</button>
@@ -218,6 +230,16 @@ async function showStudentForm(id = null) {
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">رقم الطالب *</label>
                         <input type="text" id="studentNumber" value="${student ? esc(student.student_number) : ''}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">البريد الإلكتروني</label>
+                        <input type="email" id="studentEmail" value="${student ? esc(student.email || '') : ''}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">رقم الجوال</label>
+                        <input type="tel" id="studentPhone" value="${student ? esc(student.phone || '') : ''}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -279,6 +301,8 @@ async function saveStudent(id) {
         id,
         name: document.getElementById('studentName').value.trim(),
         student_number: document.getElementById('studentNumber').value.trim(),
+        email: document.getElementById('studentEmail').value.trim(),
+        phone: document.getElementById('studentPhone').value.trim(),
         class_id: document.getElementById('studentClass').value,
         date_of_birth: document.getElementById('studentDOB').value,
         blood_type: document.getElementById('studentBlood').value,

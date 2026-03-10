@@ -119,6 +119,22 @@ async function renderSchoolSettings() {
                     </div>
                 </div>
 
+                <!-- Certificates & Signatures -->
+                <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8">
+                    <h3 class="font-black text-gray-800 mb-6 flex items-center gap-2">✍️ التوقيعات والشهادات</h3>
+                    <p class="text-[12px] text-gray-500 mb-6 font-bold">هذه الأسماء ستظهر تلقائياً في أسفل جميع الشهادات الممنوحة للطلاب.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-black text-gray-700 mb-2">اسم مدير المدرسة</label>
+                            <input type="text" id="principalName" value="${esc(s.settings?.principal_name || '')}" placeholder="مثال: أ.د. محمد العبدالله" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-black text-gray-700 mb-2">اسم المعلم المسؤول</label>
+                            <input type="text" id="teacherName" value="${esc(s.settings?.teacher_name || '')}" placeholder="مثال: أ. أحمد علي" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-gray-800">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-end gap-3 pt-4">
                     <button onclick="saveSchoolSettings()" class="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black hover:bg-emerald-700 shadow-xl shadow-emerald-100 transition active:scale-95">
                         حفظ جميع الإعدادات
@@ -145,7 +161,9 @@ async function saveSchoolSettings() {
         attendance_pct: parseInt(document.getElementById('attendancePct').value) || 0,
         uniform_pct: parseInt(document.getElementById('uniformPct').value) || 0,
         behavior_skills_pct: parseInt(document.getElementById('behaviorPct').value) || 0,
-        fitness_pct: parseInt(document.getElementById('fitnessPct').value) || 0
+        fitness_pct: parseInt(document.getElementById('fitnessPct').value) || 0,
+        principal_name: document.getElementById('principalName').value.trim(),
+        teacher_name: document.getElementById('teacherName').value.trim()
     };
 
     if (!data.name) return showToast('اسم المدرسة مطلوب', 'error');

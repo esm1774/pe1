@@ -210,7 +210,14 @@ function ensureSchema() {
         if (!in_array('blood_type', $cols)) $alter[] = "ADD COLUMN `blood_type` VARCHAR(5) DEFAULT NULL";
         if (!in_array('guardian_phone', $cols)) $alter[] = "ADD COLUMN `guardian_phone` VARCHAR(20) DEFAULT NULL";
         if (!in_array('medical_notes', $cols)) $alter[] = "ADD COLUMN `medical_notes` TEXT DEFAULT NULL";
+        if (!in_array('photo_url', $cols)) $alter[] = "ADD COLUMN `photo_url` VARCHAR(255) DEFAULT NULL AFTER `name`";
         if (!empty($alter)) $db->exec("ALTER TABLE students " . implode(", ", $alter));
+
+        // Check & add missing columns to users table
+        $colsUsers = array_column($db->query("SHOW COLUMNS FROM users")->fetchAll(), 'Field');
+        if (!in_array('photo_url', $colsUsers)) {
+            $db->exec("ALTER TABLE users ADD COLUMN `photo_url` VARCHAR(255) DEFAULT NULL AFTER `name`");
+        }
         
         // Tables definitions...
         $db->exec("CREATE TABLE IF NOT EXISTS `student_measurements` (

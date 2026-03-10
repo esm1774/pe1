@@ -17,8 +17,9 @@ function getSchoolInfo() {
 
     if (!$school) jsonError('المدرسة غير موجودة');
 
-    // Clean sensitive data if needed (though this is for school admins)
+    // Clean sensitive data
     unset($school['plan_id']); 
+    $school['settings'] = $school['settings'] ? json_decode($school['settings'], true) : [];
     
     // Get grading weights
     $weightsStmt = $db->prepare("SELECT * FROM school_grading_weights WHERE school_id = ?");
@@ -58,11 +59,25 @@ function saveSchoolInfo() {
     $startTime = sanitize($data['school_start_time'] ?? '07:30:00');
     $endTime = sanitize($data['school_end_time'] ?? '13:30:00');
 
+    $principalName = sanitize($data['principal_name'] ?? '');
+    $teacherName = sanitize($data['teacher_name'] ?? '');
+
+    // Get current settings to merge
+    $stmt = $db->prepare("SELECT settings FROM schools WHERE id = ?");
+    $stmt->execute([$sid]);
+    $currentSettingsJson = $stmt->fetchColumn();
+    $settings = $currentSettingsJson ? json_decode($currentSettingsJson, true) : [];
+    
+    $settings['principal_name'] = $principalName;
+    $settings['teacher_name'] = $teacherName;
+    $settingsJson = json_encode($settings);
+
     $stmt = $db->prepare("
         UPDATE schools SET 
             name = ?, email = ?, phone = ?, address = ?, 
             week_start_day = ?, total_periods = ?, 
-            school_start_time = ?, school_end_time = ?
+            school_start_time = ?, school_end_time = ?,
+            settings = ?
         WHERE id = ?
     ");
     
@@ -70,6 +85,7 @@ function saveSchoolInfo() {
         $name, $email, $phone, $address, 
         $weekStart, $totalPeriods, 
         $startTime, $endTime, 
+        $settingsJson,
         $sid
     ]);
 

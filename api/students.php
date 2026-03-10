@@ -49,7 +49,7 @@ function getStudents() {
     }
 
     $queries = [
-        "SELECT s.id, s.name, s.student_number, s.class_id, s.active,
+        "SELECT s.id, s.name, s.email, s.phone, s.student_number, s.class_id, s.active,
             s.date_of_birth, s.blood_type, s.guardian_phone, s.medical_notes,
             c.name as class_name, c.grade_id, g.name as grade_name,
             CONCAT(g.name, ' - ', c.name) as full_class_name,
@@ -60,7 +60,7 @@ function getStudents() {
         JOIN grades g ON c.grade_id = g.id
         WHERE s.active = 1 $where ORDER BY s.name",
 
-        "SELECT s.id, s.name, s.student_number, s.class_id, s.active,
+        "SELECT s.id, s.name, s.email, s.phone, s.student_number, s.class_id, s.active,
             s.date_of_birth, s.blood_type, s.guardian_phone, s.medical_notes,
             c.name as class_name, c.grade_id, g.name as grade_name,
             CONCAT(g.name, ' - ', c.name) as full_class_name,
@@ -119,6 +119,8 @@ function saveStudent() {
     $stmt->execute($dupParams);
     if ($stmt->fetch()) jsonError('رقم الطالب مستخدم بالفعل');
 
+    $email = !empty($data['email']) ? sanitize($data['email']) : null;
+    $phone = !empty($data['phone']) ? sanitize($data['phone']) : null;
     $dob = !empty($data['date_of_birth']) ? sanitize($data['date_of_birth']) : null;
     $bloodType = !empty($data['blood_type']) ? sanitize($data['blood_type']) : null;
     $guardianPhone = !empty($data['guardian_phone']) ? sanitize($data['guardian_phone']) : null;
@@ -127,8 +129,8 @@ function saveStudent() {
 
     try {
         if ($id) {
-            $sql = "UPDATE students SET name=?, student_number=?, class_id=?, date_of_birth=?, blood_type=?, guardian_phone=?, medical_notes=?";
-            $params = [$name, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes];
+            $sql = "UPDATE students SET name=?, email=?, phone=?, student_number=?, class_id=?, date_of_birth=?, blood_type=?, guardian_phone=?, medical_notes=?";
+            $params = [$name, $email, $phone, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes];
             if ($password) {
                 $sql .= ", password=?";
                 $params[] = $password;
@@ -142,8 +144,8 @@ function saveStudent() {
             if (!$password) {
                 $password = password_hash($studentNumber, PASSWORD_DEFAULT);
             }
-            $db->prepare("INSERT INTO students (school_id, name, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password) VALUES (?,?,?,?,?,?,?,?,?)")
-               ->execute([$sid, $name, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes, $password]);
+            $db->prepare("INSERT INTO students (school_id, name, email, phone, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+               ->execute([$sid, $name, $email, $phone, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes, $password]);
             $id = $db->lastInsertId();
         }
         jsonSuccess(['id' => $id], 'تم حفظ بيانات الطالب بنجاح');

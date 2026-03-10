@@ -469,67 +469,106 @@ input[type="number"]::-webkit-inner-spin-button {
    PRINT STYLES
    ============================================ */
 @media print {
-    .no-print {
-        display: none !important;
+
+    /* 1. Force White Background & Neutral Variables */
+    :root,
+    [data-theme="dark"],
+    body,
+    html {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        --bg-main: #ffffff !important;
+        --bg-card: #ffffff !important;
+        --text-main: #000000 !important;
+        --text-muted: #444444 !important;
+        --border-color: #eeeeee !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 
-    .print-only {
-        display: block !important;
-    }
-
+    /* 2. THE NUCLEAR OPTION: Hide everything in the body by default */
     body {
-        background: #fff !important;
+        visibility: hidden !important;
     }
 
+    /* 3. Show ONLY the report and its deep contents */
+    #printableStudentReport,
+    #printableStudentReport * {
+        visibility: visible !important;
+    }
+
+    /* 4. Position the report at the top-left of the physical page */
+    #printableStudentReport {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        background: #ffffff !important;
+        display: block !important;
+        margin: 0 !important;
+        padding: 5mm !important;
+        border: none !important;
+        box-shadow: none !important;
+        z-index: 999999 !important;
+    }
+
+    /* 5. Ensure no parent containers clip the report or restrict its size */
+    body,
+    html,
+    #mainApp,
+    #mainContent,
+    #reportContent,
+    #reportOutput {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+
+    /* 6. Explicitly hide high-interference UI elements just in case */
     #sidebar,
-    #sidebarOverlay,
     header,
-    .no-print {
+    nav,
+    .no-print,
+    #loginPage,
+    #permissionDeniedPage,
+    #impersonateBanner {
         display: none !important;
     }
 
-    #mainContent {
-        padding: 0 !important;
+    /* Preserve internal layouts within the report */
+    #printableStudentReport .flex {
+        display: flex !important;
     }
 
-    #mainApp {
-        display: block !important;
+    #printableStudentReport .grid {
+        display: grid !important;
     }
 
-    .flex {
-        display: block !important;
-    }
-
-    main {
-        min-height: auto !important;
-    }
-
-    .card-hover:hover {
+    .fade-in {
+        animation: none !important;
+        opacity: 1 !important;
         transform: none !important;
-        box-shadow: none !important;
-    }
-
-    .bg-gradient-to-l {
-        background: #4f46e5 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        visibility: visible !important;
     }
 
     table {
         page-break-inside: auto;
+        width: 100% !important;
     }
 
     tr {
         page-break-inside: avoid;
     }
 
-    .bracket-container {
-        overflow: visible !important;
+    img {
+        max-width: 100% !important;
     }
 
     @page {
-        size: landscape;
-        margin: 1cm;
+        size: A4 portrait;
+        margin: 5mm;
     }
 }
 
