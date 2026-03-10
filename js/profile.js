@@ -1009,7 +1009,7 @@ function printCertificate() {
             <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
             <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
             <style>
-                body { margin: 0; padding: 0; background: #fff; font-family: 'Cairo', sans-serif; overflow: hidden; }
+                body { margin: 0; padding: 0; background: #fff; font-family: 'Cairo', sans-serif; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 @page { size: A4 portrait; margin: 0; }
                 #print-surface {
                     width: 210mm;
@@ -1030,14 +1030,20 @@ function printCertificate() {
                     flex-direction: column !important;
                     justify-content: space-between !important;
                     box-sizing: border-box !important;
-                    background: #fff !important;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
                     border-width: 16px !important;
                 }
-                /* Ensure all sections are visible */
+                /* Ensure all sections are visible and have contrast */
                 .draggable-element { visibility: visible !important; opacity: 1 !important; display: block !important; }
                 #certSectionFooter { margin-top: auto !important; padding-top: 20px !important; }
+                
+                /* Darken light gray text for better print visibility */
+                .text-gray-400, .text-gray-500 { color: #666 !important; }
+                .text-gray-300 { color: #888 !important; }
+                
+                /* Ensure background gradients and colors show up */
+                .bg-white\/60 { background-color: rgba(255, 255, 255, 0.8) !important; }
                 
                 * { box-shadow: none !important; }
                 [contenteditable="true"] { outline: none !important; border: none !important; }

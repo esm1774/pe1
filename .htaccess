@@ -33,7 +33,12 @@ Options -Indexes
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # 2. Skip common root assets and entry points
+    # 2. Fix asset paths for school slugs (e.g., /default/css/style.css -> /css/style.css)
+    # This handles subfolder deployments where the browser requests assets relative to the slug
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(?:[^/]+/)?(assets|css|js|icons|vendor|modules)/(.*)$ $1/$2 [L,NC]
+
+    # 3. Skip common root assets and entry points
     RewriteCond %{REQUEST_URI} (api\.php|index\.html|sw\.js|manifest\.json|assets|css|js|icons|vendor|modules|welcome\.html|register\.html|login\.html) [NC]
     RewriteRule ^ - [L]
 
