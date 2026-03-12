@@ -66,7 +66,10 @@ try {
     $featureActions = [
         'tournaments' => ['tournament_save', 'tournament_delete'],
         'badges' => ['badge_save', 'badge_delete', 'award_badge', 'run_auto_badges'],
-        'sports_teams' => [],  // handled in module
+        'fitness_tests' => ['fitness_tests', 'fitness_test_save', 'fitness_results_save'],
+        'assessments_bank' => ['get_assessments', 'save_assessments'],
+        'monitoring_report' => ['report_monitoring'],
+        'weighted_grading' => ['report_grading']
     ];
     foreach ($featureActions as $feature => $actions) {
         if (in_array($action, $actions)) {
@@ -163,6 +166,7 @@ try {
         case 'report_class':    getClassReport(); break;
         case 'report_compare':  getCompareReport(); break;
         case 'report_grading':  getGradingReport(); break;
+        case 'report_monitoring': getClassMonitoringReport(); break;
         case 'send_report_email': sendReportEmail(); break;
 
         // ASSESSMENTS

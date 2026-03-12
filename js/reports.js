@@ -85,6 +85,7 @@ async function renderReports() {
             <button onclick="reportType='class';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'class' ? 'bg-green-600 text-white shadow-xl shadow-green-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">🏫 تقرير الفصل</button>
             <button onclick="reportType='compare';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'compare' ? 'bg-teal-600 text-white shadow-xl shadow-teal-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">⚖️ لوحة المقارنة</button>
             <button onclick="reportType='grading';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'grading' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📝 كشف الدرجات النهائي</button>
+            <button onclick="reportType='monitoring';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'monitoring' ? 'bg-orange-600 text-white shadow-xl shadow-orange-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📋 كشف متابعة فصل</button>
         </div>
         
         <div id="reportContent" class="mb-12">${showLoading()}</div>
@@ -93,6 +94,7 @@ async function renderReports() {
     if (reportType === 'student') renderStudentReport();
     else if (reportType === 'class') renderClassReport();
     else if (reportType === 'grading') renderGradingReport();
+    else if (reportType === 'monitoring') renderMonitoringReport();
     else renderCompareReport();
 }
 
@@ -923,11 +925,15 @@ async function generateGradingReport() {
             </div>
             <div class="text-left hidden md:block">
                 <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">توزيع الدرجات المعتمد (100٪)</p>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-blue-100">حضور: ${weights.attendance_pct}%</span>
                     <span class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-emerald-100">زي: ${weights.uniform_pct}%</span>
-                    <span class="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-yellow-100">سلوك/مشاركة: ${weights.behavior_skills_pct}%</span>
+                    <span class="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-yellow-100">سلوك: ${weights.behavior_skills_pct}%</span>
+                    <span class="bg-orange-50 text-orange-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-orange-100">مشاركة: ${weights.participation_pct}%</span>
                     <span class="bg-purple-50 text-purple-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-purple-100">لياقة: ${weights.fitness_pct}%</span>
+                    <span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-indigo-100">اختبار: ${weights.quiz_pct}%</span>
+                    <span class="bg-teal-50 text-teal-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-teal-100">مجموع: ${weights.project_pct}%</span>
+                    <span class="bg-rose-50 text-rose-700 px-3 py-1 rounded-lg text-xs font-bold ring-1 ring-rose-100">نهائي: ${weights.final_exam_pct}%</span>
                 </div>
             </div>
         </div>
@@ -938,11 +944,15 @@ async function generateGradingReport() {
                     <tr class="bg-gray-50/50">
                         <th class="px-4 py-3 text-right font-black text-gray-500 rounded-r-xl">م</th>
                         <th class="px-4 py-3 text-right font-black text-gray-500 border-x border-gray-100">الطالب</th>
-                        <th class="px-4 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="الحضور والغياب">الحضور (${weights.attendance_pct}٪)</th>
-                        <th class="px-4 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="الزي الرياضي">الزي (${weights.uniform_pct}٪)</th>
-                        <th class="px-4 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="السلوك والمشاركة">السلوك (${weights.behavior_skills_pct}٪)</th>
-                        <th class="px-4 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="اختبارات اللياقة">اللياقة (${weights.fitness_pct}٪)</th>
-                        <th class="px-4 py-3 text-center font-black text-gray-800 border-l border-gray-100 bg-gray-100">الدرجة النهائية</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="الحضور (${weights.attendance_pct})">ح (${weights.attendance_pct})</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="الزي (${weights.uniform_pct})">ز (${weights.uniform_pct})</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="السلوك (${weights.behavior_skills_pct})">س (${weights.behavior_skills_pct})</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="المشاركة (${weights.participation_pct})">م (${weights.participation_pct})</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="اللياقة (${weights.fitness_pct})">ل (${weights.fitness_pct})</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="إختبار قصير (${weights.quiz_pct})">ق (${weights.quiz_pct})</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="مشروع/بحث (${weights.project_pct})">ج (${weights.project_pct})</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="اختبار نهائي (${weights.final_exam_pct})">ن (${weights.final_exam_pct})</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-800 border-l border-gray-100 bg-gray-100">المجموع</th>
                         <th class="px-4 py-3 text-center font-black text-gray-500 rounded-l-xl">التقدير</th>
                     </tr>
                 </thead>
@@ -951,18 +961,14 @@ async function generateGradingReport() {
                     <tr class="hover:bg-indigo-50/30 transition-colors">
                         <td class="px-4 py-3 text-gray-400 font-bold">${i + 1}</td>
                         <td class="px-4 py-3 font-black text-gray-800 border-x border-gray-50">${esc(s.name)}</td>
-                        <td class="px-4 py-3 text-center font-bold text-gray-600 border-l border-gray-50">
-                            ${s.total_days > 0 ? `<span class="${s.attendance_pct >= 80 ? 'text-green-600' : 'text-orange-500'}">${s.attendance_pct}%</span>` : '<span class="text-gray-300">-</span>'}
-                        </td>
-                        <td class="px-4 py-3 text-center font-bold text-gray-600 border-l border-gray-50">
-                            ${s.total_days > 0 ? `<span class="${s.uniform_pct >= 80 ? 'text-emerald-600' : 'text-red-500'}">${s.uniform_pct}%</span>` : '<span class="text-gray-300">-</span>'}
-                        </td>
-                        <td class="px-4 py-3 text-center font-bold text-gray-600 border-l border-gray-50">
-                            ${s.total_days > 0 ? `<span class="text-yellow-600">${s.behavior_skills_pct}%</span>` : '<span class="text-gray-300">-</span>'}
-                        </td>
-                        <td class="px-4 py-3 text-center font-bold justify-center border-l border-gray-50">
-                            <span class="text-purple-600">${s.fitness_pct}%</span>
-                        </td>
+                        <td class="px-2 py-3 text-center font-bold text-gray-600 border-l border-gray-50">${s.attendance_score}</td>
+                        <td class="px-2 py-3 text-center font-bold text-gray-600 border-l border-gray-50">${s.uniform_score}</td>
+                        <td class="px-2 py-3 text-center font-bold text-gray-600 border-l border-gray-50">${s.behavior_skills_score}</td>
+                        <td class="px-2 py-3 text-center font-bold text-gray-600 border-l border-gray-50">${s.participation_score}</td>
+                        <td class="px-2 py-3 text-center font-bold text-gray-600 border-l border-gray-50">${s.fitness_score}</td>
+                        <td class="px-2 py-3 text-center font-bold text-gray-600 border-l border-gray-50">${s.quiz_score}</td>
+                        <td class="px-2 py-3 text-center font-bold text-gray-600 border-l border-gray-50">${s.project_score}</td>
+                        <td class="px-2 py-3 text-center font-bold text-gray-600 border-l border-gray-50">${s.final_exam_score}</td>
                         <td class="px-4 py-3 text-center font-black border-l border-gray-50 bg-gray-50/50 text-indigo-700 text-lg">
                             ${s.final_grade}
                         </td>
@@ -993,6 +999,171 @@ async function generateGradingReport() {
                 </button>
              </div>
              <p class="text-[10px] text-gray-400 uppercase tracking-widest font-black">PE Smart System • ${new Date().toLocaleDateString('ar-SA')}</p>
+        </div>
+    </div>`;
+}
+
+// ============================================================
+// MONITORING REPORT (كشف متابعة فصل)
+// ============================================================
+async function renderMonitoringReport() {
+    const cl = await API.get('classes');
+
+    document.getElementById('reportContent').innerHTML = `
+    <div class="fade-in">
+        <div class="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-5 md:p-8 mb-8 md:mb-10 no-print">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">اختيار الفصل</label>
+                    <select id="monReportClass" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl focus:bg-white focus:border-orange-500 focus:outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer">
+                        <option value="">-- اضغط للاختيار --</option>
+                        ${(cl?.data || []).map(c => `<option value="${c.id}">${esc(c.full_name || c.name)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">من تاريخ</label>
+                    <input type="date" id="monDateStart" value="${new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-01'}" class="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-orange-500 focus:outline-none font-bold text-gray-700">
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">إلى تاريخ</label>
+                    <input type="date" id="monDateEnd" value="${new Date().toISOString().split('T')[0]}" class="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-orange-500 focus:outline-none font-bold text-gray-700">
+                </div>
+                <div class="pt-1 flex gap-2">
+                    <button onclick="generateMonitoringReport()" class="flex-1 bg-orange-600 text-white px-2 py-3.5 rounded-2xl font-black hover:bg-orange-700 transition shadow-lg shadow-orange-100 flex items-center justify-center gap-2">
+                        <span class="text-xl">📋</span> استخراج
+                    </button>
+                    <button onclick="window.print()" class="w-16 bg-gray-900 text-white p-3.5 rounded-2xl font-black hover:bg-black transition shadow-lg flex items-center justify-center">
+                        🖨️
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="reportOutput">
+            <div class="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 text-orange-200">
+                <div class="w-24 h-24 bg-orange-50 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 grayscale opacity-30">📋</div>
+                <p class="text-gray-400 font-black text-xl">يرجى تحديد الفصل والفترة لاستخراج كشف المتابعة</p>
+                <p class="text-gray-300 text-sm mt-1">يظهر هذا التقرير تفاصيل الحصص: الحضور، الزي، المشاركة، اللياقة، والسلوك</p>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function generateMonitoringReport() {
+    const classId = document.getElementById('monReportClass').value;
+    const start = document.getElementById('monDateStart').value;
+    const end = document.getElementById('monDateEnd').value;
+
+    if (!classId) {
+        showToast('يرجى اختيار الفصل', 'error');
+        return;
+    }
+
+    const reportOutput = document.getElementById('reportOutput');
+    reportOutput.innerHTML = showLoading();
+
+    const r = await API.get('report_monitoring', {
+        class_id: classId,
+        start_date: start,
+        end_date: end
+    });
+
+    if (!r || !r.success) {
+        reportOutput.innerHTML = '<p class="text-red-500 text-center py-8">فشل استخراج التقرير</p>';
+        return;
+    }
+
+    renderMonitoringReportHTML(r.data, reportOutput);
+}
+
+function renderMonitoringReportHTML(d, container) {
+    const students = d.students || [];
+    const dates = d.dates || [];
+    const matrix = d.matrix || {};
+    const className = d.class.full_name;
+
+    if (dates.length === 0) {
+        container.innerHTML = `<div class="p-12 text-center text-gray-400 font-bold bg-white rounded-3xl border-2 border-dashed">لا توجد حصص مسجلة في هذه الفترة لهذا الفصل</div>`;
+        return;
+    }
+
+    // Header structure for dates: 1 header spanning 5 columns
+    let headerHTML = '';
+    let subHeaderHTML = '';
+    const attMap = { 'present': 'ح', 'absent': 'غ', 'late': 'م', 'excused': 'عذر' };
+
+    dates.forEach(dt => {
+        headerHTML += `<th colspan="5" class="px-2 py-3 text-center border-l-2 border-gray-200 bg-gray-50 text-[10px] font-black">${dt.replace(/-/g, '/')}</th>`;
+        subHeaderHTML += `
+            <th class="px-1 py-2 text-[8px] font-black text-gray-400 border-l border-gray-100">حضور</th>
+            <th class="px-1 py-2 text-[8px] font-black text-gray-400 border-l border-gray-100">ملابس</th>
+            <th class="px-1 py-2 text-[8px] font-black text-gray-400 border-l border-gray-100">مشاركة</th>
+            <th class="px-1 py-2 text-[8px] font-black text-gray-400 border-l border-gray-200">لياقة</th>
+            <th class="px-1 py-2 text-[8px] font-black text-gray-400 border-l-2 border-gray-200 bg-gray-50/50">سلوك</th>
+        `;
+    });
+
+    container.innerHTML = `
+    <div class="bg-white rounded-[2rem] shadow-2xl border border-gray-100 p-4 md:p-8 fade-in overflow-hidden">
+        <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-100 no-print">
+            <div>
+                <h3 class="text-xl font-black text-gray-800">📋 كشف متابعة فصل (سجل الأداء اليومي)</h3>
+                <p class="text-orange-600 font-bold mt-1">الفصل: ${esc(className)}</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.print()" class="bg-gray-900 text-white px-5 py-2 rounded-xl font-black text-sm">🖨️ طباعة</button>
+                <button onclick="downloadReportPDF('monitoringTableWrapper', 'كشف متابعة ${esc(className)}')" class="bg-emerald-600 text-white px-5 py-2 rounded-xl font-black text-sm">💾 PDF</button>
+            </div>
+        </div>
+
+        <div id="monitoringTableWrapper" class="overflow-x-auto print:overflow-visible">
+            <div class="min-w-max">
+                <h2 class="text-center font-black text-xl mb-6 hidden print:block">كشف متابعة فصل (${esc(className)})</h2>
+                <table class="w-full text-center border-collapse border-2 border-gray-200">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th rowspan="2" class="px-3 py-4 border-2 border-gray-200 text-xs font-black w-10">م</th>
+                            <th rowspan="2" class="px-6 py-4 border-2 border-gray-200 text-sm font-black min-w-[200px] text-right">اسم الطالب</th>
+                            ${headerHTML}
+                        </tr>
+                        <tr class="bg-white">
+                            ${subHeaderHTML}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${students.map((s, i) => {
+        let rowCells = '';
+        dates.forEach(dt => {
+            const m = (matrix[s.id] && matrix[s.id][dt]) ? matrix[s.id][dt] : null;
+            if (m) {
+                const uniIcon = m.uniform === 'full' ? '✓' : m.uniform === 'wrong' ? 'X' : '-';
+                rowCells += `
+                                        <td class="border border-gray-200 px-1 py-3 text-xs font-black ${m.status === 'absent' ? 'text-red-600 bg-red-50/30' : 'text-gray-800'}">${attMap[m.status] || '-'}</td>
+                                        <td class="border border-gray-200 px-1 py-3 text-xs font-bold ${m.uniform === 'wrong' ? 'text-red-500' : 'text-green-600'}">${uniIcon}</td>
+                                        <td class="border border-gray-200 px-1 py-3 text-xs font-black text-gray-600">${m.participation || '-'}</td>
+                                        <td class="border border-gray-200 px-1 py-3 text-xs font-black text-blue-600 bg-blue-50/10">${m.fitness || '-'}</td>
+                                        <td class="border border-gray-200 px-1 py-3 text-xs font-black text-yellow-600 border-l-2 bg-gray-50/30">${m.behavior || m.skills || '-'}</td>
+                                    `;
+            } else {
+                rowCells += `
+                                        <td class="border border-gray-200 bg-gray-50/20" colspan="5">-</td>
+                                    `;
+            }
+        });
+
+        return `
+                                <tr class="hover:bg-orange-50/20 transition-colors">
+                                    <td class="border-2 border-gray-200 px-2 py-3 font-bold text-gray-400 text-xs">${i + 1}</td>
+                                    <td class="border-2 border-gray-200 px-4 py-3 font-black text-gray-800 text-right text-sm">${esc(s.name)}</td>
+                                    ${rowCells}
+                                </tr>
+                            `;
+    }).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-6 text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center hidden print:block">
+                نظام PE Smart School • تم الاستخراج في ${new Date().toLocaleDateString('ar-SA')}
+            </div>
         </div>
     </div>`;
 }

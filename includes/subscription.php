@@ -190,7 +190,12 @@ class Subscription {
                 'certificates'  => 'إصدار الشهادات',
                 'analytics'     => 'لوحة التحليلات المتقدمة',
                 'fitness_tests' => 'اختبارات اللياقة البدنية',
-                'timetable'     => 'جدول الحصص الأسبوعي'
+                'timetable'     => 'جدول الحصص الأسبوعي',
+                'weighted_grading' => 'محرك التقييم الموزون',
+                'monitoring_report' => 'كشف المتابعة اليومي',
+                'assessments_bank' => 'بنك المشاريع والأبحاث',
+                'behavior_analytics' => 'تحليلات السلوك والمشاركة',
+                'white_label'   => 'تخصيص هوية التقارير'
             ];
             $name = $names[$feature] ?? $feature;
             jsonError("ميزة '{$name}' غير مفعلة لمدرستك حالياً. يرجى ترقية الاشتراك.", 403);

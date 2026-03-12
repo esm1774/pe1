@@ -199,5 +199,10 @@ const ALL_FEATURES_MAP = {
     reports: { icon: '📊', label: 'التقارير المتقدمة' },
     analytics: { icon: '📈', label: 'لوحة التحليلات' },
     fitness_tests: { icon: '💪', label: 'اختبارات اللياقة' },
-    timetable: { icon: '🗓️', label: 'جدول الحصص' }
+    timetable: { icon: '🗓️', label: 'جدول الحصص' },
+    weighted_grading: { icon: '⚖️', label: 'محرك التقييم الموزون' },
+    monitoring_report: { icon: '📋', label: 'كشف المتابعة اليومي' },
+    assessments_bank: { icon: '📚', label: 'بنك المشاريع والأبحاث' },
+    behavior_analytics: { icon: '🧠', label: 'تحليلات السلوك والمشاركة' },
+    white_label: { icon: '🏷️', label: 'تخصيص هوية التقارير' }
 };

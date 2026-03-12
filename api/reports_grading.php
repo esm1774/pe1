@@ -128,30 +128,42 @@ function getGradingReport() {
         $qScore = (float)($assRecords['quiz'] ?? 0);
         $pScore = (float)($assRecords['project'] ?? 0);
         $fnScore = (float)($assRecords['final_exam'] ?? 0);
-        // Scores are out of 10, so convert to percentage
-        $qPercent = ($qScore / 10) * 100;
-        $prjPercent = ($pScore / 10) * 100;
-        $fnlPercent = ($fnScore / 10) * 100;
+        // Scores are out of their respective max scores defined in weights, so convert to percentage
+        $qMax = (float)($weights['quiz_max'] ?? 10);
+        $pMax = (float)($weights['project_max'] ?? 10);
+        $fMax = (float)($weights['final_exam_max'] ?? 10);
+
+        $qPercent = $qMax > 0 ? ($qScore / $qMax) * 100 : 0;
+        $prjPercent = $pMax > 0 ? ($pScore / $pMax) * 100 : 0;
+        $fnlPercent = $fMax > 0 ? ($fnScore / $fMax) * 100 : 0;
 
         // Apply Weights
-        $finalScore = 
-            ($attPercent * ($weights['attendance_pct'] / 100)) +
-            ($uniPercent * ($weights['uniform_pct'] / 100)) +
-            ($behSkillPercent * ($weights['behavior_skills_pct'] / 100)) +
-            ($partPercent * ($weights['participation_pct'] / 100)) +
-            ($fitPercent * ($weights['fitness_pct'] / 100)) +
-            ($qPercent * (($weights['quiz_pct'] ?? 0) / 100)) +
-            ($prjPercent * (($weights['project_pct'] ?? 0) / 100)) +
-            ($fnlPercent * (($weights['final_exam_pct'] ?? 0) / 100));
+        $wAtt = $attPercent * ($weights['attendance_pct'] / 100);
+        $wUni = $uniPercent * ($weights['uniform_pct'] / 100);
+        $wBeh = $behSkillPercent * ($weights['behavior_skills_pct'] / 100);
+        $wPart = $partPercent * ($weights['participation_pct'] / 100);
+        $wFit = $fitPercent * ($weights['fitness_pct'] / 100);
+        $wQuiz = $qPercent * (($weights['quiz_pct'] ?? 0) / 100);
+        $wPrj = $prjPercent * (($weights['project_pct'] ?? 0) / 100);
+        $wFnl = $fnlPercent * (($weights['final_exam_pct'] ?? 0) / 100);
+
+        $finalScore = $wAtt + $wUni + $wBeh + $wPart + $wFit + $wQuiz + $wPrj + $wFnl;
 
         $st['total_days'] = $totalDays;
+        $st['attendance_score'] = round($wAtt, 1);
+        $st['uniform_score'] = round($wUni, 1);
+        $st['behavior_skills_score'] = round($wBeh, 1);
+        $st['participation_score'] = round($wPart, 1);
+        $st['fitness_score'] = round($wFit, 1);
+        $st['quiz_score'] = round($wQuiz, 1);
+        $st['project_score'] = round($wPrj, 1);
+        $st['final_exam_score'] = round($wFnl, 1);
+        
         $st['attendance_pct'] = round($attPercent, 1);
         $st['uniform_pct'] = round($uniPercent, 1);
         $st['behavior_skills_pct'] = round($behSkillPercent, 1);
         $st['fitness_pct'] = round($fitPercent, 1);
-        $st['quiz_score'] = $qScore;
-        $st['project_score'] = $pScore;
-        $st['final_exam_score'] = $fnScore;
+        
         $st['final_grade'] = round($finalScore, 1);
         
         // Calculate Grade Letter (Arabic Evaluative terms)
@@ -170,5 +182,110 @@ function getGradingReport() {
     jsonSuccess([
         'weights' => $weights,
         'students' => $students
+    ]);
+}
+
+/**
+ * NEW: Class Monitoring Report (كشف متابعة فصل)
+ * Shows attendance, uniform, participation, fitness, and behavior per lesson date.
+ */
+function getClassMonitoringReport() {
+    requireLogin();
+    $db = getDB();
+    $sid = schoolId();
+    $classId = (int)getParam('class_id');
+    $startDate = getParam('start_date', date('Y-m-01'));
+    $endDate = getParam('end_date', date('Y-m-t'));
+
+    if (!$classId) jsonError('يجب تحديد الفصل');
+    if (!canAccessClass($classId)) jsonError('لا تملك صلاحية الوصول لهذا الفصل', 403);
+
+    // 1. Get Class Info
+    $cStmt = $db->prepare("SELECT c.*, CONCAT(g.name, ' - ', c.name) as full_name FROM classes c JOIN grades g ON c.grade_id = g.id WHERE c.id = ?");
+    $cStmt->execute([$classId]);
+    $classInfo = $cStmt->fetch(PDO::FETCH_ASSOC);
+
+    // 2. Get Students
+    $sStmt = $db->prepare("SELECT id, name, student_number FROM students WHERE class_id = ? AND active = 1 ORDER BY name ASC");
+    $sStmt->execute([$classId]);
+    $students = $sStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 3. Get lesson dates during this period (dates where at least one attendance record exists for this class)
+    $dStmt = $db->prepare("
+        SELECT DISTINCT attendance_date 
+        FROM attendance a
+        JOIN students s ON a.student_id = s.id
+        WHERE s.class_id = ? AND a.attendance_date BETWEEN ? AND ?
+        ORDER BY attendance_date ASC
+    ");
+    $dStmt->execute([$classId, $startDate, $endDate]);
+    $lessonDates = $dStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (empty($lessonDates)) {
+        jsonSuccess([
+            'class' => $classInfo,
+            'students' => $students,
+            'dates' => [],
+            'matrix' => []
+        ]);
+        return;
+    }
+
+    // 4. Get all attendance & fitness data for these students/dates
+    // We'll fetch all records and organize them in a matrix in PHP for easier UI rendering
+    $stIds = array_column($students, 'id');
+    if (empty($stIds)) jsonError('لا يوجد طلاب في هذا الفصل');
+
+    $placeholders = implode(',', array_fill(0, count($stIds), '?'));
+    
+    // Attendance data
+    $aParams = array_merge([$startDate, $endDate], $stIds);
+    $aStmt = $db->prepare("
+        SELECT student_id, attendance_date, status, uniform_status, participation_stars, behavior_stars, skills_stars
+        FROM attendance 
+        WHERE attendance_date BETWEEN ? AND ? AND student_id IN ($placeholders)
+    ");
+    $aStmt->execute($aParams);
+    $attRecords = $aStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fitness data (we'll fetch test results for these dates)
+    $fStmt = $db->prepare("
+        SELECT student_id, test_date, ROUND(AVG(score), 1) as avg_score
+        FROM student_fitness 
+        WHERE test_date BETWEEN ? AND ? AND student_id IN ($placeholders)
+        GROUP BY student_id, test_date
+    ");
+    $fStmt->execute($aParams);
+    $fitRecords = $fStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Organize into matrix: [student_id][date] = { att, uni, part, fit, beh }
+    $matrix = [];
+    foreach ($attRecords as $r) {
+        $sid_st = $r['student_id'];
+        $dt = $r['attendance_date'];
+        if (!isset($matrix[$sid_st])) $matrix[$sid_st] = [];
+        
+        $matrix[$sid_st][$dt] = [
+            'status' => $r['status'],
+            'uniform' => $r['uniform_status'],
+            'participation' => $r['participation_stars'],
+            'behavior' => $r['behavior_stars'],
+            'skills' => $r['skills_stars']
+        ];
+    }
+
+    foreach ($fitRecords as $f) {
+        $sid_st = $f['student_id'];
+        $dt = $f['test_date'];
+        if (!isset($matrix[$sid_st])) $matrix[$sid_st] = [];
+        if (!isset($matrix[$sid_st][$dt])) $matrix[$sid_st][$dt] = [];
+        $matrix[$sid_st][$dt]['fitness'] = $f['avg_score'];
+    }
+
+    jsonSuccess([
+        'class' => $classInfo,
+        'students' => $students,
+        'dates' => $lessonDates,
+        'matrix' => $matrix
     ]);
 }

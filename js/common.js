@@ -520,6 +520,7 @@ const PAGE_FEATURE_MAP = {
     'reports': 'reports',
     'analytics': 'analytics',
     'badgesAdmin': 'badges',
+    'assessments': 'assessments_bank',
 };
 
 // ============================================================

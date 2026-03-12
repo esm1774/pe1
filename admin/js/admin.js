@@ -627,7 +627,12 @@ const ALL_FEATURES = {
     reports: { icon: '📊', label: 'التقارير المتقدمة', desc: 'تقارير تحليلية وإحصائية شاملة' },
     analytics: { icon: '📈', label: 'لوحة التحليلات', desc: 'رؤية تحليلية لأداء المدرسة والطلاب' },
     fitness_tests: { icon: '💪', label: 'اختبارات اللياقة البدنية', desc: 'تسجيل ومتابعة نتائج اختبارات اللياقة' },
-    timetable: { icon: '🗓️', label: 'جدول الحصص', desc: 'إعداد وعرض جداول الحصص الأسبوعية' }
+    timetable: { icon: '🗓️', label: 'جدول الحصص', desc: 'إعداد وعرض جداول الحصص الأسبوعية' },
+    weighted_grading: { icon: '⚖️', label: 'محرك التقييم الموزون', desc: 'تخصيص أوزان الدرجات بدقة عالية' },
+    monitoring_report: { icon: '📋', label: 'كشف المتابعة اليومي', desc: 'تقرير يومي شامل يجمع كافة المعايير' },
+    assessments_bank: { icon: '📚', label: 'بنك المشاريع والأبحاث', desc: 'إدارة وتقييم الأبحاث والاختبارات القصيرة' },
+    behavior_analytics: { icon: '🧠', label: 'تحليلات السلوك', desc: 'تحليل نمو تفاعل الطالب وانضباطه' },
+    white_label: { icon: '🏷️', label: 'تخصيص الهوية', desc: 'إخفاء هوية النظام ووضع شعار المدرسة' }
 };
 
 async function renderPlans() {
