@@ -104,7 +104,10 @@ function renderChildCard(child) {
                 ` : ''}
             </div>
             
-            <button onclick="window._profileStudentId=${child.id};navigateTo('studentProfile')" class="w-full mt-6 py-3 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition">استعراض الملف بالكامل ←</button>
+            <div class="flex gap-2 mt-6">
+                <button onclick="window._profileStudentId=${child.id};navigateTo('studentProfile')" class="flex-1 py-3 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition text-sm">الملف الشخصي ←</button>
+                <button onclick="navigateTo('reports'); setTimeout(() => { generateParentStudentReport(${child.id}); }, 300);" class="flex-1 py-3 bg-indigo-50 text-indigo-700 rounded-2xl font-bold hover:bg-indigo-100 transition text-sm">📊 التقرير الشامل</button>
+            </div>
         </div>
     </div>`;
 }

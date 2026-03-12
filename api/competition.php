@@ -182,22 +182,6 @@ function getStudentReport() {
         $health = $stmt->fetchAll();
     } catch (Exception $e) {}
 
-    // Fix: Filter fitness_tests by school_id to prevent cross-school data leakage
-    $fitnessTestsSql = "SELECT ft.id, ft.name as test_name, ft.unit, ft.type, ft.max_score, sf.value, sf.score, sf.test_date
-        FROM fitness_tests ft LEFT JOIN student_fitness sf ON sf.test_id = ft.id AND sf.student_id = ?
-        WHERE ft.active = 1";
-    $fitnessParams = [$studentId];
-    if ($sid) { $fitnessTestsSql .= " AND ft.school_id = ?"; $fitnessParams[] = $sid; }
-    $fitnessTestsSql .= " ORDER BY ft.id";
-    $stmt = $db->prepare($fitnessTestsSql);
-    $stmt->execute($fitnessParams);
-    $fitnessResults = $stmt->fetchAll();
-
-    $totalScore = 0; $totalMax = 0;
-    foreach ($fitnessResults as $r) {
-        if ($r['score'] !== null) { $totalScore += $r['score']; $totalMax += $r['max_score']; }
-    }
-
     // --- NEW: WEIGHTED GRADING CALCULATION ---
     $startDate = getParam('start_date', date('Y-m-01'));
     $endDate = getParam('end_date', date('Y-m-t'));
@@ -207,10 +191,16 @@ function getStudentReport() {
     $wStmt->execute([$sid]);
     $weights = $wStmt->fetch(PDO::FETCH_ASSOC);
     if (!$weights) {
-        $weights = ['attendance_pct' => 20, 'uniform_pct' => 20, 'behavior_skills_pct' => 20, 'fitness_pct' => 40];
+        $weights = ['attendance_pct' => 20, 'uniform_pct' => 20, 'behavior_skills_pct' => 20, 'participation_pct' => 20, 'fitness_pct' => 20];
+    } else {
+        $weights['attendance_pct'] = (int)$weights['attendance_pct'];
+        $weights['uniform_pct'] = (int)$weights['uniform_pct'];
+        $weights['behavior_skills_pct'] = (int)$weights['behavior_skills_pct'];
+        $weights['participation_pct'] = (int)($weights['participation_pct'] ?? 0);
+        $weights['fitness_pct'] = (int)$weights['fitness_pct'];
     }
 
-    // 2. Attendance, Uniform, Behavior & Skills Data
+    // 2. Attendance, Uniform, Behavior, Skills & Participation Data
     $aStmt = $db->prepare("
         SELECT 
             COUNT(*) as total_days,
@@ -221,7 +211,9 @@ function getStudentReport() {
             SUM(COALESCE(behavior_stars, 0)) as behavior_score,
             SUM(CASE WHEN behavior_stars > 0 THEN 3 ELSE 0 END) as max_behavior_score,
             SUM(COALESCE(skills_stars, 0)) as skills_score,
-            SUM(CASE WHEN skills_stars > 0 THEN 3 ELSE 0 END) as max_skills_score
+            SUM(CASE WHEN skills_stars > 0 THEN 3 ELSE 0 END) as max_skills_score,
+            SUM(COALESCE(participation_stars, 0)) as participation_score,
+            SUM(CASE WHEN participation_stars > 0 THEN 3 ELSE 0 END) as max_participation_score
         FROM attendance 
         WHERE student_id = ? AND attendance_date BETWEEN ? AND ?
     ");
@@ -236,14 +228,34 @@ function getStudentReport() {
     $maxStars = (float)$attData['max_behavior_score'] + (float)$attData['max_skills_score'];
     $behSkillPercent = $maxStars > 0 ? ($earnedStars / $maxStars) * 100 : 100;
 
-    // 3. Fitness Score (Weighted)
-    $fitPercent = $totalMax > 0 ? ($totalScore / $totalMax) * 100 : 100;
+    $partPercent = (int)$attData['max_participation_score'] > 0 ? ((float)$attData['participation_score'] / (float)$attData['max_participation_score']) * 100 : 100;
 
-    // 4. Final Weighted Grade
+    // 3. Fitness Results (Filtered by Date)
+    // ... (fitness results logic)
+    $fitnessTestsSql = "SELECT ft.id, ft.name as test_name, ft.unit, ft.type, ft.max_score, sf.value, sf.score, sf.test_date
+        FROM fitness_tests ft LEFT JOIN student_fitness sf ON sf.test_id = ft.id AND sf.student_id = ? AND sf.test_date BETWEEN ? AND ?
+        WHERE ft.active = 1";
+    $fitnessParams = [$studentId, $startDate, $endDate];
+    if ($sid) { $fitnessTestsSql .= " AND ft.school_id = ?"; $fitnessParams[] = $sid; }
+    $fitnessTestsSql .= " ORDER BY ft.id";
+    $stmt = $db->prepare($fitnessTestsSql);
+    $stmt->execute($fitnessParams);
+    $fitnessResults = $stmt->fetchAll();
+
+    $rangeTotalScore = 0; $rangeTotalMax = 0;
+    foreach ($fitnessResults as $r) {
+        if ($r['score'] !== null) { $rangeTotalScore += $r['score']; $rangeTotalMax += $r['max_score']; }
+    }
+
+    // 4. Fitness Score (Weighted)
+    $fitPercent = $rangeTotalMax > 0 ? ($rangeTotalScore / $rangeTotalMax) * 100 : 100;
+
+    // 5. Final Weighted Grade
     $finalScore = 
         ($attPercent * ($weights['attendance_pct'] / 100)) +
         ($uniPercent * ($weights['uniform_pct'] / 100)) +
         ($behSkillPercent * ($weights['behavior_skills_pct'] / 100)) +
+        ($partPercent * ($weights['participation_pct'] / 100)) +
         ($fitPercent * ($weights['fitness_pct'] / 100));
 
     $letter = '';
@@ -258,22 +270,25 @@ function getStudentReport() {
         'attendance_pct' => round($attPercent, 1),
         'uniform_pct' => round($uniPercent, 1),
         'behavior_skills_pct' => round($behSkillPercent, 1),
+        'participation_pct' => round($partPercent, 1),
         'fitness_pct' => round($fitPercent, 1),
         'final_grade' => round($finalScore, 1),
         'letter' => $letter,
-        'total_days' => $totalDays
+        'total_days' => $totalDays,
+        'start_date' => $startDate,
+        'end_date' => $endDate
     ];
 
     $stmt = $db->prepare("SELECT SUM(CASE WHEN status='present' THEN 1 ELSE 0 END) as present_count,
         SUM(CASE WHEN status='absent' THEN 1 ELSE 0 END) as absent_count,
-        SUM(CASE WHEN status='late' THEN 1 ELSE 0 END) as late_count FROM attendance WHERE student_id = ?");
-    $stmt->execute([$studentId]);
+        SUM(CASE WHEN status='late' THEN 1 ELSE 0 END) as late_count FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
+    $stmt->execute([$studentId, $startDate, $endDate]);
     $att = $stmt->fetch();
 
     jsonSuccess([
         'student' => $student, 'measurement' => $measurement, 'health' => $health,
-        'fitness' => $fitnessResults, 'totalScore' => (int)$totalScore, 'totalMax' => (int)$totalMax,
-        'percentage' => round($finalScore), // Return final weighted score as overall percentage
+        'fitness' => $fitnessResults, 'totalScore' => (int)$rangeTotalScore, 'totalMax' => (int)$rangeTotalMax,
+        'percentage' => round($finalScore), 
         'grading_summary' => $gradingSummary,
         'attendance' => [
             'present' => (int)($att['present_count'] ?? 0),

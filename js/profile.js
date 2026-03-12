@@ -32,15 +32,20 @@ async function renderStudentProfilePage() {
     mc.innerHTML = `
     <div class="fade-in max-w-full overflow-x-hidden">
         <div class="mb-4 mt-2 px-1">
-            ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'supervisor') ? `
-                <button onclick="navigateTo('students')" class="text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-2 cursor-pointer transition text-xs md:text-base">
-                    <span class="text-lg">→</span> العودة لقائمة الطلاب
-                </button>
-            ` : `
-                <button onclick="navigateTo('dashboard')" class="text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-2 cursor-pointer transition text-xs md:text-base">
-                    <span class="text-lg">→</span> العودة للرئيسية
-                </button>
-            `}
+                <div class="flex flex-wrap gap-2">
+                    ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'supervisor') ? `
+                        <button onclick="navigateTo('students')" class="text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-2 cursor-pointer transition text-xs md:text-base">
+                            <span class="text-lg">→</span> العودة لقائمة الطلاب
+                        </button>
+                    ` : `
+                        <button onclick="navigateTo('dashboard')" class="text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-2 cursor-pointer transition text-xs md:text-base">
+                            <span class="text-lg">→</span> العودة للرئيسية
+                        </button>
+                    `}
+                    <button onclick="navigateTo('reports'); setTimeout(() => { if(window._profileStudentId) { const sel = document.getElementById('reportStudent'); if(sel) { sel.value = window._profileStudentId; generateStudentReport(); } } }, 500);" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center gap-2 text-xs md:text-sm">
+                        <span>📊 استخراج تقرير شامل</span>
+                    </button>
+                </div>
         </div>
 
         <!-- Header Card -->

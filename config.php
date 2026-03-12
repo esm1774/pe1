@@ -201,13 +201,32 @@ function ensureSchema() {
     $done = true;
     
     // Performance: Only run schema checks if version changed or periodically
-    $currentVersion = '2.1.4'; 
+    $currentVersion = '2.1.5'; 
     $dbVersion = getPlatformSetting('db_schema_version', '0');
     if ($dbVersion === $currentVersion && !isset($_GET['force_schema'])) return;
 
     try {
         $db = getDB();
         
+        // 1. Core Tables & Improvements
+        // ... (login_attempts, students, users, parents tables checks)
+        
+        // Check & add participation_stars to attendance table
+        try {
+            $colsAtt = array_column($db->query("SHOW COLUMNS FROM attendance")->fetchAll(), 'Field');
+            if (!in_array('participation_stars', $colsAtt)) {
+                $db->exec("ALTER TABLE attendance ADD COLUMN `participation_stars` TINYINT UNSIGNED DEFAULT 0 AFTER `skills_stars`");
+            }
+        } catch (Exception $e) {}
+
+        // Check & add participation_pct to school_grading_weights table
+        try {
+            $colsWeights = array_column($db->query("SHOW COLUMNS FROM school_grading_weights")->fetchAll(), 'Field');
+            if (!in_array('participation_pct', $colsWeights)) {
+                $db->exec("ALTER TABLE school_grading_weights ADD COLUMN `participation_pct` TINYINT UNSIGNED DEFAULT 0 AFTER `behavior_skills_pct`");
+            }
+        } catch (Exception $e) {}
+
         // 1. Core Tables & Improvements
         $db->exec("CREATE TABLE IF NOT EXISTS `login_attempts` (
             `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

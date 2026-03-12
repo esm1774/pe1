@@ -32,7 +32,8 @@ function getSchoolInfo() {
             'attendance_pct' => 20,
             'uniform_pct' => 20,
             'behavior_skills_pct' => 20,
-            'fitness_pct' => 40
+            'participation_pct' => 20,
+            'fitness_pct' => 20
         ];
     }
     
@@ -90,26 +91,28 @@ function saveSchoolInfo() {
     ]);
 
     // Handle grading weights
-    if (isset($data['attendance_pct'], $data['uniform_pct'], $data['behavior_skills_pct'], $data['fitness_pct'])) {
+    if (isset($data['attendance_pct'], $data['uniform_pct'], $data['behavior_skills_pct'], $data['participation_pct'], $data['fitness_pct'])) {
         $aPct = (int)$data['attendance_pct'];
         $uPct = (int)$data['uniform_pct'];
         $bPct = (int)$data['behavior_skills_pct'];
+        $pPct = (int)$data['participation_pct'];
         $fPct = (int)$data['fitness_pct'];
         
-        if ($aPct + $uPct + $bPct + $fPct !== 100) {
+        if ($aPct + $uPct + $bPct + $pPct + $fPct !== 100) {
             jsonError('مجموع أوزان التقييم يجب أن يساوي 100%');
         }
 
         $wStmt = $db->prepare("
-            INSERT INTO school_grading_weights (school_id, attendance_pct, uniform_pct, behavior_skills_pct, fitness_pct)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO school_grading_weights (school_id, attendance_pct, uniform_pct, behavior_skills_pct, participation_pct, fitness_pct)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 attendance_pct = VALUES(attendance_pct),
                 uniform_pct = VALUES(uniform_pct),
                 behavior_skills_pct = VALUES(behavior_skills_pct),
+                participation_pct = VALUES(participation_pct),
                 fitness_pct = VALUES(fitness_pct)
         ");
-        $wStmt->execute([$sid, $aPct, $uPct, $bPct, $fPct]);
+        $wStmt->execute([$sid, $aPct, $uPct, $bPct, $pPct, $fPct]);
     }
 
     logActivity('update', 'school_settings', $sid, 'تم تحديث إعدادات المدرسة: ' . $name);

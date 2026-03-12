@@ -83,6 +83,7 @@ async function loadAttendanceList() {
                     <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-48">الزي الرياضي</th>
                     <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">المهارة</th>
                     <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">السلوك</th>
+                    <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">المشاركة</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -160,6 +161,12 @@ async function loadAttendanceList() {
                                 <input type="hidden" id="behavior_${s.student_id}" value="${s.behavior_stars || 0}">
                             </div>
                         </td>
+                        <td class="px-4 py-6 text-center">
+                            <div class="flex items-center justify-center rating-stars" dir="ltr">
+                                ${[1, 2, 3].map(v => `<span class="cursor-pointer text-xl transition-colors ${s.participation_stars >= v ? 'text-purple-600' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'participation', ${v})">★</span>`).join('')}
+                                <input type="hidden" id="participation_${s.student_id}" value="${s.participation_stars || 0}">
+                            </div>
+                        </td>
                     </tr>
                     `;
     }).join('')}
@@ -230,9 +237,9 @@ async function loadAttendanceList() {
                 </div>
 
                 <!-- Mobile: Stars -->
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
-                        <span class="text-[10px] font-black text-gray-500 mb-1">المهارة والمشاركة</span>
+                        <span class="text-[10px] font-black text-gray-500 mb-1">المهارة البدنية</span>
                         <div class="rating-stars text-xl" dir="ltr">
                             ${[1, 2, 3].map(v => `<span class="cursor-pointer transition-colors ${s.skills_stars >= v ? 'text-amber-400' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'skills', ${v}, true)">★</span>`).join('')}
                         </div>
@@ -241,6 +248,12 @@ async function loadAttendanceList() {
                         <span class="text-[10px] font-black text-gray-500 mb-1">السلوك الرياضي</span>
                         <div class="rating-stars text-xl" dir="ltr">
                             ${[1, 2, 3].map(v => `<span class="cursor-pointer transition-colors ${s.behavior_stars >= v ? 'text-blue-500' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'behavior', ${v}, true)">★</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
+                        <span class="text-[10px] font-black text-gray-500 mb-1">المشاركة الصفية</span>
+                        <div class="rating-stars text-xl" dir="ltr">
+                            ${[1, 2, 3].map(v => `<span class="cursor-pointer transition-colors ${s.participation_stars >= v ? 'text-purple-600' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'participation', ${v}, true)">★</span>`).join('')}
                         </div>
                     </div>
                 </div>
@@ -283,13 +296,15 @@ async function saveAttendance() {
             // Check stars
             const skillsVal = document.getElementById(`skills_${sid}`) ? document.getElementById(`skills_${sid}`).value : 0;
             const behaviorVal = document.getElementById(`behavior_${sid}`) ? document.getElementById(`behavior_${sid}`).value : 0;
+            const participationVal = document.getElementById(`participation_${sid}`) ? document.getElementById(`participation_${sid}`).value : 0;
 
             records.push({
                 student_id: sid,
                 status: attRadio.value,
                 uniform_status: uniRadio ? uniRadio.value : null,
                 skills_stars: skillsVal,
-                behavior_stars: behaviorVal
+                behavior_stars: behaviorVal,
+                participation_stars: participationVal
             });
             processedIds.add(sid);
         }
@@ -335,10 +350,12 @@ function setStars(element, sid, type, val, isMobile = false) {
     allStars.forEach((star, idx) => {
         if (idx < val) {
             star.classList.remove('text-gray-300');
-            star.classList.add(type === 'skills' ? 'text-amber-400' : 'text-blue-500');
+            if (type === 'skills') star.classList.add('text-amber-400');
+            else if (type === 'behavior') star.classList.add('text-blue-500');
+            else if (type === 'participation') star.classList.add('text-purple-600');
         } else {
             star.classList.add('text-gray-300');
-            star.classList.remove('text-amber-400', 'text-blue-500');
+            star.classList.remove('text-amber-400', 'text-blue-500', 'text-purple-600');
         }
     });
 

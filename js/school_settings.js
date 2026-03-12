@@ -99,7 +99,7 @@ async function renderSchoolSettings() {
                 <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8">
                     <h3 class="font-black text-gray-800 mb-6 flex items-center gap-2">⚖️ أوزان تقييم التربية البدنية</h3>
                     <p class="text-[12px] text-gray-500 mb-4 font-bold">حدد النسبة المئوية لكل معيار ليتم حساب الدرجة النهائية للطالب. (يجب أن يكون المجموع 100%)</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div>
                             <label class="block text-sm font-black text-gray-700 mb-2">% الحضور والغياب</label>
                             <input type="number" id="attendancePct" value="${s.grading_weights?.attendance_pct || 20}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-emerald-600 text-center text-lg">
@@ -109,8 +109,12 @@ async function renderSchoolSettings() {
                             <input type="number" id="uniformPct" value="${s.grading_weights?.uniform_pct || 20}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-emerald-600 text-center text-lg">
                         </div>
                         <div>
-                            <label class="block text-sm font-black text-gray-700 mb-2">% المهارة والمشاركة</label>
+                            <label class="block text-sm font-black text-gray-700 mb-2">% المهارة والسلوك</label>
                             <input type="number" id="behaviorPct" value="${s.grading_weights?.behavior_skills_pct || 20}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-emerald-600 text-center text-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-black text-gray-700 mb-2">% المشاركة</label>
+                            <input type="number" id="participationPct" value="${s.grading_weights?.participation_pct || 0}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-purple-600 text-center text-lg">
                         </div>
                         <div>
                             <label class="block text-sm font-black text-gray-700 mb-2">% اللياقة البدنية</label>
@@ -161,13 +165,14 @@ async function saveSchoolSettings() {
         attendance_pct: parseInt(document.getElementById('attendancePct').value) || 0,
         uniform_pct: parseInt(document.getElementById('uniformPct').value) || 0,
         behavior_skills_pct: parseInt(document.getElementById('behaviorPct').value) || 0,
+        participation_pct: parseInt(document.getElementById('participationPct').value) || 0,
         fitness_pct: parseInt(document.getElementById('fitnessPct').value) || 0,
         principal_name: document.getElementById('principalName').value.trim(),
         teacher_name: document.getElementById('teacherName').value.trim()
     };
 
     if (!data.name) return showToast('اسم المدرسة مطلوب', 'error');
-    if (data.attendance_pct + data.uniform_pct + data.behavior_skills_pct + data.fitness_pct !== 100) {
+    if (data.attendance_pct + data.uniform_pct + data.behavior_skills_pct + data.participation_pct + data.fitness_pct !== 100) {
         return showToast('إجمالي أوزان التقييم للتربية البدنية يجب أن يساوي 100%', 'error');
     }
 

@@ -24,12 +24,14 @@ function getGradingReport() {
             'attendance_pct' => 20,
             'uniform_pct' => 20,
             'behavior_skills_pct' => 20,
-            'fitness_pct' => 40
+            'participation_pct' => 20,
+            'fitness_pct' => 20
         ];
     } else {
         $weights['attendance_pct'] = (int)$weights['attendance_pct'];
         $weights['uniform_pct'] = (int)$weights['uniform_pct'];
         $weights['behavior_skills_pct'] = (int)$weights['behavior_skills_pct'];
+        $weights['participation_pct'] = (int)($weights['participation_pct'] ?? 0);
         $weights['fitness_pct'] = (int)$weights['fitness_pct'];
     }
 
@@ -42,7 +44,7 @@ function getGradingReport() {
     foreach ($students as &$st) {
         $stId = $st['id'];
 
-        // --- ATTENDANCE, UNIFORM, BEHAVIOR & SKILLS ---
+        // --- ATTENDANCE, UNIFORM, BEHAVIOR, SKILLS & PARTICIPATION ---
         $aStmt = $db->prepare("
             SELECT 
                 COUNT(*) as total_days,
@@ -56,7 +58,10 @@ function getGradingReport() {
                 SUM(CASE WHEN behavior_stars > 0 THEN 3 ELSE 0 END) as max_behavior_score,
                 
                 SUM(COALESCE(skills_stars, 0)) as skills_score,
-                SUM(CASE WHEN skills_stars > 0 THEN 3 ELSE 0 END) as max_skills_score
+                SUM(CASE WHEN skills_stars > 0 THEN 3 ELSE 0 END) as max_skills_score,
+
+                SUM(COALESCE(participation_stars, 0)) as participation_score,
+                SUM(CASE WHEN participation_stars > 0 THEN 3 ELSE 0 END) as max_participation_score
                 
             FROM attendance 
             WHERE student_id = ? AND attendance_date BETWEEN ? AND ?
@@ -84,9 +89,13 @@ function getGradingReport() {
             $behSkillPercent = ($earnedStars / $maxStars) * 100;
         }
 
+        $partPercent = 100;
+        if ((int)$attData['max_participation_score'] > 0) {
+            $partPercent = ((float)$attData['participation_score'] / (float)$attData['max_participation_score']) * 100;
+        }
+
         // --- FITNESS SCORE ---
-        // We join with fitness_tests to know the max_score of each test taken.
-        // Percentage = SUM(earned_score) / SUM(max_score) * 100
+        // ... (fitness score calculation logic)
         $fStmt = $db->prepare("
             SELECT 
                 SUM(sf.score) as total_earned,
@@ -111,6 +120,7 @@ function getGradingReport() {
             ($attPercent * ($weights['attendance_pct'] / 100)) +
             ($uniPercent * ($weights['uniform_pct'] / 100)) +
             ($behSkillPercent * ($weights['behavior_skills_pct'] / 100)) +
+            ($partPercent * ($weights['participation_pct'] / 100)) +
             ($fitPercent * ($weights['fitness_pct'] / 100));
 
         $st['total_days'] = $totalDays;

@@ -132,6 +132,14 @@ async function renderStudentReport() {
                         <option value="">-- اختر الفصل أولاً --</option>
                     </select>
                 </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">من تاريخ</label>
+                    <input type="date" id="reportStartDate" value="${new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]}" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl md:rounded-[1.5rem] focus:bg-white focus:border-green-500 focus:outline-none transition-all font-bold text-gray-700 text-sm">
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">إلى تاريخ</label>
+                    <input type="date" id="reportEndDate" value="${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]}" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl md:rounded-[1.5rem] focus:bg-white focus:border-green-500 focus:outline-none transition-all font-bold text-gray-700 text-sm">
+                </div>
                 <div class="pt-1">
                     <button onclick="generateStudentReport()" class="w-full bg-emerald-600 text-white px-6 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-emerald-700 transition shadow-lg shadow-emerald-100 flex items-center justify-center gap-3 active:scale-95 text-sm md:text-base">
                         <span class="text-xl">📄</span> عرض التقرير
@@ -171,12 +179,15 @@ async function updateReportStudents() {
 
 async function generateStudentReport() {
     const sid = document.getElementById('reportStudent').value;
+    const startDate = document.getElementById('reportStartDate').value;
+    const endDate = document.getElementById('reportEndDate').value;
+
     if (!sid) {
         showToast('اختر طالب', 'error');
         return;
     }
 
-    const r = await API.get('report_student', { student_id: sid });
+    const r = await API.get('report_student', { student_id: sid, start_date: startDate, end_date: endDate });
     if (!r || !r.success) return;
 
     renderStudentReportHTML(r.data, document.getElementById('reportOutput'));
@@ -188,6 +199,10 @@ async function generateParentStudentReport(sid) {
         if (select) sid = select.value;
     }
     if (!sid) return;
+
+    // Dates for parents (current month by default)
+    const startDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    const endDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
 
     // Highlight selected card if it exists
     document.querySelectorAll('.child-report-card').forEach(el => {
@@ -203,7 +218,7 @@ async function generateParentStudentReport(sid) {
     const ro = document.getElementById('reportOutput');
     if (ro) ro.innerHTML = showLoading();
 
-    const r = await API.get('report_student', { student_id: sid });
+    const r = await API.get('report_student', { student_id: sid, start_date: startDate, end_date: endDate });
     if (r && r.success) {
         renderStudentReportHTML(r.data, ro);
     } else if (ro) {

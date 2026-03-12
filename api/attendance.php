@@ -16,7 +16,7 @@ function getAttendance() {
 
     $queries = [
         "SELECT s.id as student_id, s.name, s.student_number, a.status, a.id as attendance_id,
-               a.uniform_status, a.behavior_stars, a.skills_stars,
+               a.uniform_status, a.behavior_stars, a.skills_stars, a.participation_stars,
                (SELECT COUNT(*) FROM student_health sh WHERE sh.student_id = s.id AND sh.is_active = 1) as health_alerts,
                (SELECT GROUP_CONCAT(CONCAT(sh.condition_name, ' (', sh.severity, ')') SEPARATOR ', ')
                 FROM student_health sh WHERE sh.student_id = s.id AND sh.is_active = 1) as health_summary
@@ -25,7 +25,7 @@ function getAttendance() {
         WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name",
 
         "SELECT s.id as student_id, s.name, s.student_number, a.status, a.id as attendance_id,
-               a.uniform_status, a.behavior_stars, a.skills_stars,
+               a.uniform_status, a.behavior_stars, a.skills_stars, a.participation_stars,
                0 as health_alerts, NULL as health_summary
         FROM students s
         LEFT JOIN attendance a ON a.student_id = s.id AND a.attendance_date = ?
@@ -60,12 +60,13 @@ function saveAttendance() {
     }
 
     $db   = getDB();
-    $stmt = $db->prepare("INSERT INTO attendance (student_id, attendance_date, status, uniform_status, behavior_stars, skills_stars, recorded_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE 
+    $stmt = $db->prepare("INSERT INTO attendance (student_id, attendance_date, status, uniform_status, behavior_stars, skills_stars, participation_stars, recorded_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE 
             status = VALUES(status), 
             uniform_status = VALUES(uniform_status), 
             behavior_stars = VALUES(behavior_stars), 
             skills_stars = VALUES(skills_stars), 
+            participation_stars = VALUES(participation_stars), 
             recorded_by = VALUES(recorded_by), 
             updated_at = NOW()");
 
@@ -80,6 +81,7 @@ function saveAttendance() {
             $uniform = isset($record['uniform_status']) ? sanitize($record['uniform_status']) : null;
             $behavior = isset($record['behavior_stars']) ? (int)$record['behavior_stars'] : 0;
             $skills = isset($record['skills_stars']) ? (int)$record['skills_stars'] : 0;
+            $participation = isset($record['participation_stars']) ? (int)$record['participation_stars'] : 0;
 
             // Fix #6: Whitelist valid status values to prevent data corruption
             if (!in_array($status, ['present', 'absent', 'late', 'excused'])) continue;
@@ -89,7 +91,7 @@ function saveAttendance() {
                 $uniform = null;
             }
 
-            $stmt->execute([$studentId, $date, $status, $uniform, $behavior, $skills, $_SESSION['user_id']]);
+            $stmt->execute([$studentId, $date, $status, $uniform, $behavior, $skills, $participation, $_SESSION['user_id']]);
 
             // Trigger Notifications for Absent/Late
             if ($status === 'absent' || $status === 'late') {
