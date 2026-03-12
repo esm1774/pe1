@@ -201,7 +201,7 @@ function ensureSchema() {
     $done = true;
     
     // Performance: Only run schema checks if version changed or periodically
-    $currentVersion = '2.1.3'; 
+    $currentVersion = '2.1.4'; 
     $dbVersion = getPlatformSetting('db_schema_version', '0');
     if ($dbVersion === $currentVersion && !isset($_GET['force_schema'])) return;
 
@@ -241,6 +241,7 @@ function ensureSchema() {
         $colsParents = array_column($db->query("SHOW COLUMNS FROM parents")->fetchAll(), 'Field');
         $alterParents = [];
         if (!in_array('must_change_password', $colsParents)) $alterParents[] = "ADD COLUMN `must_change_password` TINYINT(1) NOT NULL DEFAULT 1";
+        if (!in_array('photo_url', $colsParents)) $alterParents[] = "ADD COLUMN `photo_url` VARCHAR(255) DEFAULT NULL AFTER `name`";
         if (!empty($alterParents)) $db->exec("ALTER TABLE parents " . implode(", ", $alterParents));
         
         // Tables definitions...

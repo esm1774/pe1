@@ -370,7 +370,7 @@ function uploadProfilePhoto() {
     }
 
     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $prefix = ($user['role'] === 'student') ? 'std_' : 'usr_';
+    $prefix = ($user['role'] === 'student') ? 'std_' : (($user['role'] === 'parent') ? 'par_' : 'usr_');
     $filename = $prefix . $user['id'] . '_' . time() . '.' . $ext;
     
     $targetDir = __DIR__ . '/../uploads/profiles/';
@@ -378,7 +378,7 @@ function uploadProfilePhoto() {
 
     if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         $db = getDB();
-        $table = ($user['role'] === 'student') ? 'students' : 'users';
+        $table = ($user['role'] === 'student') ? 'students' : (($user['role'] === 'parent') ? 'parents' : 'users');
         
         // Delete old photo if exists
         $stmt = $db->prepare("SELECT photo_url FROM `$table` WHERE id = ?");
