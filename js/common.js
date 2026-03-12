@@ -424,7 +424,8 @@ function showApp() {
         let sibling = header.nextElementSibling;
         let hasVisibleLink = false;
         while (sibling && !sibling.classList.contains('sidebar-section-header')) {
-            if (sibling.offsetParent !== null && sibling.dataset.role) {
+            // Check if sibling is a link and is not hidden by the logic above
+            if (sibling.classList.contains('sidebar-link') && sibling.style.display !== 'none') {
                 hasVisibleLink = true;
                 break;
             }

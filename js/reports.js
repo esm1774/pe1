@@ -84,8 +84,8 @@ async function renderReports() {
             <button onclick="reportType='student';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'student' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📄 تقرير الطالب</button>
             <button onclick="reportType='class';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'class' ? 'bg-green-600 text-white shadow-xl shadow-green-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">🏫 تقرير الفصل</button>
             <button onclick="reportType='compare';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'compare' ? 'bg-teal-600 text-white shadow-xl shadow-teal-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">⚖️ لوحة المقارنة</button>
-            <button onclick="reportType='grading';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'grading' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📝 كشف الدرجات النهائي</button>
-            <button onclick="reportType='monitoring';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'monitoring' ? 'bg-orange-600 text-white shadow-xl shadow-orange-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📋 كشف متابعة فصل</button>
+            ${hasFeature('weighted_grading') ? `<button onclick="reportType='grading';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'grading' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📝 كشف الدرجات النهائي</button>` : ''}
+            ${hasFeature('monitoring_report') ? `<button onclick="reportType='monitoring';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'monitoring' ? 'bg-orange-600 text-white shadow-xl shadow-orange-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📋 كشف متابعة فصل</button>` : ''}
         </div>
         
         <div id="reportContent" class="mb-12">${showLoading()}</div>
@@ -93,8 +93,8 @@ async function renderReports() {
 
     if (reportType === 'student') renderStudentReport();
     else if (reportType === 'class') renderClassReport();
-    else if (reportType === 'grading') renderGradingReport();
-    else if (reportType === 'monitoring') renderMonitoringReport();
+    else if (reportType === 'grading' && hasFeature('weighted_grading')) renderGradingReport();
+    else if (reportType === 'monitoring' && hasFeature('monitoring_report')) renderMonitoringReport();
     else renderCompareReport();
 }
 
@@ -271,7 +271,7 @@ function renderStudentReportHTML(d, container) {
                 <h4 class="font-black text-gray-800 mb-8 flex items-center gap-3 text-xl">
                     <span class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl">📝</span> التقييم الشامل والتقدير النهائي
                 </h4>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
                     <div class="bg-blue-50/50 border border-blue-100 rounded-3xl p-5 text-center">
                         <p class="text-[10px] text-blue-400 font-black uppercase mb-1">الحضور والالتزام</p>
                         <p class="text-2xl font-black text-blue-700">${d.grading_summary.attendance_pct}%</p>
@@ -291,6 +291,28 @@ function renderStudentReportHTML(d, container) {
                         <p class="text-[10px] text-purple-400 font-black uppercase mb-1">اللياقة البدنية</p>
                         <p class="text-2xl font-black text-purple-700">${d.grading_summary.fitness_pct}%</p>
                         <p class="text-[9px] text-purple-400/60 font-medium">الوزن: ${d.grading_summary.weights.fitness_pct}%</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    <div class="bg-orange-50/50 border border-orange-100 rounded-3xl p-5 text-center">
+                        <p class="text-[10px] text-orange-400 font-black uppercase mb-1">المشاركة</p>
+                        <p class="text-2xl font-black text-orange-700">${d.grading_summary.participation_pct}%</p>
+                        <p class="text-[9px] text-orange-400/60 font-medium">الوزن: ${d.grading_summary.weights.participation_pct}%</p>
+                    </div>
+                    <div class="bg-indigo-50/50 border border-indigo-100 rounded-3xl p-5 text-center">
+                        <p class="text-[10px] text-indigo-400 font-black uppercase mb-1">الاختبارات القصيرة</p>
+                        <p class="text-2xl font-black text-indigo-700">${d.grading_summary.quiz_score}<span class="text-xs text-indigo-300">/${d.grading_summary.quiz_max}</span></p>
+                        <p class="text-[9px] text-indigo-400/60 font-medium">الوزن: ${d.grading_summary.weights.quiz_pct}%</p>
+                    </div>
+                    <div class="bg-rose-50/50 border border-rose-100 rounded-3xl p-5 text-center">
+                        <p class="text-[10px] text-rose-400 font-black uppercase mb-1">المشاريع والأبحاث</p>
+                        <p class="text-2xl font-black text-rose-700">${d.grading_summary.project_score}<span class="text-xs text-rose-300">/${d.grading_summary.project_max}</span></p>
+                        <p class="text-[9px] text-rose-400/60 font-medium">الوزن: ${d.grading_summary.weights.project_pct}%</p>
+                    </div>
+                    <div class="bg-teal-50/50 border border-teal-100 rounded-3xl p-5 text-center">
+                        <p class="text-[10px] text-teal-400 font-black uppercase mb-1">الاختبار النهائي</p>
+                        <p class="text-2xl font-black text-teal-700">${d.grading_summary.final_exam_score}<span class="text-xs text-teal-300">/${d.grading_summary.final_exam_max}</span></p>
+                        <p class="text-[9px] text-teal-400/60 font-medium">الوزن: ${d.grading_summary.weights.final_exam_pct}%</p>
                     </div>
                 </div>
             </div>

@@ -297,8 +297,11 @@ function getStudentReport() {
         'participation_pct' => round($partPercent, 1),
         'fitness_pct' => round($fitPercent, 1),
         'quiz_score' => $qScore,
+        'quiz_max' => $qMax,
         'project_score' => $pScore,
+        'project_max' => $pMax,
         'final_exam_score' => $fnScore,
+        'final_exam_max' => $fnMax,
         'final_grade' => round($finalScore, 1),
         'letter' => $letter,
         'total_days' => $totalDays,
@@ -398,16 +401,42 @@ function getClassReport() {
         $f = $fitStmt->fetch();
         $fitPct = ($f['max'] > 0) ? ($f['earned'] / $f['max']) * 100 : 100;
 
+        // Assessments
+        $asStmt = $db->prepare("SELECT type, score FROM student_assessments WHERE student_id = ?");
+        $asStmt->execute([$stId]);
+        $assRecords = $asStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        
+        $qScore = (float)($assRecords['quiz'] ?? 0);
+        $pScore = (float)($assRecords['project'] ?? 0);
+        $fnScore = (float)($assRecords['final_exam'] ?? 0);
+        
+        $qMax = (int)($weights['quiz_max'] ?? 10) ?: 10;
+        $pMax = (int)($weights['project_max'] ?? 10) ?: 10;
+        $fnMax = (int)($weights['final_exam_max'] ?? 10) ?: 10;
+
+        $qPct = ($qScore / $qMax) * 100;
+        $prjPct = ($pScore / $pMax) * 100;
+        $fnlPct = ($fnScore / $fnMax) * 100;
+
         // Attendance & Others
-        $aStmt = $db->prepare("SELECT COUNT(*) as days, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_earned, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_earned, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_max, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as stars_earned, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as stars_max FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
+        $aStmt = $db->prepare("SELECT COUNT(*) as days, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_earned, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_earned, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_max, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as stars_earned, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as stars_max, SUM(COALESCE(participation_stars, 0)) as part_earned, SUM(CASE WHEN participation_stars > 0 THEN 3 ELSE 0 END) as part_max FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
         $aStmt->execute([$stId, $startDate, $endDate]);
         $a = $aStmt->fetch();
 
         $attPct = ($a['days'] > 0) ? ($a['att_earned'] / $a['days']) * 100 : 100;
         $uniPct = ($a['uni_max'] > 0) ? ($a['uni_earned'] / $a['uni_max']) * 100 : 100;
         $starPct = ($a['stars_max'] > 0) ? ($a['stars_earned'] / $a['stars_max']) * 100 : 100;
+        $partPct = ($a['part_max'] > 0) ? ($a['part_earned'] / $a['part_max']) * 100 : 100;
 
-        $final = ($attPct * ($weights['attendance_pct']/100)) + ($uniPct * ($weights['uniform_pct']/100)) + ($starPct * ($weights['behavior_skills_pct']/100)) + ($fitPct * ($weights['fitness_pct']/100));
+        $final = 
+            ($attPct * (($weights['attendance_pct'] ?? 0) / 100)) + 
+            ($uniPct * (($weights['uniform_pct'] ?? 0) / 100)) + 
+            ($starPct * (($weights['behavior_skills_pct'] ?? 0) / 100)) + 
+            ($partPct * (($weights['participation_pct'] ?? 0) / 100)) +
+            ($fitPct * (($weights['fitness_pct'] ?? 0) / 100)) +
+            ($qPct * (($weights['quiz_pct'] ?? 0) / 100)) +
+            ($prjPct * (($weights['project_pct'] ?? 0) / 100)) +
+            ($fnlPct * (($weights['final_exam_pct'] ?? 0) / 100));
         
         $s['percentage'] = round($final);
         

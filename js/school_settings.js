@@ -112,14 +112,19 @@ async function renderSchoolSettings() {
                             <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% المهارة والسلوك</label>
                             <input type="number" id="behaviorPct" value="${s.grading_weights?.behavior_skills_pct || 20}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-emerald-600 focus:outline-none text-center">
                         </div>
+                        ${hasFeature('behavior_analytics') ? `
                         <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
                             <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% المشاركة</label>
                             <input type="number" id="participationPct" value="${s.grading_weights?.participation_pct || 0}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-purple-600 focus:outline-none text-center">
                         </div>
+                        ` : ''}
+                        
                         <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
                             <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% اللياقة</label>
                             <input type="number" id="fitnessPct" value="${s.grading_weights?.fitness_pct || 40}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-emerald-600 focus:outline-none text-center">
                         </div>
+
+                        ${hasFeature('assessments_bank') ? `
                         <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
                             <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% الاختبارات القصيرة</label>
                             <div class="flex items-center gap-2">
@@ -141,6 +146,7 @@ async function renderSchoolSettings() {
                                 <input type="number" id="finalMax" value="${s.grading_weights?.final_exam_max || 10}" placeholder="عظمة" class="w-16 bg-white rounded-lg border border-emerald-100 text-sm font-bold text-center py-1 text-emerald-400" title="الدرجة القصوى">
                             </div>
                         </div>
+                        ` : ''}
                     </div>
                 </div>
 

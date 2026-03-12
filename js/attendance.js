@@ -85,9 +85,11 @@ async function loadAttendanceList() {
                     <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الصحة</th>
                     <th class="px-8 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-48">التحضير الرسمي</th>
                     <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-48">الزي الرياضي</th>
+                    ${hasFeature('behavior_analytics') ? `
                     <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">المهارة</th>
                     <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">السلوك</th>
                     <th class="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">المشاركة</th>
+                    ` : ''}
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -153,6 +155,7 @@ async function loadAttendanceList() {
                                 </label>
                             </div>
                         </td>
+                        ${hasFeature('behavior_analytics') ? `
                         <td class="px-4 py-6 text-center">
                             <div class="flex items-center justify-center rating-stars" dir="ltr">
                                 ${[1, 2, 3].map(v => `<span class="cursor-pointer text-xl transition-colors ${s.skills_stars >= v ? 'text-amber-400' : 'text-gray-300'}" onclick="setStars(this, ${s.student_id}, 'skills', ${v})">★</span>`).join('')}
@@ -171,6 +174,7 @@ async function loadAttendanceList() {
                                 <input type="hidden" id="participation_${s.student_id}" value="${s.participation_stars || 0}">
                             </div>
                         </td>
+                        ` : ''}
                     </tr>
                     `;
     }).join('')}
@@ -241,6 +245,7 @@ async function loadAttendanceList() {
                 </div>
 
                 <!-- Mobile: Stars -->
+                ${hasFeature('behavior_analytics') ? `
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
                         <span class="text-[10px] font-black text-gray-500 mb-1">المهارة البدنية</span>
@@ -261,6 +266,7 @@ async function loadAttendanceList() {
                         </div>
                     </div>
                 </div>
+                ` : ''}
             </div>
             `;
     }).join('')}
