@@ -498,6 +498,7 @@ try {
         case 'advanced_analytics':   getAdvancedAnalytics(); break;
         case 'maintenance_get':      getMaintenanceSettings(); break;
         case 'maintenance_save':     saveMaintenanceSettings(); break;
+        case 'system_health':        getPlatformHealth(); break;
         
         case 'blog_posts':           getBlogPosts(); break;
         case 'blog_post':            getBlogPost(); break;
@@ -552,6 +553,77 @@ function saveMaintenanceSettings() {
 
     logActivity('update', 'platform_settings', 0, 'تم تحديث إعدادات وضع الصيانة');
     jsonSuccess(null, 'تم حفظ الإعدادات بنجاح');
+}
+
+/**
+ * Detailed System Health for Platform Admin
+ */
+function getPlatformHealth() {
+    requirePlatformAdmin();
+    
+    $health = [
+        'database' => [
+            'status' => 'ok',
+            'details' => 'Connected'
+        ],
+        'server' => [
+            'php_version' => PHP_VERSION,
+            'os' => PHP_OS,
+            'memory_limit' => ini_get('memory_limit'),
+            'upload_max' => ini_get('upload_max_filesize'),
+            'post_max' => ini_get('post_max_size'),
+            'execution_time' => ini_get('max_execution_time') . 's',
+            'debug_mode' => defined('DEBUG_MODE') ? DEBUG_MODE : false
+        ],
+        'storage' => [
+            'status' => 'unknown',
+            'free' => '—',
+            'total' => '—',
+            'percent' => 0
+        ],
+        'counts' => [
+            'schools' => 0,
+            'students' => 0,
+            'teachers' => 0,
+            'classes' => 0
+        ]
+    ];
+
+    try {
+        $db = getDB();
+        $health['database']['version'] = $db->query("SELECT VERSION()")->fetchColumn();
+        
+        // Detailed DB Stats
+        $stmt = $db->query("SELECT TABLE_NAME, ROUND((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024, 2) AS `size_mb` 
+                             FROM information_schema.TABLES 
+                             WHERE TABLE_SCHEMA = '" . DB_NAME . "'");
+        $health['database']['tables'] = $stmt->fetchAll();
+
+        // Counts
+        $health['counts']['schools'] = (int)$db->query("SELECT COUNT(*) FROM schools")->fetchColumn();
+        $health['counts']['students'] = (int)$db->query("SELECT COUNT(*) FROM students")->fetchColumn();
+        $health['counts']['teachers'] = (int)$db->query("SELECT COUNT(*) FROM users WHERE role='teacher'")->fetchColumn();
+        $health['counts']['classes'] = (int)$db->query("SELECT COUNT(*) FROM classes")->fetchColumn();
+
+    } catch (Exception $e) {
+        $health['database']['status'] = 'error';
+        $health['database']['details'] = $e->getMessage();
+    }
+
+    // Storage
+    if (function_exists('disk_free_space')) {
+        $path = __DIR__;
+        $free = @disk_free_space($path);
+        $total = @disk_total_space($path);
+        if ($free !== false && $total !== false) {
+            $health['storage']['status'] = ($free < 500 * 1024 * 1024) ? 'warning' : 'ok';
+            $health['storage']['free'] = round($free / 1024 / 1024 / 1024, 2) . ' GB';
+            $health['storage']['total'] = round($total / 1024 / 1024 / 1024, 2) . ' GB';
+            $health['storage']['percent'] = round(($free / $total) * 100, 1);
+        }
+    }
+
+    jsonSuccess($health);
 }
 
 // ============================================================

@@ -156,7 +156,8 @@ function navigate(page) {
         analytics: renderAdvancedAnalytics,
         settings: renderPlatformSettings,
         blog: renderBlog,
-        media: renderMedia
+        media: renderMedia,
+        health: renderHealth
     };
 
     if (renderers[page]) renderers[page]();
@@ -2214,5 +2215,107 @@ function selectMediaImage(filePath, inputId, previewId) {
 
     closeMediaPicker();
     toast('✅ تم اختيار الصورة');
+}
+// ============================================================
+// SYSTEM HEALTH
+// ============================================================
+async function renderHealth() {
+    const mc = document.getElementById('mainContent');
+    mc.innerHTML = '<div class="spinner"></div>';
+
+    const r = await API.get('system_health');
+    if (!r || !r.success) {
+        mc.innerHTML = '<div class="empty-state"><div class="icon">🏥</div><p>خطأ في جلب بيانات صحة النظام</p></div>';
+        return;
+    }
+
+    const h = r.data;
+    const dbStatusColor = h.database.status === 'ok' ? 'var(--accent-emerald)' : 'var(--accent-red)';
+    const storageStatusColor = h.storage.status === 'ok' ? 'var(--accent-emerald)' : (h.storage.status === 'warning' ? 'var(--accent-orange)' : 'var(--text-muted)');
+
+    mc.innerHTML = `
+        <div class="page-header">
+            <h1>🏥 حالة وصحة النظام</h1>
+            <p>معلومات تقنية شاملة عن السيرفر وقاعدة البيانات والموارد.</p>
+        </div>
+
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+            <!-- Server Info -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>🖥️ معلومات السيرفر</h3>
+                </div>
+                <div class="panel-body">
+                    <table class="simple-table">
+                        <tr><td>نظام التشغيل:</td><td><strong>${h.server.os}</strong></td></tr>
+                        <tr><td>إصدار PHP:</td><td><strong>${h.server.php_version}</strong></td></tr>
+                        <tr><td>حد الذاكرة (Memory):</td><td><strong>${h.server.memory_limit}</strong></td></tr>
+                        <tr><td>أقصى حجم للرفع:</td><td><strong>${h.server.upload_max}</strong></td></tr>
+                        <tr><td>وضع التصحيح (Debug):</td><td><span class="badge ${h.server.debug_mode ? 'badge-trial' : 'badge-active'}">${h.server.debug_mode ? 'مفعل' : 'معطل'}</span></td></tr>
+                        <tr><td>وقت التنفيذ الأقصى:</td><td><strong>${h.server.execution_time}</strong></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Database Info -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>🗄️ قاعدة البيانات</h3>
+                    <span class="badge" style="background:${dbStatusColor}; color:white">${h.database.status.toUpperCase()}</span>
+                </div>
+                <div class="panel-body">
+                    <table class="simple-table">
+                        <tr><td>الإصدار (MySQL/MariaDB):</td><td><strong>${h.database.version || '—'}</strong></td></tr>
+                        <tr><td>حالة الاتصال:</td><td><strong style="color:${dbStatusColor}">${h.database.details}</strong></td></tr>
+                        <tr><td>إجمالي المدارس:</td><td><strong>${h.counts.schools}</strong></td></tr>
+                        <tr><td>إجمالي الطلاب:</td><td><strong>${h.counts.students}</strong></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Storage Info -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>💾 مساحة التخزين</h3>
+                </div>
+                <div class="panel-body">
+                    <div style="margin-bottom:15px">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px">
+                            <span>المساحة المتاحة</span>
+                            <span>${h.storage.free} / ${h.storage.total}</span>
+                        </div>
+                        <div style="height:10px; background:var(--bg-glass); border-radius:10px; overflow:hidden">
+                            <div style="height:100%; width:${h.storage.percent}%; background:${storageStatusColor}"></div>
+                        </div>
+                        <div style="text-align:left; font-size:10px; margin-top:5px; color:var(--text-muted)">${h.storage.percent}% متاح</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h3>📊 إحصائيات الجداول (MB)</h3>
+            </div>
+            <div class="panel-body">
+                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px">
+                    ${h.database.tables.map(t => `
+                        <div style="background:var(--bg-glass); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center">
+                            <span style="font-size:12px; font-family:monospace">${t.TABLE_NAME}</span>
+                            <span class="badge" style="background:rgba(6,182,212,0.1); color:var(--accent-cyan)">${t.size_mb} MB</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .simple-table { width: 100%; border-collapse: collapse; }
+            .simple-table td { padding: 8px 0; border-bottom: 1px solid var(--border-glass); font-size: 13px; }
+            .simple-table tr:last-child td { border-bottom: none; }
+            .simple-table td:first-child { color: var(--text-secondary); width: 60%; }
+            .simple-table td:last-child { text-align: left; }
+        </style>
+    `;
 }
 

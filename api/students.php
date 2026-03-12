@@ -48,8 +48,7 @@ function getStudents() {
         $params[] = "%$search%";
     }
 
-    $queries = [
-        "SELECT s.id, s.name, s.email, s.phone, s.student_number, s.class_id, s.active,
+    $sql = "SELECT s.id, s.name, s.email, s.phone, s.student_number, s.class_id, s.active,
             s.date_of_birth, s.blood_type, s.guardian_phone, s.medical_notes,
             c.name as class_name, c.grade_id, g.name as grade_name,
             CONCAT(g.name, ' - ', c.name) as full_class_name,
@@ -58,39 +57,26 @@ function getStudents() {
         FROM students s
         JOIN classes c ON s.class_id = c.id
         JOIN grades g ON c.grade_id = g.id
-        WHERE s.active = 1 $where ORDER BY s.name",
+        WHERE s.active = 1 $where ORDER BY s.name";
 
-        "SELECT s.id, s.name, s.email, s.phone, s.student_number, s.class_id, s.active,
-            s.date_of_birth, s.blood_type, s.guardian_phone, s.medical_notes,
-            c.name as class_name, c.grade_id, g.name as grade_name,
-            CONCAT(g.name, ' - ', c.name) as full_class_name,
-            TIMESTAMPDIFF(YEAR, s.date_of_birth, CURDATE()) AS age,
-            0 as health_alerts
-        FROM students s
-        JOIN classes c ON s.class_id = c.id
-        JOIN grades g ON c.grade_id = g.id
-        WHERE s.active = 1 $where ORDER BY s.name",
-
-        "SELECT s.id, s.name, s.student_number, s.class_id,
-            c.name as class_name, c.grade_id, g.name as grade_name,
-            CONCAT(g.name, ' - ', c.name) as full_class_name,
-            NULL as date_of_birth, NULL as blood_type, NULL as guardian_phone,
-            NULL as medical_notes, 0 as age, 0 as health_alerts
-        FROM students s
-        JOIN classes c ON s.class_id = c.id
-        JOIN grades g ON c.grade_id = g.id
-        WHERE s.active = 1 $where ORDER BY s.name"
-    ];
-
-    foreach ($queries as $sql) {
-        try {
-            $stmt = $db->prepare($sql);
-            $stmt->execute($params);
-            jsonSuccess($stmt->fetchAll());
-            return;
-        } catch (PDOException $e) {
-            continue;
-        }
+    try {
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        jsonSuccess($stmt->fetchAll());
+    } catch (PDOException $e) {
+        // Fallback for older schemas during migration if health_alerts count fails
+        $sqlFallback = "SELECT s.id, s.name, s.email, s.phone, s.student_number, s.class_id, s.active,
+                s.date_of_birth, s.blood_type, s.guardian_phone, s.medical_notes,
+                c.name as class_name, c.grade_id, g.name as grade_name,
+                CONCAT(g.name, ' - ', c.name) as full_class_name,
+                TIMESTAMPDIFF(YEAR, s.date_of_birth, CURDATE()) AS age
+            FROM students s
+            JOIN classes c ON s.class_id = c.id
+            JOIN grades g ON c.grade_id = g.id
+            WHERE s.active = 1 $where ORDER BY s.name";
+        $stmt = $db->prepare($sqlFallback);
+        $stmt->execute($params);
+        jsonSuccess($stmt->fetchAll());
     }
     jsonError('خطأ في جلب بيانات الطلاب');
 }
@@ -132,7 +118,7 @@ function saveStudent() {
             $sql = "UPDATE students SET name=?, email=?, phone=?, student_number=?, class_id=?, date_of_birth=?, blood_type=?, guardian_phone=?, medical_notes=?";
             $params = [$name, $email, $phone, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes];
             if ($password) {
-                $sql .= ", password=?";
+                $sql .= ", password=?, must_change_password = 0";
                 $params[] = $password;
             }
             $sql .= " WHERE id=?";
@@ -141,11 +127,14 @@ function saveStudent() {
         } else {
             Subscription::requireLimit('students');
             // New student default password
+            $mustChange = 1;
             if (!$password) {
                 $password = password_hash($studentNumber, PASSWORD_DEFAULT);
+            } else {
+                $mustChange = 0;
             }
-            $db->prepare("INSERT INTO students (school_id, name, email, phone, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
-               ->execute([$sid, $name, $email, $phone, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes, $password]);
+            $db->prepare("INSERT INTO students (school_id, name, email, phone, student_number, class_id, date_of_birth, blood_type, guardian_phone, medical_notes, password, must_change_password) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+               ->execute([$sid, $name, $email, $phone, $studentNumber, $classId, $dob, $bloodType, $guardianPhone, $medicalNotes, $password, $mustChange]);
             $id = $db->lastInsertId();
         }
         jsonSuccess(['id' => $id], 'تم حفظ بيانات الطالب بنجاح');

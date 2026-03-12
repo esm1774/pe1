@@ -283,3 +283,79 @@ async function handleUploadPhoto() {
         showToast('حدث خطأ أثناء الرفع: ' + e.message, 'error');
     }
 }
+
+/**
+ * Forced Password Change Logic
+ * Shows a modal that cannot be closed until password is changed
+ */
+function showForcePasswordChangeModal() {
+    // Show modal with no close button and click-outside disabled
+    showModal(`
+        <div class="p-8 text-center">
+            <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
+                🔐
+            </div>
+            <h3 class="text-2xl font-black text-gray-800 mb-2">تحديث كلمة المرور</h3>
+            <p class="text-gray-500 font-bold mb-8">لدواعي أمنية، يجب عليك تغيير كلمة المرور الافتراضية قبل متابعة استخدام المنصة.</p>
+            
+            <div class="space-y-4 text-right">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">كلمة المرور الجديدة</label>
+                    <input type="password" id="forceNewPass" class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50 text-center text-lg" placeholder="6 أحرف على الأقل">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">تأكيد كلمة المرور</label>
+                    <input type="password" id="forceConfirmPass" class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50 text-center text-lg">
+                </div>
+            </div>
+
+            <button onclick="handleForceUpdatePassword()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-4 rounded-2xl font-bold mt-8 hover:shadow-lg transform transition active:scale-95 cursor-pointer shadow-md">
+                تحديث والدخول للمنصة 🚀
+            </button>
+        </div>
+    `);
+
+    // Disable closing the modal
+    const modalContainer = document.getElementById('modalContainer');
+    if (modalContainer) {
+        // Remove existing click listener if any or just overwrite with a no-op
+        modalContainer.onclick = (e) => {
+            if (e.target === modalContainer) {
+                showToast('يجب تغيير كلمة المرور للمتابعة', 'warning');
+            }
+        };
+    }
+}
+
+async function handleForceUpdatePassword() {
+    const pass = document.getElementById('forceNewPass').value;
+    const confirm = document.getElementById('forceConfirmPass').value;
+
+    if (!pass || pass.length < 6) {
+        showToast('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+        return;
+    }
+
+    if (pass !== confirm) {
+        showToast('كلمات المرور غير متطابقة', 'error');
+        return;
+    }
+
+    // Reuse profile update endpoint but only for password
+    const data = { password: pass };
+
+    showLoading();
+    const r = await API.post('update_my_profile', data);
+    if (r && r.success) {
+        showToast('تم تحديث كلمة المرور بنجاح! 🎉');
+        if (currentUser) currentUser.must_change_password = 0;
+
+        // Re-enable modal closing
+        const modalContainer = document.getElementById('modalContainer');
+        if (modalContainer) modalContainer.onclick = null;
+
+        closeModal();
+    } else {
+        showToast(r ? r.error : 'فشل التحديث', 'error');
+    }
+}

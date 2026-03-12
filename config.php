@@ -200,9 +200,24 @@ function ensureSchema() {
     if ($done) return;
     $done = true;
     
+    // Performance: Only run schema checks if version changed or periodically
+    $currentVersion = '2.1.3'; 
+    $dbVersion = getPlatformSetting('db_schema_version', '0');
+    if ($dbVersion === $currentVersion && !isset($_GET['force_schema'])) return;
+
     try {
         $db = getDB();
         
+        // 1. Core Tables & Improvements
+        $db->exec("CREATE TABLE IF NOT EXISTS `login_attempts` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `ip_address` VARCHAR(45) NOT NULL,
+            `username` VARCHAR(100) NOT NULL,
+            `attempted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_login_ip` (`ip_address`),
+            INDEX `idx_login_time` (`attempted_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         // Check & add missing columns to students table
         $cols = array_column($db->query("SHOW COLUMNS FROM students")->fetchAll(), 'Field');
         $alter = [];
@@ -211,13 +226,22 @@ function ensureSchema() {
         if (!in_array('guardian_phone', $cols)) $alter[] = "ADD COLUMN `guardian_phone` VARCHAR(20) DEFAULT NULL";
         if (!in_array('medical_notes', $cols)) $alter[] = "ADD COLUMN `medical_notes` TEXT DEFAULT NULL";
         if (!in_array('photo_url', $cols)) $alter[] = "ADD COLUMN `photo_url` VARCHAR(255) DEFAULT NULL AFTER `name`";
+        if (!in_array('last_login', $cols)) $alter[] = "ADD COLUMN `last_login` TIMESTAMP NULL DEFAULT NULL";
+        if (!in_array('must_change_password', $cols)) $alter[] = "ADD COLUMN `must_change_password` TINYINT(1) NOT NULL DEFAULT 1";
         if (!empty($alter)) $db->exec("ALTER TABLE students " . implode(", ", $alter));
 
         // Check & add missing columns to users table
         $colsUsers = array_column($db->query("SHOW COLUMNS FROM users")->fetchAll(), 'Field');
-        if (!in_array('photo_url', $colsUsers)) {
-            $db->exec("ALTER TABLE users ADD COLUMN `photo_url` VARCHAR(255) DEFAULT NULL AFTER `name`");
-        }
+        $alterUsers = [];
+        if (!in_array('photo_url', $colsUsers)) $alterUsers[] = "ADD COLUMN `photo_url` VARCHAR(255) DEFAULT NULL AFTER `name`";
+        if (!in_array('must_change_password', $colsUsers)) $alterUsers[] = "ADD COLUMN `must_change_password` TINYINT(1) NOT NULL DEFAULT 1";
+        if (!empty($alterUsers)) $db->exec("ALTER TABLE users " . implode(", ", $alterUsers));
+
+        // Check & add missing columns to parents table
+        $colsParents = array_column($db->query("SHOW COLUMNS FROM parents")->fetchAll(), 'Field');
+        $alterParents = [];
+        if (!in_array('must_change_password', $colsParents)) $alterParents[] = "ADD COLUMN `must_change_password` TINYINT(1) NOT NULL DEFAULT 1";
+        if (!empty($alterParents)) $db->exec("ALTER TABLE parents " . implode(", ", $alterParents));
         
         // Tables definitions...
         $db->exec("CREATE TABLE IF NOT EXISTS `student_measurements` (
@@ -447,6 +471,10 @@ function ensureSchema() {
             INDEX `idx_blog_status` (`status`, `published_at`),
             INDEX `idx_blog_school` (`school_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Update version to avoid repeated runs
+        $db->prepare("INSERT INTO platform_settings (setting_key, setting_value) VALUES ('db_schema_version', ?) 
+                      ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()")->execute([$currentVersion, $currentVersion]);
 
     } catch (Exception $e) {
         if (defined('DEBUG_MODE') && DEBUG_MODE) {
@@ -711,6 +739,7 @@ function sanitize($input) {
     if (is_array($input)) {
         return array_map('sanitize', $input);
     }
+    if ($input === null) return null;
     return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
 }
 
@@ -876,3 +905,50 @@ function unassignClassFromTeacher(int $teacherId, int $classId): void {
 // ============================================================
 ensureSchema();
 checkMaintenance();
+/**
+ * REUSABLE MAIL SENDER
+ */
+function sendEmail($to, $subject, $message, $name = '') {
+    $htmlMessage = "<html><body style='font-family: Arial, sans-serif; direction: rtl; text-align: right;'>
+        <div style='max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px;'>
+            <h2 style='color: #10b981;'>" . APP_NAME . "</h2>
+            <div style='line-height: 1.6; color: #374151;'>$message</div>
+            <hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'>
+            <p style='color: #9ca3af; font-size: 12px; font-style: italic;'>" . APP_NAME . " &mdash; نظام إدارة التربية البدنية الذكي</p>
+        </div>
+    </body></html>";
+
+    if (MAIL_USE_SMTP && !empty(MAIL_USERNAME) && !empty(MAIL_PASSWORD)) {
+        $mailerPath = __DIR__ . '/vendor/autoload.php';
+        if (file_exists($mailerPath)) {
+            require_once $mailerPath;
+            try {
+                $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+                $mail->isSMTP();
+                $mail->Host       = MAIL_HOST;
+                $mail->SMTPAuth   = true;
+                $mail->Username   = MAIL_USERNAME;
+                $mail->Password   = MAIL_PASSWORD;
+                $mail->SMTPSecure = (MAIL_ENCRYPTION === 'ssl') ? 'ssl' : 'tls';
+                $mail->Port       = MAIL_PORT;
+                $mail->CharSet    = 'UTF-8';
+                $mail->setFrom(MAIL_FROM_EMAIL ?: MAIL_USERNAME, MAIL_FROM_NAME);
+                $mail->addAddress($to, $name);
+                $mail->isHTML(true);
+                $mail->Subject = $subject;
+                $mail->Body    = $htmlMessage;
+                $mail->AltBody = strip_tags(str_replace('<br>', "\n", $message));
+                return $mail->send();
+            } catch (Exception $e) {
+                error_log('[SMTP Error] ' . $e->getMessage());
+            }
+        }
+    }
+    
+    // Fallback to mail()
+    $fromEmail = (MAIL_FROM_EMAIL ?: 'noreply@pesmart.local');
+    $headers  = "From: " . MAIL_FROM_NAME . " <$fromEmail>\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=utf-8\r\n";
+    return @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $htmlMessage, $headers);
+}

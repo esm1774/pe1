@@ -56,7 +56,7 @@ function saveUser() {
         }
         if (!empty($password)) {
             $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
-            $db->prepare("UPDATE users SET name=?, username=?, password=?, role=? WHERE id=?")->execute([$name, $username, $hash, $role, $id]);
+            $db->prepare("UPDATE users SET name=?, username=?, password=?, role=?, must_change_password = 0 WHERE id=?")->execute([$name, $username, $hash, $role, $id]);
         } else {
             $db->prepare("UPDATE users SET name=?, username=?, role=? WHERE id=?")->execute([$name, $username, $role, $id]);
         }
@@ -64,7 +64,7 @@ function saveUser() {
         Subscription::requireLimit('teachers');
         if (empty($password)) jsonError('كلمة المرور مطلوبة');
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
-        $db->prepare("INSERT INTO users (school_id, username, password, name, role) VALUES (?,?,?,?,?)")->execute([$sid, $username, $hash, $name, $role]);
+        $db->prepare("INSERT INTO users (school_id, username, password, name, role, must_change_password) VALUES (?,?,?,?,?,1)")->execute([$sid, $username, $hash, $name, $role]);
         $id = $db->lastInsertId();
     }
     logActivity($id ? 'update' : 'create', 'user', $id, $name);
@@ -219,62 +219,83 @@ function getMyProfile() {
 function updateMyProfile() {
     requireLogin();
     $data = getPostData();
-    validateRequired($data, ['name']); // Name is mandatory, others optional
+    
+    if (empty($data['name']) && empty($data['password'])) {
+        // We still allow updating phone/email if provided
+    }
 
     $db = getDB();
     $role = $_SESSION['user_role'] ?? '';
     $uid = $_SESSION['user_id'] ?? 0;
+    
+    $fields = [];
+    $params = [];
 
-    if ($role === 'parent') {
-        $sql = "UPDATE parents SET name = ?, email = ?, phone = ? WHERE id = ?";
-        $params = [
-            sanitize($data['name']),
-            sanitize($data['email'] ?? null),
-            sanitize($data['phone'] ?? null),
-            $uid
-        ];
-    } elseif ($role === 'student') {
-        $password = !empty($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
-        $sql = "UPDATE students SET name = ?, email = ?, phone = ?, date_of_birth = ?" . ($password ? ", password = ?" : "") . " WHERE id = ?";
-        $params = [
-            sanitize($data['name']),
-            sanitize($data['email'] ?? null),
-            sanitize($data['phone'] ?? null),
-            !empty($data['birth_date']) ? sanitize($data['birth_date']) : null
-        ];
-        if ($password) $params[] = $password;
-        $params[] = $uid;
-    } else {
-        $sql = "UPDATE users SET 
-                name = ?, 
-                email = ?, 
-                phone = ?, 
-                specialization = ?, 
-                education = ?, 
-                experience_years = ?, 
-                bio = ?, 
-                birth_date = ? 
-                WHERE id = ?";
-        $params = [
-            sanitize($data['name']),
-            sanitize($data['email'] ?? null),
-            sanitize($data['phone'] ?? null),
-            sanitize($data['specialization'] ?? null),
-            sanitize($data['education'] ?? null),
-            isset($data['experience_years']) ? (int)$data['experience_years'] : null,
-            sanitize($data['bio'] ?? null),
-            !empty($data['birth_date']) ? sanitize($data['birth_date']) : null,
-            $uid
-        ];
+    // Common fields
+    if (isset($data['name']) && !empty($data['name'])) {
+        $fields[] = "name = ?";
+        $params[] = sanitize($data['name']);
+        $_SESSION['user_name'] = $data['name'];
     }
+    if (isset($data['email'])) {
+        $fields[] = "email = ?";
+        $params[] = sanitize($data['email']);
+    }
+    if (isset($data['phone'])) {
+        $fields[] = "phone = ?";
+        $params[] = sanitize($data['phone']);
+    }
+    if (!empty($data['password'])) {
+        $fields[] = "password = ?";
+        $params[] = password_hash($data['password'], PASSWORD_DEFAULT);
+        $fields[] = "must_change_password = 0";
+    }
+
+    // Role-specific fields
+    if ($role === 'student') {
+        if (isset($data['birth_date'])) {
+            $fields[] = "date_of_birth = ?";
+            $params[] = sanitize($data['birth_date']);
+        }
+        $table = "students";
+    } elseif ($role === 'parent') {
+        $table = "parents";
+    } else {
+        // admin, teacher, supervisor
+        if (isset($data['specialization'])) {
+            $fields[] = "specialization = ?";
+            $params[] = sanitize($data['specialization']);
+        }
+        if (isset($data['education'])) {
+            $fields[] = "education = ?";
+            $params[] = sanitize($data['education']);
+        }
+        if (isset($data['experience_years'])) {
+            $fields[] = "experience_years = ?";
+            $params[] = (int)$data['experience_years'];
+        }
+        if (isset($data['bio'])) {
+            $fields[] = "bio = ?";
+            $params[] = sanitize($data['bio']);
+        }
+        if (isset($data['birth_date'])) {
+            $fields[] = "birth_date = ?";
+            $params[] = sanitize($data['birth_date']);
+        }
+        $table = "users";
+    }
+
+    if (empty($fields)) {
+        jsonError('لا توجد بيانات للتحديث');
+    }
+
+    $sql = "UPDATE $table SET " . implode(", ", $fields) . " WHERE id = ?";
+    $params[] = $uid;
 
     $db->prepare($sql)->execute($params);
     
-    // Update name in session too
-    $_SESSION['user_name'] = $data['name'];
-    
-    logActivity('update_profile', $role, $uid);
-    jsonSuccess(null, 'تم تحديث ملفك الشخصي بنجاح');
+    logActivity('update_profile', $role, $uid, !empty($data['password']) ? "Password updated" : "Info updated");
+    jsonSuccess(null, 'تم تحديث البيانات بنجاح');
 }
 
 /**

@@ -693,3 +693,80 @@ input[type="number"]::-webkit-inner-spin-button {
     -webkit-backdrop-filter: blur(20px);
     border-color: rgba(255, 255, 255, 0.1);
 }
+
+/* ============================================
+   PDF & HTML2CANVAS COMPATIBILITY
+   ============================================ */
+/* Fix for oklch() colors which html2canvas doesn't support */
+#reportOutput,
+#printableStudentReport,
+.modal-content,
+[id^="printable"] {
+    --tw-ring-color: rgba(59, 130, 246, 0.5) !important;
+    --tw-ring-offset-color: #fff !important;
+}
+
+/* Ensure fallbacks for common Tailwind v4 oklch colors in reports */
+#reportOutput .bg-emerald-600 {
+    background-color: #059669 !important;
+}
+
+#reportOutput .text-emerald-700 {
+    color: #047857 !important;
+}
+
+#reportOutput .bg-green-600 {
+    background-color: #16a34a !important;
+}
+
+#reportOutput .text-green-600 {
+    color: #16a34a !important;
+}
+
+#reportOutput .bg-indigo-600 {
+    background-color: #4f46e5 !important;
+}
+
+#reportOutput .text-indigo-600 {
+    color: #4f46e5 !important;
+}
+
+#reportOutput .bg-blue-50 {
+    background-color: #eff6ff !important;
+}
+
+#reportOutput .bg-red-50 {
+    background-color: #fef2f2 !important;
+}
+
+#reportOutput .bg-yellow-50 {
+    background-color: #fefce8 !important;
+}
+
+#reportOutput .bg-purple-50 {
+    background-color: #faf5ff !important;
+}
+
+#reportOutput .bg-emerald-50 {
+    background-color: #ecfdf5 !important;
+}
+
+#reportOutput .bg-gray-50 {
+    background-color: #f9fafb !important;
+}
+
+#reportOutput .border-gray-100 {
+    border-color: #f3f4f6 !important;
+}
+
+#reportOutput .shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+#reportOutput .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+#reportOutput .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}

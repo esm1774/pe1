@@ -453,6 +453,16 @@ function showApp() {
     if (typeof loadAnnouncements === 'function') {
         loadAnnouncements();
     }
+
+    // Forced Password Change Policy
+    if (currentUser && currentUser.must_change_password == 1) {
+        if (typeof showForcePasswordChangeModal === 'function') {
+            showForcePasswordChangeModal();
+        } else {
+            console.warn('showForcePasswordChangeModal is not defined. Falling back to toast.');
+            showToast('⚠️ يرجى تغيير كلمة المرور فوراً لتأمين حسابك', 'warning');
+        }
+    }
 }
 
 // SaaS: Check if a feature is available in current plan

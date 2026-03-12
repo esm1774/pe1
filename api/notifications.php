@@ -79,14 +79,19 @@ function createNotification($parentId, $type, $title, $message, $studentId = nul
  */
 function notifyStudentParents($studentId, $type, $title, $message) {
     $db = getDB();
-    $pStmt = $db->prepare("SELECT p.id FROM parents p 
+    $pStmt = $db->prepare("SELECT p.id, p.email, p.name FROM parents p 
                           JOIN parent_students ps ON p.id = ps.parent_id 
                           WHERE ps.student_id = ? AND p.active = 1");
     $pStmt->execute([$studentId]);
-    $parents = $pStmt->fetchAll(PDO::FETCH_COLUMN);
+    $parents = $pStmt->fetchAll();
 
-    foreach ($parents as $parentId) {
-        createNotification($parentId, $type, $title, $message, $studentId);
+    foreach ($parents as $p) {
+        createNotification($p['id'], $type, $title, $message, $studentId);
+        
+        // Also send email if configured
+        if (!empty($p['email'])) {
+            sendEmail($p['email'], $title, $message, $p['name']);
+        }
     }
 }
 

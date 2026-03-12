@@ -156,10 +156,16 @@ async function renderStudentProfilePage() {
 function _parseStudentProfileHash() {
     const parts = currentPage.split('/'); // e.g. ["studentProfile", "12", "health"]
     if (parts[0] === 'studentProfile') {
-        if (parts[1]) window._profileStudentId = parseInt(parts[1]);
+        if (parts[1]) {
+            window._profileStudentId = parseInt(parts[1]);
+        } else if (currentUser && currentUser.role === 'student') {
+            // Fix: If no ID in hash but user is a student, use their own ID
+            window._profileStudentId = currentUser.id;
+        }
+
         if (parts[2]) profileTab = parts[2];
         else profileTab = 'info';
-    } else if (currentUser.role === 'student') {
+    } else if (currentUser && currentUser.role === 'student') {
         window._profileStudentId = currentUser.id;
     }
 }

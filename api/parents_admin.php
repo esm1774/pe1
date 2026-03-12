@@ -58,7 +58,7 @@ function saveParent() {
         // Update
         if (!empty($password)) {
             $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
-            $stmt = $db->prepare("UPDATE parents SET name=?, username=?, password=?, email=?, phone=? WHERE id=?");
+            $stmt = $db->prepare("UPDATE parents SET name=?, username=?, password=?, email=?, phone=?, must_change_password = 0 WHERE id=?");
             $stmt->execute([$name, $username, $hash, $email, $phone, $id]);
         } else {
             $stmt = $db->prepare("UPDATE parents SET name=?, username=?, email=?, phone=? WHERE id=?");
@@ -69,7 +69,7 @@ function saveParent() {
         // Create
         if (empty($password)) jsonError('كلمة المرور مطلوبة للمستخدم الجديد');
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
-        $stmt = $db->prepare("INSERT INTO parents (school_id, name, username, password, email, phone) VALUES (?,?,?,?,?,?)");
+        $stmt = $db->prepare("INSERT INTO parents (school_id, name, username, password, email, phone, must_change_password) VALUES (?,?,?,?,?,?,1)");
         $stmt->execute([$sid, $name, $username, $hash, $email, $phone]);
         $id = $db->lastInsertId();
         logActivity('create_parent', 'parents', $id, $name);

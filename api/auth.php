@@ -10,13 +10,13 @@ function checkAuth() {
     if (isLoggedIn()) {
         $db = getDB();
         if ($_SESSION['user_role'] === 'student') {
-            $stmt = $db->prepare("SELECT id, student_number, name, 'student' as role, class_id, school_id FROM students WHERE id = ? AND active = 1");
+            $stmt = $db->prepare("SELECT id, student_number, name, 'student' as role, class_id, school_id, must_change_password FROM students WHERE id = ? AND active = 1");
             $stmt->execute([$_SESSION['user_id']]);
         } elseif ($_SESSION['user_role'] === 'parent') {
-            $stmt = $db->prepare("SELECT id, username, name, 'parent' as role, school_id FROM parents WHERE id = ? AND active = 1");
+            $stmt = $db->prepare("SELECT id, username, name, 'parent' as role, school_id, must_change_password FROM parents WHERE id = ? AND active = 1");
             $stmt->execute([$_SESSION['user_id']]);
         } else {
-            $stmt = $db->prepare("SELECT id, username, name, role, school_id FROM users WHERE id = ? AND active = 1");
+            $stmt = $db->prepare("SELECT id, username, name, role, school_id, must_change_password FROM users WHERE id = ? AND active = 1");
             $stmt->execute([$_SESSION['user_id']]);
         }
         
@@ -83,6 +83,15 @@ function login() {
         $schoolFilter = " AND school_id = $schoolIdResolved";
     }
 
+    // --- LOGIN RATE LIMITING CHECK ---
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $stmt = $db->prepare("SELECT COUNT(*) FROM login_attempts WHERE (ip_address = ? OR username = ?) AND attempted_at > DATE_SUB(NOW(), INTERVAL ? SECOND)");
+    $stmt->execute([$ip, $username, LOGIN_LOCKOUT_TIME]);
+    if ((int)$stmt->fetchColumn() >= MAX_LOGIN_ATTEMPTS) {
+        logActivity('login_blocked', 'auth', null, "IP: $ip, User: $username");
+        jsonError('تم حظر هذه المحاولة مؤقتاً لتكرار الفشل. يرجى الانتظار ١٥ دقيقة.');
+    }
+
     // 1. Try Staff (users table)
     $stmt = $db->prepare("SELECT id, username, password, name, role, school_id FROM users WHERE username = ? AND active = 1" . $schoolFilter);
     $stmt->execute([$username]);
@@ -97,7 +106,9 @@ function login() {
         }
 
         $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
+        $db->prepare("DELETE FROM login_attempts WHERE ip_address = ? OR username = ?")->execute([$ip, $username]);
         logActivity('login', 'user', $user['id']);
+        $user['must_change_password'] = (int)($user['must_change_password'] ?? 0);
         unset($user['password']);
         
         // Include school slug for redirection
@@ -125,6 +136,7 @@ function login() {
         }
 
         $db->prepare("UPDATE students SET last_login = NOW() WHERE id = ?")->execute([$student['id']]);
+        $db->prepare("DELETE FROM login_attempts WHERE ip_address = ? OR username = ?")->execute([$ip, $username]);
         logActivity('student_login', 'student', $student['id']);
         
         $response = [
@@ -134,6 +146,7 @@ function login() {
             'role' => 'student',
             'class_id' => $student['class_id'],
             'school_id' => $student['school_id'],
+            'must_change_password' => (int)($student['must_change_password'] ?? 0),
             'weak_password' => ($password === $student['student_number'])
         ];
         
@@ -161,7 +174,10 @@ function login() {
         }
 
         $db->prepare("UPDATE parents SET last_login = NOW() WHERE id = ?")->execute([$parent['id']]);
+        $db->prepare("DELETE FROM login_attempts WHERE ip_address = ? OR username = ?")->execute([$ip, $username]);
         logActivity('parent_login', 'parent', $parent['id']);
+        
+        $parent['must_change_password'] = (int)($parent['must_change_password'] ?? 0);
         unset($parent['password']);
         $parent['role'] = 'parent';
         
@@ -176,6 +192,7 @@ function login() {
     }
 
     // Fallback: Failed for all
+    $db->prepare("INSERT INTO login_attempts (ip_address, username) VALUES (?, ?)")->execute([$ip, $username]);
     logActivity('login_failed', 'auth', null, "Input: $username");
     jsonError('بيانات الدخول غير صحيحة');
 }
@@ -322,55 +339,10 @@ function sendOTP($email, $otp, $name) {
     </body>
     </html>";
 
-    $plainText = "مرحباً $name،\n\nرمز استعادة كلمة المرور الخاص بك هو: $otp\n\nهذا الرمز صالح لمدة 15 دقيقة فقط.\n\nإذا لم تطلب استعادة كلمة المرور، يرجى تجاهل هذه الرسالة.";
-
-    // ── SMTP via PHPMailer (if enabled and library exists) ──────────────────
-    if (MAIL_USE_SMTP && !empty(MAIL_USERNAME) && !empty(MAIL_PASSWORD)) {
-        $mailerPath = __DIR__ . '/vendor/autoload.php';
-        if (file_exists($mailerPath)) {
-            require_once $mailerPath;
-            try {
-                $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-                $mail->isSMTP();
-                $mail->Host       = MAIL_HOST;
-                $mail->SMTPAuth   = true;
-                $mail->Username   = MAIL_USERNAME;
-                $mail->Password   = MAIL_PASSWORD;
-                $mail->SMTPSecure = MAIL_ENCRYPTION === 'ssl'
-                    ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
-                    : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port       = MAIL_PORT;
-                $mail->CharSet    = 'UTF-8';
-
-                $fromEmail = !empty(MAIL_FROM_EMAIL) ? MAIL_FROM_EMAIL : MAIL_USERNAME;
-                $mail->setFrom($fromEmail, MAIL_FROM_NAME);
-                $mail->addAddress($email, $name);
-
-                $mail->isHTML(true);
-                $mail->Subject = $subject;
-                $mail->Body    = $htmlMessage;
-                $mail->AltBody = $plainText;
-
-                $mail->send();
-                return true;
-            } catch (\Exception $e) {
-                if (defined('DEBUG_MODE') && DEBUG_MODE) {
-                    error_log('[SMTP Error] ' . $e->getMessage());
-                }
-                // Fall through to mail() fallback
-            }
-        }
-    }
-
-    // ── Fallback: PHP mail() for local/dev environments ────────────────────
-    $fromEmail = !empty(MAIL_FROM_EMAIL) ? MAIL_FROM_EMAIL : 'noreply@pesmart.local';
-    $headers  = "From: " . MAIL_FROM_NAME . " <$fromEmail>\r\n";
-    $headers .= "Reply-To: $fromEmail\r\n";
-    $headers .= "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=utf-8\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
-
-    return @mail($email, '=?UTF-8?B?' . base64_encode($subject) . '?=', $htmlMessage, $headers);
+    $subject = 'رمز استعادة كلمة المرور';
+    $message = "مرحباً $name،<br><br>رمز استعادة كلمة المرور الخاص بك هو: <b>$otp</b><br><br>هذا الرمز صالح لمدة 15 دقيقة فقط.<br><br>إذا لم تطلب استعادة كلمة المرور، يرجى تجاهل هذه الرسالة.";
+    
+    return sendEmail($email, $subject, $message, $name);
 }
 
 
@@ -455,13 +427,7 @@ function forgotPassword() {
     // Send Email
     sendOTP($email, $otp, $userName);
 
-    // Provide OTP in response ONLY in debug mode for testing (or keep it clean)
-    $msg = 'أرسلنا رمز الاستعادة إلى بريدك الإلكتروني (صالح لمدة 15 دقيقة)';
-    if (defined('DEBUG_MODE') && DEBUG_MODE) {
-        $msg .= " - وضع التطوير، الرمز: $otp";
-    }
-
-    jsonSuccess(null, $msg);
+    jsonSuccess(null, 'أرسلنا رمز الاستعادة إلى بريدك الإلكتروني (صالح لمدة 15 دقيقة)');
 }
 
 /**
@@ -496,11 +462,13 @@ function resetPassword() {
     $userId = $reset['user_id'];
 
     if ($userType === 'user') {
-        $db->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hash, $userId]);
+        $db->prepare("UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?")->execute([$hash, $userId]);
     } elseif ($userType === 'parent') {
-        $db->prepare("UPDATE parents SET password = ? WHERE id = ?")->execute([$hash, $userId]);
+        $db->prepare("UPDATE parents SET password = ?, must_change_password = 0 WHERE id = ?")->execute([$hash, $userId]);
     } elseif ($userType === 'platform_admin') {
-        $db->prepare("UPDATE platform_admins SET password = ? WHERE id = ?")->execute([$hash, $userId]);
+        $db->prepare("UPDATE platform_admins SET password = ?, must_change_password = 0 WHERE id = ?")->execute([$hash, $userId]);
+    } elseif ($userType === 'student') {
+        $db->prepare("UPDATE students SET password = ?, must_change_password = 0 WHERE id = ?")->execute([$hash, $userId]);
     }
 
     // Delete used OTP
