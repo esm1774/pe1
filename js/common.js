@@ -552,7 +552,9 @@ function navigateTo(page) {
     currentPage = page;
     window.location.hash = page;
 
-    const basePage = page.split('/')[0];
+    const parts = page.split('/');
+    const basePage = parts[0];
+    const params = parts.slice(1);
 
     // Update sidebar active state
     document.querySelectorAll('.sidebar-link').forEach(link => {
@@ -583,13 +585,12 @@ function navigateTo(page) {
         }
     }
 
-    const basePageForFunc = page.split('/')[0];
-    const funcName = PAGE_MAP[basePageForFunc];
+    const funcName = PAGE_MAP[basePage];
     const renderer = funcName ? safeGetFunction(funcName) : null;
 
     if (renderer) {
         try {
-            const result = renderer();
+            const result = renderer(...params);
             // Handle async functions - catch Promise rejections
             if (result && typeof result.catch === 'function') {
                 result.catch(e => {

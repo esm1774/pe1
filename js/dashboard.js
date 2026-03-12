@@ -133,7 +133,7 @@ async function renderDashboard() {
                                 </div>
                                 <div class="flex items-center gap-2">
                                     ${isActive ? '<span class="flex h-2 w-2 rounded-full bg-indigo-600 animate-ping"></span> <span class="text-[10px] font-black text-indigo-600 ml-1">الآن</span>' : ''}
-                                    <button onclick="navigateTo('attendance')" title="الانتقال لشاشة التحضير" class="text-xs ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-500 border border-gray-200'} px-3 py-2 rounded-lg font-bold hover:opacity-90 transition">
+                                    <button onclick="navigateTo('attendance/${t.class_id}')" title="الانتقال لشاشة التحضير" class="text-xs ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-500 border border-gray-200'} px-3 py-2 rounded-lg font-bold hover:opacity-90 transition">
                                         تحضير
                                     </button>
                                 </div>

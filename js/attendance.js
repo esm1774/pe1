@@ -4,7 +4,11 @@
 
 let attFilter = { class_id: '', date: new Date().toISOString().split('T')[0] };
 
-async function renderAttendance() {
+async function renderAttendance(classId = null) {
+    if (classId) {
+        attFilter.class_id = classId;
+    }
+
     const mc = document.getElementById('mainContent');
     mc.innerHTML = showLoading();
 
