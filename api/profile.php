@@ -179,6 +179,11 @@ function getStudentProfile() {
         ($prjPercent * (($weights['project_pct'] ?? 0) / 100)) +
         ($fnlPercent * (($weights['final_exam_pct'] ?? 0) / 100));
 
+    // 8. Raw Attendance Records for UI
+    $recStmt = $db->prepare("SELECT * FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ? ORDER BY attendance_date DESC");
+    $recStmt->execute([$studentId, $startDate, $endDate]);
+    $attendanceRecords = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+
     $letter = '';
     if ($finalScore >= 90) $letter = 'ممتاز';
     else if ($finalScore >= 80) $letter = 'جيد جداً';
@@ -213,7 +218,8 @@ function getStudentProfile() {
         'attendance' => [
             'present' => (int)($attendance['present_count'] ?? 0),
             'absent' => (int)($attendance['absent_count'] ?? 0),
-            'late' => (int)($attendance['late_count'] ?? 0)
+            'late' => (int)($attendance['late_count'] ?? 0),
+            'records' => $attendanceRecords
         ]
     ]);
 }

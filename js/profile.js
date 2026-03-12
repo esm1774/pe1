@@ -547,6 +547,49 @@ async function renderProfileTab(sid) {
                     <div class="flex items-center gap-2"><div class="w-3 h-3 bg-red-500 rounded-full"></div> <span class="text-xs font-black text-gray-400">غياب</span></div>
                 </div>
             </div>
+
+            <div class="mt-12 overflow-x-auto rounded-[2rem] border border-gray-100">
+                <table class="w-full text-right">
+                    <thead>
+                        <tr class="bg-gray-50/50">
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">التاريخ</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">الحالة</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">الزي</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">المشاركة</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">السلوك</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">المهارة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        ${a.records && a.records.length > 0 ? a.records.map(r => {
+            const u = r.uniform_status;
+            const uLabel = u === 'full' ? '✅ كامل' : u === 'partial' ? '⚠️ جزئي' : u === 'wrong' ? '❌ مخالف' : '-';
+            const uClass = u === 'full' ? 'text-green-600' : u === 'partial' ? 'text-yellow-600' : u === 'wrong' ? 'text-red-600' : 'text-gray-300';
+
+            return `
+                                <tr class="hover:bg-gray-50/50 transition-colors">
+                                    <td class="px-6 py-4 font-bold text-gray-700 font-mono text-xs">${r.attendance_date}</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.status === 'present' ? 'bg-green-100 text-green-700' : r.status === 'absent' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}">
+                                            ${r.status === 'present' ? 'حاضر' : r.status === 'absent' ? 'غائب' : 'متأخر'}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-xs font-bold ${uClass}">${uLabel}</td>
+                                    <td class="px-6 py-4 text-center">
+                                        <div class="flex justify-center gap-0.5">${r.participation_stars ? Array(parseInt(r.participation_stars)).fill('⭐').join('') : '-'}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <div class="flex justify-center gap-0.5">${r.behavior_stars ? Array(parseInt(r.behavior_stars)).fill('🌟').join('') : '-'}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <div class="flex justify-center gap-0.5">${r.skills_stars ? Array(parseInt(r.skills_stars)).fill('🔥').join('') : '-'}</div>
+                                    </td>
+                                </tr>
+                            `;
+        }).join('') : `<tr><td colspan="6" class="p-12 text-center text-gray-400 font-bold italic">لا توجد سجلات مفصلة لهذا الطالب</td></tr>`}
+                    </tbody>
+                </table>
+            </div>
             ` : `
             <div class="text-center py-20 bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-100">
                 <p class="text-6xl mb-4 grayscale opacity-20">📅</p>
