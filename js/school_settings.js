@@ -99,26 +99,47 @@ async function renderSchoolSettings() {
                 <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8">
                     <h3 class="font-black text-gray-800 mb-6 flex items-center gap-2">⚖️ أوزان تقييم التربية البدنية</h3>
                     <p class="text-[12px] text-gray-500 mb-4 font-bold">حدد النسبة المئوية لكل معيار ليتم حساب الدرجة النهائية للطالب. (يجب أن يكون المجموع 100%)</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <div>
-                            <label class="block text-sm font-black text-gray-700 mb-2">% الحضور والغياب</label>
-                            <input type="number" id="attendancePct" value="${s.grading_weights?.attendance_pct || 20}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-emerald-600 text-center text-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% الحضور</label>
+                            <input type="number" id="attendancePct" value="${s.grading_weights?.attendance_pct || 20}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-emerald-600 focus:outline-none text-center">
                         </div>
-                        <div>
-                            <label class="block text-sm font-black text-gray-700 mb-2">% الزي الرياضي</label>
-                            <input type="number" id="uniformPct" value="${s.grading_weights?.uniform_pct || 20}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-emerald-600 text-center text-lg">
+                        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% الزي</label>
+                            <input type="number" id="uniformPct" value="${s.grading_weights?.uniform_pct || 20}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-emerald-600 focus:outline-none text-center">
                         </div>
-                        <div>
-                            <label class="block text-sm font-black text-gray-700 mb-2">% المهارة والسلوك</label>
-                            <input type="number" id="behaviorPct" value="${s.grading_weights?.behavior_skills_pct || 20}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-emerald-600 text-center text-lg">
+                        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% المهارة والسلوك</label>
+                            <input type="number" id="behaviorPct" value="${s.grading_weights?.behavior_skills_pct || 20}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-emerald-600 focus:outline-none text-center">
                         </div>
-                        <div>
-                            <label class="block text-sm font-black text-gray-700 mb-2">% المشاركة</label>
-                            <input type="number" id="participationPct" value="${s.grading_weights?.participation_pct || 0}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-purple-600 text-center text-lg">
+                        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% المشاركة</label>
+                            <input type="number" id="participationPct" value="${s.grading_weights?.participation_pct || 0}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-purple-600 focus:outline-none text-center">
                         </div>
-                        <div>
-                            <label class="block text-sm font-black text-gray-700 mb-2">% اللياقة البدنية</label>
-                            <input type="number" id="fitnessPct" value="${s.grading_weights?.fitness_pct || 40}" min="0" max="100" class="w-full px-5 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-emerald-600 text-center text-lg">
+                        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% اللياقة</label>
+                            <input type="number" id="fitnessPct" value="${s.grading_weights?.fitness_pct || 40}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-emerald-600 focus:outline-none text-center">
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% الاختبارات القصيرة</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="quizPct" value="${s.grading_weights?.quiz_pct || 0}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-purple-600 focus:outline-none text-center">
+                                <input type="number" id="quizMax" value="${s.grading_weights?.quiz_max || 10}" placeholder="عظمة" class="w-16 bg-white rounded-lg border border-purple-100 text-sm font-bold text-center py-1 text-purple-400" title="الدرجة القصوى">
+                            </div>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% المشروع/البحث</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="projectPct" value="${s.grading_weights?.project_pct || 0}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-blue-600 focus:outline-none text-center">
+                                <input type="number" id="projectMax" value="${s.grading_weights?.project_max || 10}" placeholder="عظمة" class="w-16 bg-white rounded-lg border border-blue-100 text-sm font-bold text-center py-1 text-blue-400" title="الدرجة القصوى">
+                            </div>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">% الاختبار النهائي</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="finalExamPct" value="${s.grading_weights?.final_exam_pct || 0}" min="0" max="100" class="w-full bg-transparent border-none text-xl font-black text-emerald-600 focus:outline-none text-center">
+                                <input type="number" id="finalMax" value="${s.grading_weights?.final_exam_max || 10}" placeholder="عظمة" class="w-16 bg-white rounded-lg border border-emerald-100 text-sm font-bold text-center py-1 text-emerald-400" title="الدرجة القصوى">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -167,12 +188,18 @@ async function saveSchoolSettings() {
         behavior_skills_pct: parseInt(document.getElementById('behaviorPct').value) || 0,
         participation_pct: parseInt(document.getElementById('participationPct').value) || 0,
         fitness_pct: parseInt(document.getElementById('fitnessPct').value) || 0,
+        quiz_pct: parseInt(document.getElementById('quizPct').value) || 0,
+        project_pct: parseInt(document.getElementById('projectPct').value) || 0,
+        final_exam_pct: parseInt(document.getElementById('finalExamPct').value) || 0,
+        quiz_max: parseInt(document.getElementById('quizMax').value) || 10,
+        project_max: parseInt(document.getElementById('projectMax').value) || 10,
+        final_exam_max: parseInt(document.getElementById('finalMax').value) || 10,
         principal_name: document.getElementById('principalName').value.trim(),
         teacher_name: document.getElementById('teacherName').value.trim()
     };
 
     if (!data.name) return showToast('اسم المدرسة مطلوب', 'error');
-    if (data.attendance_pct + data.uniform_pct + data.behavior_skills_pct + data.participation_pct + data.fitness_pct !== 100) {
+    if (data.attendance_pct + data.uniform_pct + data.behavior_skills_pct + data.participation_pct + data.fitness_pct + data.quiz_pct + data.project_pct + data.final_exam_pct !== 100) {
         return showToast('إجمالي أوزان التقييم للتربية البدنية يجب أن يساوي 100%', 'error');
     }
 

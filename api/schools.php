@@ -32,8 +32,14 @@ function getSchoolInfo() {
             'attendance_pct' => 20,
             'uniform_pct' => 20,
             'behavior_skills_pct' => 20,
-            'participation_pct' => 20,
-            'fitness_pct' => 20
+            'participation_pct' => 10,
+            'fitness_pct' => 10,
+            'quiz_pct' => 10,
+            'project_pct' => 5,
+            'final_exam_pct' => 5,
+            'quiz_max' => 10,
+            'project_max' => 10,
+            'final_exam_max' => 10
         ];
     }
     
@@ -91,28 +97,40 @@ function saveSchoolInfo() {
     ]);
 
     // Handle grading weights
-    if (isset($data['attendance_pct'], $data['uniform_pct'], $data['behavior_skills_pct'], $data['participation_pct'], $data['fitness_pct'])) {
+    if (isset($data['attendance_pct'], $data['uniform_pct'], $data['behavior_skills_pct'], $data['participation_pct'], $data['fitness_pct'], $data['quiz_pct'], $data['project_pct'], $data['final_exam_pct'])) {
         $aPct = (int)$data['attendance_pct'];
         $uPct = (int)$data['uniform_pct'];
         $bPct = (int)$data['behavior_skills_pct'];
         $pPct = (int)$data['participation_pct'];
         $fPct = (int)$data['fitness_pct'];
+        $qPct = (int)$data['quiz_pct'];
+        $prjPct = (int)$data['project_pct'];
+        $fnlPct = (int)$data['final_exam_pct'];
         
-        if ($aPct + $uPct + $bPct + $pPct + $fPct !== 100) {
+        if ($aPct + $uPct + $bPct + $pPct + $fPct + $qPct + $prjPct + $fnlPct !== 100) {
             jsonError('مجموع أوزان التقييم يجب أن يساوي 100%');
         }
 
         $wStmt = $db->prepare("
-            INSERT INTO school_grading_weights (school_id, attendance_pct, uniform_pct, behavior_skills_pct, participation_pct, fitness_pct)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO school_grading_weights (school_id, attendance_pct, uniform_pct, behavior_skills_pct, participation_pct, fitness_pct, quiz_pct, project_pct, final_exam_pct, quiz_max, project_max, final_exam_max)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 attendance_pct = VALUES(attendance_pct),
                 uniform_pct = VALUES(uniform_pct),
                 behavior_skills_pct = VALUES(behavior_skills_pct),
                 participation_pct = VALUES(participation_pct),
-                fitness_pct = VALUES(fitness_pct)
+                fitness_pct = VALUES(fitness_pct),
+                quiz_pct = VALUES(quiz_pct),
+                project_pct = VALUES(project_pct),
+                final_exam_pct = VALUES(final_exam_pct),
+                quiz_max = VALUES(quiz_max),
+                project_max = VALUES(project_max),
+                final_exam_max = VALUES(final_exam_max)
         ");
-        $wStmt->execute([$sid, $aPct, $uPct, $bPct, $pPct, $fPct]);
+        $wStmt->execute([
+            $sid, $aPct, $uPct, $bPct, $pPct, $fPct, $qPct, $prjPct, $fnlPct,
+            (int)($data['quiz_max'] ?? 10), (int)($data['project_max'] ?? 10), (int)($data['final_exam_max'] ?? 10)
+        ]);
     }
 
     logActivity('update', 'school_settings', $sid, 'تم تحديث إعدادات المدرسة: ' . $name);

@@ -198,6 +198,9 @@ function getStudentReport() {
         $weights['behavior_skills_pct'] = (int)$weights['behavior_skills_pct'];
         $weights['participation_pct'] = (int)($weights['participation_pct'] ?? 0);
         $weights['fitness_pct'] = (int)$weights['fitness_pct'];
+        $weights['quiz_pct'] = (int)($weights['quiz_pct'] ?? 0);
+        $weights['project_pct'] = (int)($weights['project_pct'] ?? 0);
+        $weights['final_exam_pct'] = (int)($weights['final_exam_pct'] ?? 0);
     }
 
     // 2. Attendance, Uniform, Behavior, Skills & Participation Data
@@ -250,13 +253,34 @@ function getStudentReport() {
     // 4. Fitness Score (Weighted)
     $fitPercent = $rangeTotalMax > 0 ? ($rangeTotalScore / $rangeTotalMax) * 100 : 100;
 
-    // 5. Final Weighted Grade
+    // 5. Assessments Data
+    $asStmt = $db->prepare("SELECT type, score FROM student_assessments WHERE student_id = ?");
+    $asStmt->execute([$studentId]);
+    $assRecords = $asStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    
+    $qScore = (float)($assRecords['quiz'] ?? 0);
+    $pScore = (float)($assRecords['project'] ?? 0);
+    $fnScore = (float)($assRecords['final_exam'] ?? 0);
+    
+    // Normalize based on max scores from settings (default 10)
+    $qMax = (int)($weights['quiz_max'] ?? 10) ?: 10;
+    $pMax = (int)($weights['project_max'] ?? 10) ?: 10;
+    $fnMax = (int)($weights['final_exam_max'] ?? 10) ?: 10;
+
+    $qPercent = ($qScore / $qMax) * 100;
+    $prjPercent = ($pScore / $pMax) * 100;
+    $fnlPercent = ($fnScore / $fnMax) * 100;
+
+    // 6. Final Weighted Grade
     $finalScore = 
         ($attPercent * ($weights['attendance_pct'] / 100)) +
         ($uniPercent * ($weights['uniform_pct'] / 100)) +
         ($behSkillPercent * ($weights['behavior_skills_pct'] / 100)) +
         ($partPercent * ($weights['participation_pct'] / 100)) +
-        ($fitPercent * ($weights['fitness_pct'] / 100));
+        ($fitPercent * ($weights['fitness_pct'] / 100)) +
+        ($qPercent * (($weights['quiz_pct'] ?? 0) / 100)) +
+        ($prjPercent * (($weights['project_pct'] ?? 0) / 100)) +
+        ($fnlPercent * (($weights['final_exam_pct'] ?? 0) / 100));
 
     $letter = '';
     if ($finalScore >= 90) $letter = 'ممتاز';
@@ -272,6 +296,9 @@ function getStudentReport() {
         'behavior_skills_pct' => round($behSkillPercent, 1),
         'participation_pct' => round($partPercent, 1),
         'fitness_pct' => round($fitPercent, 1),
+        'quiz_score' => $qScore,
+        'project_score' => $pScore,
+        'final_exam_score' => $fnScore,
         'final_grade' => round($finalScore, 1),
         'letter' => $letter,
         'total_days' => $totalDays,

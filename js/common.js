@@ -78,6 +78,7 @@ const PAGE_MAP = {
     grades: 'renderGrades',
     students: 'renderStudents',
     attendance: 'renderAttendance',
+    assessments: 'renderAssessments',
     fitness: 'renderFitness',
     competition: 'renderCompetition',
     tournaments: 'renderTournaments',

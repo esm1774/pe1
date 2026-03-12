@@ -50,6 +50,7 @@ require_once 'api/audit_log.php';
 require_once 'api/timetable.php';
 require_once 'api/schools.php';
 require_once 'api/reports_grading.php';
+require_once 'api/assessments.php';
 
 // ============================================================
 // ROUTE REQUESTS
@@ -163,6 +164,10 @@ try {
         case 'report_compare':  getCompareReport(); break;
         case 'report_grading':  getGradingReport(); break;
         case 'send_report_email': sendReportEmail(); break;
+
+        // ASSESSMENTS
+        case 'get_assessments':     getAssessments(); break;
+        case 'save_assessments':    saveAssessments(); break;
 
         // USERS
         case 'users':           getUsers(); break;

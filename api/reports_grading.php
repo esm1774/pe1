@@ -24,8 +24,11 @@ function getGradingReport() {
             'attendance_pct' => 20,
             'uniform_pct' => 20,
             'behavior_skills_pct' => 20,
-            'participation_pct' => 20,
-            'fitness_pct' => 20
+            'participation_pct' => 10,
+            'fitness_pct' => 10,
+            'quiz_pct' => 10,
+            'project_pct' => 5,
+            'final_exam_pct' => 5
         ];
     } else {
         $weights['attendance_pct'] = (int)$weights['attendance_pct'];
@@ -33,6 +36,9 @@ function getGradingReport() {
         $weights['behavior_skills_pct'] = (int)$weights['behavior_skills_pct'];
         $weights['participation_pct'] = (int)($weights['participation_pct'] ?? 0);
         $weights['fitness_pct'] = (int)$weights['fitness_pct'];
+        $weights['quiz_pct'] = (int)($weights['quiz_pct'] ?? 0);
+        $weights['project_pct'] = (int)($weights['project_pct'] ?? 0);
+        $weights['final_exam_pct'] = (int)($weights['final_exam_pct'] ?? 0);
     }
 
     // 2. Fetch Students
@@ -95,7 +101,6 @@ function getGradingReport() {
         }
 
         // --- FITNESS SCORE ---
-        // ... (fitness score calculation logic)
         $fStmt = $db->prepare("
             SELECT 
                 SUM(sf.score) as total_earned,
@@ -115,19 +120,38 @@ function getGradingReport() {
             $fitPercent = ($totalEarned / $totalMax) * 100;
         }
 
+        // --- NEW ASSESSMENTS (Quiz, Project, Final Exam) ---
+        $asStmt = $db->prepare("SELECT type, score FROM student_assessments WHERE student_id = ?");
+        $asStmt->execute([$stId]);
+        $assRecords = $asStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        
+        $qScore = (float)($assRecords['quiz'] ?? 0);
+        $pScore = (float)($assRecords['project'] ?? 0);
+        $fnScore = (float)($assRecords['final_exam'] ?? 0);
+        // Scores are out of 10, so convert to percentage
+        $qPercent = ($qScore / 10) * 100;
+        $prjPercent = ($pScore / 10) * 100;
+        $fnlPercent = ($fnScore / 10) * 100;
+
         // Apply Weights
         $finalScore = 
             ($attPercent * ($weights['attendance_pct'] / 100)) +
             ($uniPercent * ($weights['uniform_pct'] / 100)) +
             ($behSkillPercent * ($weights['behavior_skills_pct'] / 100)) +
             ($partPercent * ($weights['participation_pct'] / 100)) +
-            ($fitPercent * ($weights['fitness_pct'] / 100));
+            ($fitPercent * ($weights['fitness_pct'] / 100)) +
+            ($qPercent * (($weights['quiz_pct'] ?? 0) / 100)) +
+            ($prjPercent * (($weights['project_pct'] ?? 0) / 100)) +
+            ($fnlPercent * (($weights['final_exam_pct'] ?? 0) / 100));
 
         $st['total_days'] = $totalDays;
         $st['attendance_pct'] = round($attPercent, 1);
         $st['uniform_pct'] = round($uniPercent, 1);
         $st['behavior_skills_pct'] = round($behSkillPercent, 1);
         $st['fitness_pct'] = round($fitPercent, 1);
+        $st['quiz_score'] = $qScore;
+        $st['project_score'] = $pScore;
+        $st['final_exam_score'] = $fnScore;
         $st['final_grade'] = round($finalScore, 1);
         
         // Calculate Grade Letter (Arabic Evaluative terms)

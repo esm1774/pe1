@@ -124,7 +124,9 @@ function getStudentProfile() {
             SUM(COALESCE(behavior_stars, 0)) as behavior_score,
             SUM(CASE WHEN behavior_stars > 0 THEN 3 ELSE 0 END) as max_behavior_score,
             SUM(COALESCE(skills_stars, 0)) as skills_score,
-            SUM(CASE WHEN skills_stars > 0 THEN 3 ELSE 0 END) as max_skills_score
+            SUM(CASE WHEN skills_stars > 0 THEN 3 ELSE 0 END) as max_skills_score,
+            SUM(COALESCE(participation_stars, 0)) as participation_score,
+            SUM(CASE WHEN participation_stars IS NOT NULL THEN 3 ELSE 0 END) as max_participation_score
         FROM attendance 
         WHERE student_id = ? AND attendance_date BETWEEN ? AND ?
     ");
@@ -142,12 +144,40 @@ function getStudentProfile() {
     // 3. Fitness Score (Weighted)
     $fitPercent = $totalMax > 0 ? ($totalScore / $totalMax) * 100 : 100;
 
-    // 4. Final Weighted Grade
+    // 5. Assessments Data
+    $asStmt = $db->prepare("SELECT type, score, max_score FROM student_assessments WHERE student_id = ?");
+    $asStmt->execute([$studentId]);
+    $studentAssessments = $asStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Normalize based on max scores from settings (default 10)
+    $asMap = [];
+    foreach($studentAssessments as $sa) $asMap[$sa['type']] = $sa;
+
+    $qScore = (float)($asMap['quiz']['score'] ?? 0);
+    $pScore = (float)($asMap['project']['score'] ?? 0);
+    $fnScore = (float)($asMap['final_exam']['score'] ?? 0);
+
+    $qMax = (int)($weights['quiz_max'] ?? 10) ?: 10;
+    $pMax = (int)($weights['project_max'] ?? 10) ?: 10;
+    $fnMax = (int)($weights['final_exam_max'] ?? 10) ?: 10;
+
+    $qPercent = ($qScore / $qMax) * 100;
+    $prjPercent = ($pScore / $pMax) * 100;
+    $fnlPercent = ($fnScore / $fnMax) * 100;
+
+    // 6. Participations Data (Stars)
+    $partPercent = (int)$attData['max_participation_score'] > 0 ? ((float)$attData['participation_score'] / (float)$attData['max_participation_score']) * 100 : 100;
+
+    // 7. Final Weighted Grade
     $finalScore = 
         ($attPercent * ($weights['attendance_pct'] / 100)) +
         ($uniPercent * ($weights['uniform_pct'] / 100)) +
         ($behSkillPercent * ($weights['behavior_skills_pct'] / 100)) +
-        ($fitPercent * ($weights['fitness_pct'] / 100));
+        ($partPercent * ($weights['participation_pct'] / 100)) +
+        ($fitPercent * ($weights['fitness_pct'] / 100)) +
+        ($qPercent * (($weights['quiz_pct'] ?? 0) / 100)) +
+        ($prjPercent * (($weights['project_pct'] ?? 0) / 100)) +
+        ($fnlPercent * (($weights['final_exam_pct'] ?? 0) / 100));
 
     $letter = '';
     if ($finalScore >= 90) $letter = 'ممتاز';
@@ -175,6 +205,7 @@ function getStudentProfile() {
         'activeAlerts' => array_values($activeAlerts),
         'fitness' => $fitnessResults,
         'badges' => $badges,
+        'assessments' => $studentAssessments,
         'totalScore' => (int)$totalScore,
         'totalMax' => (int)$totalMax,
         'percentage' => round($finalScore), // Comprehensive Weighted Score

@@ -201,7 +201,7 @@ function ensureSchema() {
     $done = true;
     
     // Performance: Only run schema checks if version changed or periodically
-    $currentVersion = '2.1.5'; 
+    $currentVersion = '2.1.8'; 
     $dbVersion = getPlatformSetting('db_schema_version', '0');
     if ($dbVersion === $currentVersion && !isset($_GET['force_schema'])) return;
 
@@ -209,7 +209,25 @@ function ensureSchema() {
         $db = getDB();
         
         // 1. Core Tables & Improvements
-        // ... (login_attempts, students, users, parents tables checks)
+        // ... (existing checks)
+        
+        // Update school_grading_weights with max score columns
+        try {
+            $db->exec("ALTER TABLE `school_grading_weights` ADD COLUMN `quiz_max` INT DEFAULT 10");
+        } catch (Exception $e) {}
+        try {
+            $db->exec("ALTER TABLE `school_grading_weights` ADD COLUMN `project_max` INT DEFAULT 10");
+        } catch (Exception $e) {}
+        try {
+            $db->exec("ALTER TABLE `school_grading_weights` ADD COLUMN `final_exam_max` INT DEFAULT 10");
+        } catch (Exception $e) {}
+
+        // Ensure student_assessments has unique constraint
+        try {
+            $db->exec("ALTER TABLE `student_assessments` ADD UNIQUE INDEX `idx_student_type` (`student_id`, `type`)");
+        } catch (Exception $e) {}
+
+        // Core Tables...
         
         // Check & add participation_stars to attendance table
         try {
@@ -219,13 +237,40 @@ function ensureSchema() {
             }
         } catch (Exception $e) {}
 
-        // Check & add participation_pct to school_grading_weights table
+        // Check & add grading weight columns to school_grading_weights table
         try {
             $colsWeights = array_column($db->query("SHOW COLUMNS FROM school_grading_weights")->fetchAll(), 'Field');
             if (!in_array('participation_pct', $colsWeights)) {
                 $db->exec("ALTER TABLE school_grading_weights ADD COLUMN `participation_pct` TINYINT UNSIGNED DEFAULT 0 AFTER `behavior_skills_pct`");
             }
+            if (!in_array('quiz_pct', $colsWeights)) {
+                $db->exec("ALTER TABLE school_grading_weights ADD COLUMN `quiz_pct` TINYINT UNSIGNED DEFAULT 0 AFTER `fitness_pct` ");
+            }
+            if (!in_array('project_pct', $colsWeights)) {
+                $db->exec("ALTER TABLE school_grading_weights ADD COLUMN `project_pct` TINYINT UNSIGNED DEFAULT 0 AFTER `quiz_pct` ");
+            }
+            if (!in_array('final_exam_pct', $colsWeights)) {
+                $db->exec("ALTER TABLE school_grading_weights ADD COLUMN `final_exam_pct` TINYINT UNSIGNED DEFAULT 0 AFTER `project_pct` ");
+            }
         } catch (Exception $e) {}
+
+        // New table for student assessments (Quizzes, Projects, Final Exams)
+        $db->exec("CREATE TABLE IF NOT EXISTS `student_assessments` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `student_id` INT UNSIGNED NOT NULL,
+            `type` ENUM('quiz', 'project', 'final_exam') NOT NULL,
+            `title` VARCHAR(150) DEFAULT NULL,
+            `score` DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+            `max_score` DECIMAL(5,2) NOT NULL DEFAULT 10.00,
+            `assessment_date` DATE NOT NULL,
+            `recorded_by` INT UNSIGNED DEFAULT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX `idx_sa_student` (`student_id`),
+            INDEX `idx_sa_type` (`type`),
+            INDEX `idx_sa_date` (`assessment_date`),
+            CONSTRAINT `fk_sa_student` FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // 1. Core Tables & Improvements
         $db->exec("CREATE TABLE IF NOT EXISTS `login_attempts` (

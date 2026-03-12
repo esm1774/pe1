@@ -145,6 +145,8 @@ async function renderStudentProfilePage() {
             <button onclick="switchProfileTab('info')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'info' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📋 البيانات</button>
             <button onclick="switchProfileTab('measurements')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'measurements' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📏 القياسات</button>
             <button onclick="switchProfileTab('pfitness')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pfitness' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">💪 اللياقة</button>
+            <button onclick="switchProfileTab('passessments')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'passessments' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📝 الاختبارات</button>
+            <button onclick="switchProfileTab('pprojects')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pprojects' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📂 المشاريع</button>
             ${hasFeature('badges') ? `<button onclick="switchProfileTab('badges')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'badges' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏅 الأوسمة</button>` : ''}
             <button onclick="switchProfileTab('health')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'health' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏥 الصحة</button>
             <button onclick="switchProfileTab('pattendance')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pattendance' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📅 الحضور</button>
@@ -551,6 +553,59 @@ async function renderProfileTab(sid) {
                 <p class="text-gray-400 font-black">لم يتم تسجيل أي سجلات حضور لهذا الطالب</p>
             </div>`}
         </div>`;
+    } else if (profileTab === 'passessments') {
+        const ass = d.assessments || [];
+        const weights = d.grading_summary?.weights || {};
+        const quiz = ass.find(a => a.type === 'quiz') || { score: 0 };
+        const final = ass.find(a => a.type === 'final_exam') || { score: 0 };
+        const qMax = weights.quiz_max || 10;
+        const fMax = weights.final_exam_max || 10;
+
+        tc.innerHTML = `
+            <div class="fade-in">
+                <div class="mb-6">
+                    <h4 class="text-xl font-black text-gray-800">📝 رصد الاختبارات</h4>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">نتائج الاختبارات القصيرة والنهائية</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 rounded-3xl p-8 border border-emerald-100/50">
+                        <p class="text-[10px] text-emerald-600 font-black uppercase mb-2">الاختبارات القصيرة</p>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-5xl font-black text-emerald-700">${quiz.score}</span>
+                            <span class="text-xl font-bold text-emerald-400">/ ${qMax}</span>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 rounded-3xl p-8 border border-blue-100/50">
+                        <p class="text-[10px] text-blue-600 font-black uppercase mb-2">الاختبار النهائي</p>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-5xl font-black text-blue-700">${final.score}</span>
+                            <span class="text-xl font-bold text-blue-400">/ ${fMax}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (profileTab === 'pprojects') {
+        const ass = d.assessments || [];
+        const weights = d.grading_summary?.weights || {};
+        const proj = ass.find(a => a.type === 'project') || { score: 0 };
+        const pMax = weights.project_max || 10;
+
+        tc.innerHTML = `
+            <div class="fade-in">
+                <div class="mb-6">
+                    <h4 class="text-xl font-black text-gray-800">📂 المشاريع والأبحاث</h4>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">تقييم الأعمال والبحوث الرياضية</p>
+                </div>
+                <div class="bg-indigo-50 rounded-3xl p-8 border border-indigo-100/50 max-w-md">
+                    <p class="text-[10px] text-indigo-600 font-black uppercase mb-2">الدرجة المستحقة</p>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-5xl font-black text-indigo-700">${proj.score}</span>
+                        <span class="text-xl font-bold text-indigo-400">/ ${pMax}</span>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 }
 
