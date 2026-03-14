@@ -26,7 +26,7 @@ function getTimetable() {
     }
 
     // Permission check
-    if ($targetTeacherId !== $_SESSION['user_id']) {
+    if ($targetTeacherId != $_SESSION['user_id']) {
         if (!isAdmin() && !isSupervisor()) {
             jsonError('لا تملك صلاحية عرض جدول مستخدم آخر', 403);
         }

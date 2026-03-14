@@ -10,13 +10,13 @@ function checkAuth() {
     if (isLoggedIn()) {
         $db = getDB();
         if ($_SESSION['user_role'] === 'student') {
-            $stmt = $db->prepare("SELECT id, student_number, name, 'student' as role, class_id, school_id, must_change_password FROM students WHERE id = ? AND active = 1");
+            $stmt = $db->prepare("SELECT id, student_number, name, 'student' as role, class_id, school_id, email, must_change_password FROM students WHERE id = ? AND active = 1");
             $stmt->execute([$_SESSION['user_id']]);
         } elseif ($_SESSION['user_role'] === 'parent') {
-            $stmt = $db->prepare("SELECT id, username, name, 'parent' as role, school_id, must_change_password FROM parents WHERE id = ? AND active = 1");
+            $stmt = $db->prepare("SELECT id, username, name, 'parent' as role, school_id, email, must_change_password FROM parents WHERE id = ? AND active = 1");
             $stmt->execute([$_SESSION['user_id']]);
         } else {
-            $stmt = $db->prepare("SELECT id, username, name, role, school_id, must_change_password FROM users WHERE id = ? AND active = 1");
+            $stmt = $db->prepare("SELECT id, username, name, role, school_id, email, must_change_password FROM users WHERE id = ? AND active = 1");
             $stmt->execute([$_SESSION['user_id']]);
         }
         
@@ -43,6 +43,18 @@ function checkAuth() {
             if (isset($_SESSION['is_impersonating']) && $_SESSION['is_impersonating'] === true) {
                 $user['is_impersonating'] = true;
             }
+
+            // Multi-School: Include schools list if requested
+            if (isset($_GET['include_schools']) && $_SESSION['user_role'] !== 'student' && $_SESSION['user_role'] !== 'parent') {
+                $stmtSchools = $db->prepare("
+                    SELECT s.id, s.name, s.slug, usa.role
+                    FROM user_school_access usa
+                    JOIN schools s ON s.id = usa.school_id
+                    WHERE usa.user_id = ? AND s.active = 1
+                ");
+                $stmtSchools->execute([$user['id']]);
+                $user['schools'] = $stmtSchools->fetchAll();
+            }
             
             jsonSuccess($user);
             return;
@@ -62,6 +74,100 @@ function login() {
 
     $db = getDB();
 
+    // --- IDENTIFICATION ---
+    $isEmail = filter_var($username, FILTER_VALIDATE_EMAIL);
+    $userCandidate = null;
+
+    if ($isEmail) {
+        $stmt = $db->prepare("SELECT id, username, password, name, role, school_id, email, must_change_password FROM users WHERE email = ? AND active = 1");
+        $stmt->execute([$username]);
+        $userCandidate = $stmt->fetch();
+        
+        if ($userCandidate && password_verify($password, $userCandidate['password'])) {
+            // Found a staff member with this email
+            // Get all schools they have access to
+            $stmt = $db->prepare("
+                SELECT s.id, s.name, s.slug, usa.role
+                FROM user_school_access usa
+                JOIN schools s ON s.id = usa.school_id
+                WHERE usa.user_id = ? AND s.active = 1
+            ");
+            $stmt->execute([$userCandidate['id']]);
+            $schools = $stmt->fetchAll();
+
+            // Handle Multi-School Picker if needed
+            if (count($schools) > 1 && empty($schoolSlug)) {
+                jsonSuccess([
+                    'requires_school_selection' => true,
+                    'schools' => $schools,
+                    'user_id' => $userCandidate['id']
+                ], 'يرجى اختيار المدرسة');
+            }
+
+            // If a specific school was provided, verify access
+            if (!empty($schoolSlug)) {
+                $targetSchool = null;
+                foreach ($schools as $s) {
+                    if ($s['slug'] === $schoolSlug) {
+                        $targetSchool = $s;
+                        break;
+                    }
+                }
+                if (!$targetSchool) jsonError('ليس لديك صلاحية للدخول لهذه المدرسة');
+                
+                $userCandidate['school_id'] = $targetSchool['id'];
+                $userCandidate['role'] = $targetSchool['role']; // Use role specific to this school
+            } elseif (count($schools) === 1) {
+                // Only one school, auto-select it
+                $userCandidate['school_id'] = $schools[0]['id'];
+                $userCandidate['role'] = $schools[0]['role'];
+            }
+            
+            // Log in as staff
+            $user = $userCandidate;
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['user_role'] = $user['role'];
+            $_SESSION['user_name'] = $user['name'];
+            $_SESSION['user_email'] = $user['email'] ?? null;
+            if ($user['school_id']) {
+                Tenant::setId((int)$user['school_id']);
+            }
+
+            $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
+            $db->prepare("DELETE FROM login_attempts WHERE username = ?")->execute([$username]);
+            logActivity('login', 'user', $user['id']);
+            
+            unset($user['password']);
+            if ($user['school_id']) {
+                $school = Tenant::school();
+                if ($school) $user['school_slug'] = $school['slug'];
+            }
+            
+            jsonSuccess($user, 'تم تسجيل الدخول بنجاح');
+            return;
+        }
+
+        // Check parents table for email
+        $stmt = $db->prepare("SELECT id, username, password, name, school_id, email, must_change_password FROM parents WHERE email = ? AND active = 1");
+        $stmt->execute([$username]);
+        $parent = $stmt->fetch();
+        if ($parent && password_verify($password, $parent['password'])) {
+            $_SESSION['user_id'] = $parent['id'];
+            $_SESSION['user_role'] = 'parent';
+            $_SESSION['user_name'] = $parent['name'];
+            if ($parent['school_id']) Tenant::setId((int)$parent['school_id']);
+
+            $db->prepare("UPDATE parents SET last_login = NOW() WHERE id = ?")->execute([$parent['id']]);
+            $db->prepare("DELETE FROM login_attempts WHERE username = ?")->execute([$username]);
+            logActivity('parent_login', 'parent', $parent['id']);
+            
+            unset($parent['password']);
+            jsonSuccess($parent, 'تم تسجيل الدخول بنجاح');
+            return;
+        }
+    }
+
+    // --- FALLBACK TO TRADITIONAL USERNAME LOGIN ---
     // If school slug provided, resolve it first
     $schoolFilter = '';
     $schoolIdResolved = Tenant::id(); // From subdomain or session
@@ -85,44 +191,86 @@ function login() {
 
     // --- LOGIN RATE LIMITING CHECK ---
     $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-    $stmt = $db->prepare("SELECT COUNT(*) FROM login_attempts WHERE (ip_address = ? OR username = ?) AND attempted_at > DATE_SUB(NOW(), INTERVAL ? SECOND)");
-    $stmt->execute([$ip, $username, LOGIN_LOCKOUT_TIME]);
+    $stmt = $db->prepare("SELECT COUNT(*) FROM login_attempts WHERE username = ? AND attempted_at > DATE_SUB(NOW(), INTERVAL ? SECOND)");
+    $stmt->execute([$username, LOGIN_LOCKOUT_TIME]);
     if ((int)$stmt->fetchColumn() >= MAX_LOGIN_ATTEMPTS) {
         logActivity('login_blocked', 'auth', null, "IP: $ip, User: $username");
         jsonError('تم حظر هذه المحاولة مؤقتاً لتكرار الفشل. يرجى الانتظار ١٥ دقيقة.');
     }
 
     // 1. Try Staff (users table)
-    $stmt = $db->prepare("SELECT id, username, password, name, role, school_id FROM users WHERE username = ? AND active = 1" . $schoolFilter);
+    // Find the primary user record first (usernames are unique per school, but now we have global accounts)
+    $stmt = $db->prepare("SELECT id, username, password, name, role, school_id, email, must_change_password FROM users WHERE username = ? AND active = 1 LIMIT 1");
     $stmt->execute([$username]);
-    $user = $stmt->fetch();
+    $userCandidate = $stmt->fetch();
 
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['user_role'] = $user['role'];
-        $_SESSION['user_name'] = $user['name'];
-        if ($user['school_id']) {
-            Tenant::setId((int)$user['school_id']);
+    if ($userCandidate && password_verify($password, $userCandidate['password'])) {
+        // Staff found. Now resolve which school they're logging into.
+        $stmt = $db->prepare("
+            SELECT s.id, s.name, s.slug, usa.role
+            FROM user_school_access usa
+            JOIN schools s ON s.id = usa.school_id
+            WHERE usa.user_id = ? AND s.active = 1
+        ");
+        $stmt->execute([$userCandidate['id']]);
+        $schools = $stmt->fetchAll();
+
+        // If contextually constrained to a school (via subdomain or slug)
+        if ($schoolIdResolved && $userCandidate['role'] !== 'super_admin') {
+            $hasAccess = false;
+            foreach ($schools as $s) {
+                if ($s['id'] == $schoolIdResolved) {
+                    $hasAccess = true;
+                    $userCandidate['school_id'] = $s['id'];
+                    $userCandidate['role'] = $s['role'];
+                    break;
+                }
+            }
+            if (!$hasAccess && $userCandidate['school_id'] != $schoolIdResolved) {
+                jsonError('ليس لديك صلاحية للدخول لهذه المدرسة');
+            }
         }
 
-        $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
-        $db->prepare("DELETE FROM login_attempts WHERE ip_address = ? OR username = ?")->execute([$ip, $username]);
-        logActivity('login', 'user', $user['id']);
-        $user['must_change_password'] = (int)($user['must_change_password'] ?? 0);
-        unset($user['password']);
+        // Multi-School: If at main domain and multiple schools found, trigger selection
+        if (empty($schoolSlug) && !$schoolIdResolved && count($schools) > 1 && $userCandidate['role'] !== 'super_admin') {
+            jsonSuccess([
+                'requires_school_selection' => true,
+                'schools' => $schools,
+                'user_id' => $userCandidate['id']
+            ], 'يرجى اختيار المدرسة');
+        }
+
+        // Auto-select if only one school
+        if (empty($schoolSlug) && !$schoolIdResolved && count($schools) === 1) {
+            $userCandidate['school_id'] = $schools[0]['id'];
+            $userCandidate['role'] = $schools[0]['role'];
+        }
+
+        // Finalize Login
+        $_SESSION['user_id'] = $userCandidate['id'];
+        $_SESSION['user_role'] = $userCandidate['role'];
+        $_SESSION['user_name'] = $userCandidate['name'];
+        $_SESSION['user_email'] = $userCandidate['email'] ?? null;
+        if ($userCandidate['school_id']) Tenant::setId((int)$userCandidate['school_id']);
+
+        $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$userCandidate['id']]);
+        $db->prepare("DELETE FROM login_attempts WHERE username = ?")->execute([$username]);
+        logActivity('login', 'user', $userCandidate['id']);
         
-        // Include school slug for redirection
-        if ($user['school_id']) {
+        $userCandidate['must_change_password'] = (int)($userCandidate['must_change_password'] ?? 0);
+        unset($userCandidate['password']);
+        
+        if ($userCandidate['school_id']) {
             $school = Tenant::school();
-            if ($school) $user['school_slug'] = $school['slug'];
+            if ($school) $userCandidate['school_slug'] = $school['slug'];
         }
         
-        jsonSuccess($user, 'تم تسجيل الدخول بنجاح');
+        jsonSuccess($userCandidate, 'تم تسجيل الدخول بنجاح');
         return;
     }
 
     // 2. Try Student (students table)
-    $stmt = $db->prepare("SELECT id, student_number, password, name, class_id, school_id FROM students WHERE student_number = ? AND active = 1" . $schoolFilter);
+    $stmt = $db->prepare("SELECT id, student_number, password, name, class_id, school_id, must_change_password FROM students WHERE student_number = ? AND active = 1" . $schoolFilter);
     $stmt->execute([$username]);
     $student = $stmt->fetch();
 
@@ -136,7 +284,7 @@ function login() {
         }
 
         $db->prepare("UPDATE students SET last_login = NOW() WHERE id = ?")->execute([$student['id']]);
-        $db->prepare("DELETE FROM login_attempts WHERE ip_address = ? OR username = ?")->execute([$ip, $username]);
+        $db->prepare("DELETE FROM login_attempts WHERE username = ?")->execute([$username]);
         logActivity('student_login', 'student', $student['id']);
         
         $response = [
@@ -174,7 +322,7 @@ function login() {
         }
 
         $db->prepare("UPDATE parents SET last_login = NOW() WHERE id = ?")->execute([$parent['id']]);
-        $db->prepare("DELETE FROM login_attempts WHERE ip_address = ? OR username = ?")->execute([$ip, $username]);
+        $db->prepare("DELETE FROM login_attempts WHERE username = ?")->execute([$username]);
         logActivity('parent_login', 'parent', $parent['id']);
         
         $parent['must_change_password'] = (int)($parent['must_change_password'] ?? 0);
@@ -244,8 +392,19 @@ function studentLogin() {
 
 function logout() {
     logActivity('logout', 'user', $_SESSION['user_id'] ?? null);
+    
+    // Thoroughly clear session
+    $_SESSION = [];
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
     session_destroy();
-    jsonSuccess(null, 'تم تسجيل الخروج');
+    
+    jsonSuccess(null, 'تم تسجيل الخروج بنجاح');
 }
 
 /**

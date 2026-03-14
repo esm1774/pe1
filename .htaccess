@@ -33,13 +33,14 @@ Options -Indexes
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # 2. Fix asset paths for school slugs (e.g., /default/css/style.css -> /css/style.css)
-    # This handles subfolder deployments where the browser requests assets relative to the slug
+    # 2. Fix asset and API paths for school slugs
+    # This ensures that requests like /slug/api.php or /slug/css/style.css 
+    # are correctly routed to the root files even when a slug makes them relative.
     RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^(?:[^/]+/)?(assets|css|js|icons|vendor|modules)/(.*)$ $1/$2 [L,NC]
+    RewriteRule ^(?:[^/]+/)?(api\.php|blog\.php|post\.php|welcome\.php|assets|css|js|icons|vendor|modules|uploads|admin)(.*)$ $1$2 [L,NC]
 
-    # 3. Skip common root assets and entry points
-    RewriteCond %{REQUEST_URI} (api\.php|index\.html|sw\.js|manifest\.json|assets|css|js|icons|vendor|modules|welcome\.html|register\.html|login\.html) [NC]
+    # 3. Skip common root entries to avoid infinite loops
+    RewriteCond %{REQUEST_URI} (api\.php|index\.html|sw\.js|manifest\.json|assets|css|js|icons|vendor|modules|uploads|admin|welcome\.html|register\.html|login\.html) [NC]
     RewriteRule ^ - [L]
 
     # 3. Rewrite all other requests to index.html (SPA routing)

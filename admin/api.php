@@ -471,6 +471,51 @@ function deleteAnnouncement() {
     jsonSuccess(null, 'تم مسح الإعلان');
 }
 
+/**
+ * Export all unique subscribers for marketing
+ */
+function exportSubscribers() {
+    requirePlatformAdmin();
+    $db = getDB();
+    
+    // We'll collect emails from users, parents and school contact emails
+    $emails = [];
+    
+    // 1. Staff Emails
+    $res = $db->query("SELECT DISTINCT email, name FROM users WHERE email IS NOT NULL AND email != ''");
+    while($row = $res->fetch(PDO::FETCH_ASSOC)) {
+        $emails[strtolower($row['email'])] = $row['name'];
+    }
+    
+    // 2. Parent Emails
+    // Check if parents table has email column (it should from previous audit)
+    $res = $db->query("SELECT DISTINCT email, name FROM parents WHERE email IS NOT NULL AND email != ''");
+    while($row = $res->fetch(PDO::FETCH_ASSOC)) {
+        $emails[strtolower($row['email'])] = $row['name'];
+    }
+    
+    // 3. School Contact Emails
+    $res = $db->query("SELECT DISTINCT email, name FROM schools WHERE email IS NOT NULL AND email != ''");
+    while($row = $res->fetch(PDO::FETCH_ASSOC)) {
+        $emails[strtolower($row['email'])] = $row['name'];
+    }
+    
+    // Prepare CSV
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=subscribers_'.date('Y-m-d').'.csv');
+    
+    $output = fopen('php://output', 'w');
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
+    fputcsv($output, ['Email', 'Name']);
+    
+    foreach($emails as $email => $name) {
+        fputcsv($output, [$email, $name]);
+    }
+    
+    fclose($output);
+    exit;
+}
+
 // ============================================================
 // ROUTER
 // ============================================================
@@ -498,7 +543,9 @@ try {
         case 'advanced_analytics':   getAdvancedAnalytics(); break;
         case 'maintenance_get':      getMaintenanceSettings(); break;
         case 'maintenance_save':     saveMaintenanceSettings(); break;
+        case 'export_subscribers':   exportSubscribers(); break;
         case 'system_health':        getPlatformHealth(); break;
+        case 'unlock_logins':        unlockLogins(); break;
         
         case 'blog_posts':           getBlogPosts(); break;
         case 'blog_post':            getBlogPost(); break;
@@ -624,6 +671,17 @@ function getPlatformHealth() {
     }
 
     jsonSuccess($health);
+}
+
+// ============================================================
+// SECURITY & LOCKOUTS
+// ============================================================
+function unlockLogins() {
+    requirePlatformAdmin();
+    $db = getDB();
+    $db->query("TRUNCATE TABLE login_attempts");
+    logActivity('unlock_logins', 'platform', 0, 'تم فك حظر تسجيل الدخول عن جميع الحسابات المحظورة');
+    jsonSuccess(null, 'تم فك الحظر عن جميع الحسابات بنجاح');
 }
 
 // ============================================================

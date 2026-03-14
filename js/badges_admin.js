@@ -31,7 +31,7 @@ async function renderBadgeManagementPage() {
     const badges = r.data || [];
 
     mc.innerHTML = `
-            < div class="fade-in px-4 md:px-0" >
+            <div class="fade-in px-4 md:px-0">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
             <div>
                 <h2 class="text-3xl font-black text-gray-800">🏅 أكاديمية الأوسمة الرقمية</h2>
@@ -101,7 +101,7 @@ function showBadgeForm(badge = null) {
     ];
 
     showModal(`
-            < div class="p-8 md:p-12" >
+            <div class="p-8 md:p-12">
             <div class="flex items-center gap-4 mb-10">
                 <div class="w-16 h-16 rounded-[1.5rem] bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl font-black">
                     ${isEdit ? '✏️' : '➕'}

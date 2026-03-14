@@ -201,7 +201,7 @@ function ensureSchema() {
     $done = true;
     
     // Performance: Only run schema checks if version changed or periodically
-    $currentVersion = '2.1.8'; 
+    $currentVersion = '2.1.9'; 
     $dbVersion = getPlatformSetting('db_schema_version', '0');
     if ($dbVersion === $currentVersion && !isset($_GET['force_schema'])) return;
 
@@ -299,7 +299,16 @@ function ensureSchema() {
         $alterUsers = [];
         if (!in_array('photo_url', $colsUsers)) $alterUsers[] = "ADD COLUMN `photo_url` VARCHAR(255) DEFAULT NULL AFTER `name`";
         if (!in_array('must_change_password', $colsUsers)) $alterUsers[] = "ADD COLUMN `must_change_password` TINYINT(1) NOT NULL DEFAULT 1";
+        if (!in_array('email', $colsUsers)) $alterUsers[] = "ADD COLUMN `email` VARCHAR(150) DEFAULT NULL AFTER `username` ";
         if (!empty($alterUsers)) $db->exec("ALTER TABLE users " . implode(", ", $alterUsers));
+
+        // Ensure unique email index (globally)
+        try {
+            $hasEmailIdx = $db->query("SHOW INDEX FROM users WHERE Column_name = 'email' AND Non_unique = 0")->fetch();
+            if (!$hasEmailIdx) {
+                $db->exec("ALTER TABLE users ADD UNIQUE INDEX `uk_user_email_global` (`email`) ");
+            }
+        } catch (Exception $e) {}
 
         // Check & add missing columns to parents table
         $colsParents = array_column($db->query("SHOW COLUMNS FROM parents")->fetchAll(), 'Field');
@@ -535,6 +544,19 @@ function ensureSchema() {
             UNIQUE KEY `uk_blog_slug` (`slug`),
             INDEX `idx_blog_status` (`status`, `published_at`),
             INDEX `idx_blog_school` (`school_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Multi-School Access Table
+        $db->exec("CREATE TABLE IF NOT EXISTS `user_school_access` (
+            `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `user_id`       INT UNSIGNED NOT NULL,
+            `school_id`     INT UNSIGNED NOT NULL,
+            `role`          VARCHAR(50) DEFAULT NULL,
+            `is_primary`    TINYINT(1) DEFAULT 0,
+            `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY `uk_user_school` (`user_id`, `school_id`),
+            INDEX `idx_usa_user` (`user_id`),
+            INDEX `idx_usa_school` (`school_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // Update version to avoid repeated runs

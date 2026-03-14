@@ -175,7 +175,12 @@ const API = {
                     return null;
                 }
                 if (r.status === 403) {
-                    handleDeactivation(result);
+                    if (result?.error && result.error.includes('معطل')) {
+                        handleDeactivation(result);
+                    } else {
+                        showToast(result?.error || 'ليس لديك صلاحية', 'error');
+                        // Optionally redirect to dashboard if they are completely blocked
+                    }
                     return null;
                 }
                 if (r.status === 503 && result.error === 'maintenance') {
@@ -233,11 +238,16 @@ async function handleLogin() {
     if (!r) {
         errorEl.textContent = 'تعذر الاتصال بالخادم. تأكد من عمل XAMPP وقاعدة البيانات.';
         errorEl.classList.remove('hidden');
-        alert('فشل الاتصال بـ: ' + API.base); // Useful for local debugging
         return;
     }
 
     if (r.success) {
+        // Multi-School Handling
+        if (r.data.requires_school_selection) {
+            showSchoolPicker(r.data.schools, username, password);
+            return;
+        }
+
         currentUser = r.data;
         // Store school context from login response
         if (r.data.school_id) {
@@ -252,20 +262,142 @@ async function handleLogin() {
 
         // Redirect to slug-based URL if school context exists
         if (r.data.school_slug) {
-            window.location.href = window.APP_BASE + r.data.school_slug + '/';
+            const expectedSlugPath = `/${r.data.school_slug}/`;
+            if (window.APP_BASE.endsWith(expectedSlugPath)) {
+                showApp();
+                checkPostLoginRequirements(r.data);
+            } else {
+                window.location.href = window.APP_BASE + r.data.school_slug + '/';
+            }
         } else {
             showApp();
-            if (r.data.weak_password) {
-                setTimeout(() => {
-                    showToast('⚠️ يرجى تغيير كلمة المرور الافتراضية لحماية حسابك', 'info');
-                }, 3000);
-            }
+            checkPostLoginRequirements(r.data);
         }
     } else {
         errorEl.textContent = r.error || 'بيانات غير صحيحة';
         errorEl.classList.remove('hidden');
     }
 }
+
+/**
+ * Handle requirements after login (e.g. mandatory email, password change)
+ */
+function checkPostLoginRequirements(user) {
+    if (user.must_change_password) {
+        setTimeout(() => showToast('⚠️ يرجى تغيير كلمة المرور الافتراضية لحماية حسابك', 'info'), 3000);
+    }
+
+    // Mandatory Email Check for staff
+    if (['admin', 'teacher', 'supervisor'].includes(user.role) && !user.email) {
+        showMandatoryEmailModal();
+    }
+}
+
+/**
+ * Show a modal for users with access to multiple schools
+ */
+function showSchoolPicker(schools, username, password) {
+    const modalHtml = `
+        <div id="schoolPickerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">🏢</div>
+                    <h3 class="text-xl font-bold text-gray-900">اختر المدرسة</h3>
+                    <p class="text-gray-500 text-sm mt-1">حسابك مرتبط بأكثر من مدرسة، يرجى اختيار المدرسة المراد الدخول إليها:</p>
+                </div>
+                
+                <div class="space-y-3 max-h-60 overflow-y-auto mb-6 pr-2">
+                    ${schools.map(s => `
+                        <button onclick="selectSchoolAndLogin('${s.slug}', '${username}', '${password}')" 
+                                class="w-full flex items-center p-3 border-2 border-gray-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-right group">
+                            <span class="flex-1 font-semibold text-gray-700 group-hover:text-blue-700">${s.name}</span>
+                            <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg group-hover:bg-blue-100 group-hover:text-blue-600">${s.role === 'admin' ? 'مدير' : 'معلم'}</span>
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <button onclick="document.getElementById('schoolPickerModal').remove()" class="w-full py-2 text-gray-400 hover:text-gray-600 font-medium transition-colors">إلغاء</button>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+window.selectSchoolAndLogin = async (slug, username, password) => {
+    document.getElementById('schoolPickerModal').remove();
+    document.getElementById('loginUsername').value = username;
+    document.getElementById('loginPassword').value = password;
+
+    // Inject the slug into a hidden field or handle it in handleLogin
+    // We'll just trigger handleLogin but with a trick
+    const r = await API.post('login', { username, password, school: slug });
+    if (r && r.success) {
+        currentUser = r.data;
+        if (r.data.school_slug) {
+            window.location.href = window.APP_BASE + r.data.school_slug + '/';
+        } else {
+            showApp();
+        }
+    } else {
+        showToast(r?.error || 'فشل تسجيل الدخول', 'error');
+    }
+};
+
+/**
+ * Show modal to force staff members to provide an email
+ */
+function showMandatoryEmailModal() {
+    const modalHtml = `
+        <div id="emailEnforcementModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-fade-in">
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📧</div>
+                    <h3 class="text-2xl font-bold text-gray-900">تحديث البريد الإلكتروني</h3>
+                    <p class="text-gray-600 mt-2">يرجى إضافة بريدك الإلكتروني لتتمكن من استعادة حسابك في حال فقدان كلمة المرور ولتصلك إشعارات المنصة.</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">البريد الإلكتروني <span class="text-red-500">*</span></label>
+                        <input type="email" id="enforcedEmail" placeholder="example@domain.com" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center" dir="ltr">
+                    </div>
+                    
+                    <button onclick="saveEnforcedEmail()" id="btnSaveEmail"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transform hover:-translate-y-0.5 transition-all">
+                        حفظ ومتابعة
+                    </button>
+                    
+                    <p class="text-xs text-center text-gray-400">لن نتمكن من إرسال تنبيهات هامة لك بدون بريد إلكتروني صحيح.</p>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+window.saveEnforcedEmail = async () => {
+    const email = document.getElementById('enforcedEmail').value.trim();
+    if (!email || !email.includes('@')) {
+        showToast('يرجى إدخال بريد إلكتروني صحيح', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btnSaveEmail');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
+
+    const r = await API.post('update_my_profile', { email: email });
+    if (r && r.success) {
+        showToast('تم تحديث البريد الإلكتروني بنجاح', 'success');
+        document.getElementById('emailEnforcementModal').remove();
+        if (currentUser) currentUser.email = email;
+    } else {
+        showToast(r?.error || 'فشل تحديث البريد الإلكتروني', 'error');
+        btn.disabled = false;
+        btn.textContent = 'حفظ ومتابعة';
+    }
+};
 
 async function handleLogout() {
     // Fix #9: Stop notification polling before clearing session
@@ -275,7 +407,10 @@ async function handleLogout() {
     await API.post('logout');
     currentUser = null;
     currentSchool = null;
-    showLoginPage();
+
+    // Redirect to root home instead of staying on the school slug path
+    // This prevents accidental re-login on refresh and cleans the URL
+    window.location.href = window.APP_BASE;
 }
 
 async function exitImpersonation() {
@@ -399,7 +534,14 @@ function showApp() {
     // Ensure URL has school slug if we are logged in with a school context
     if (currentSchool && currentSchool.slug) {
         const path = window.location.pathname;
-        const targetSlugPath = `${window.APP_BASE}${currentSchool.slug}/`;
+        const expectedSlugSegment = `/${currentSchool.slug}/`;
+
+        let targetSlugPath;
+        if (window.APP_BASE.endsWith(expectedSlugSegment)) {
+            targetSlugPath = window.APP_BASE;
+        } else {
+            targetSlugPath = `${window.APP_BASE}${currentSchool.slug}/`;
+        }
 
         // If the current path doesn't match the specific school's slug path
         if (path !== targetSlugPath) {
@@ -465,6 +607,9 @@ function showApp() {
             showToast('⚠️ يرجى تغيير كلمة المرور فوراً لتأمين حسابك', 'warning');
         }
     }
+
+    // SaaS: Multi-School Check
+    checkMultiSchoolLink();
 }
 
 // SaaS: Check if a feature is available in current plan
@@ -973,4 +1118,74 @@ function handleDeactivation(data) {
 
     // Disable any background tasks
     if (window.announcementTimer) clearInterval(window.announcementTimer);
+}
+
+/**
+ * Switch current school for multi-school users
+ */
+window.triggerSchoolSwitch = async () => {
+    if (!currentUser || !currentUser.email) {
+        showToast('يجب تسجيل بريد إلكتروني أولاً', 'info');
+        showMandatoryEmailModal();
+        return;
+    }
+
+    // Fetch user schools
+    const r = await API.get('check_auth', { include_schools: 1 });
+    if (r && r.success && r.data.schools && r.data.schools.length > 1) {
+        showSchoolPicker(r.data.schools, currentUser.username, '');
+    } else {
+        showToast('لا توجد مدارس أخرى مرتبطة بهذا الحساب', 'info');
+    }
+};
+
+/**
+ * Select a specific school and update context
+ */
+window.selectSchoolAndLogin = async (slug, username, password) => {
+    const modal = document.getElementById('schoolPickerModal');
+    if (modal) modal.remove();
+
+    // If password is not provided (from switcher), we use a session-based switch endpoint
+    if (!password) {
+        // Find school ID from slug
+        const rCheck = await API.get('check_auth', { include_schools: 1 });
+        const school = rCheck.data.schools.find(s => s.slug === slug);
+        if (school) {
+            const rSwitch = await API.post('switch_school', { school_id: school.id });
+            if (rSwitch && rSwitch.success) {
+                window.location.href = window.APP_BASE + slug + '/';
+                return;
+            }
+        }
+        showToast('فشل تبديل المدرسة', 'error');
+        return;
+    }
+
+    // Traditional login with school selector
+    const r = await API.post('login', { username, password, school: slug });
+    if (r && r.success) {
+        currentUser = r.data;
+        if (r.data.school_slug) {
+            window.location.href = window.APP_BASE + r.data.school_slug + '/';
+        } else {
+            showApp();
+        }
+    } else {
+        showToast(r?.error || 'فشل تسجيل الدخول', 'error');
+    }
+};
+
+/**
+ * Check if the user has multiple schools to show the switcher
+ */
+function checkMultiSchoolLink() {
+    if (!currentUser || !currentUser.email || currentUser.role === 'student' || currentUser.role === 'parent') return;
+
+    API.get('check_auth', { include_schools: 1 }).then(r => {
+        if (r && r.success && r.data.schools && r.data.schools.length > 1) {
+            const menu = document.getElementById('switchSchoolMenuItem');
+            if (menu) menu.classList.remove('hidden');
+        }
+    });
 }

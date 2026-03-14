@@ -224,6 +224,7 @@ async function renderDashboard() {
                 <button class="btn btn-emerald btn-sm" onclick="navigate('schools')">🏫 إدارة المدارس</button>
                 <button class="btn btn-cyan btn-sm" onclick="navigate('plans')">💎 إدارة الخطط</button>
                 <button class="btn btn-success btn-sm" onclick="openAddSchoolModal()">➕ إضافة مدرسة</button>
+                <button class="btn btn-outline btn-sm" onclick="window.location.href='api.php?action=export_subscribers'">📥 تصدير الإيميلات</button>
             </div>
         </div>
     `;
@@ -2321,6 +2322,30 @@ async function renderHealth() {
             .simple-table td:first-child { color: var(--text-secondary); width: 60%; }
             .simple-table td:last-child { text-align: left; }
         </style>
+
+        <div class="panel" style="margin-top: 20px; border-left: 4px solid var(--accent-red);">
+            <div class="panel-header">
+                <h3 style="color: var(--accent-red);">🛡️ عمليات الأمان والطوارئ</h3>
+            </div>
+            <div class="panel-body">
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+                    في حال تعذر دخول المعلمين أو المدارس بسبب إدخال كلمة المرور بشكل خاطئ أكثر من 5 مرات متتالية، يتم حظر الحسابات مؤقتاً كإجراء أمني. يمكنك فك الحظر عن الجميع فوراً من هنا.
+                </p>
+                <button onclick="unlockLogins()" class="btn" style="background:var(--bg-glass); color:var(--accent-red); border: 1px solid var(--accent-red);">
+                    🔓 فك حظر تسجيل الدخول لجميع الحسابات
+                </button>
+            </div>
+        </div>
     `;
+}
+
+async function unlockLogins() {
+    if (!confirm('هل أنت متأكد من رغبتك في فك الحظر عن جميع الحسابات المحظورة؟')) return;
+    const r = await API.post('unlock_logins');
+    if (r && r.success) {
+        toast('✅ ' + r.message);
+    } else {
+        toast(r?.error || 'حدث خطأ', 'error');
+    }
 }
 

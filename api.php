@@ -154,6 +154,15 @@ try {
         case 'fitness_criteria':      getFitnessCriteria(); break;
         case 'fitness_criteria_save': saveFitnessCriteria(); break;
 
+        // BADGES
+        case 'get_badges':         getBadges(); break;
+        case 'badge_save':         saveBadge(); break;
+        case 'badge_delete':       deleteBadge(); break;
+        case 'award_badge':        awardBadge(); break;
+        case 'revoke_badge':       revokeBadge(); break;
+        case 'get_student_badges': getStudentBadges(); break;
+        case 'run_auto_badges':    runAutoBadges(); break;
+
         // COMPETITION
         case 'competition':     getCompetition(); break;
 
@@ -202,6 +211,7 @@ try {
         // MY PROFILE
         case 'get_my_profile':    getMyProfile(); break;
         case 'update_my_profile': updateMyProfile(); break;
+        case 'switch_school':     switchSchool(); break;
         case 'upload_profile_photo': uploadProfilePhoto(); break;
 
         // BADGES

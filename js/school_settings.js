@@ -189,17 +189,17 @@ async function saveSchoolSettings() {
         total_periods: document.getElementById('totalPeriods').value,
         school_start_time: document.getElementById('startTime').value,
         school_end_time: document.getElementById('endTime').value,
-        attendance_pct: parseInt(document.getElementById('attendancePct').value) || 0,
-        uniform_pct: parseInt(document.getElementById('uniformPct').value) || 0,
-        behavior_skills_pct: parseInt(document.getElementById('behaviorPct').value) || 0,
-        participation_pct: parseInt(document.getElementById('participationPct').value) || 0,
-        fitness_pct: parseInt(document.getElementById('fitnessPct').value) || 0,
-        quiz_pct: parseInt(document.getElementById('quizPct').value) || 0,
-        project_pct: parseInt(document.getElementById('projectPct').value) || 0,
-        final_exam_pct: parseInt(document.getElementById('finalExamPct').value) || 0,
-        quiz_max: parseInt(document.getElementById('quizMax').value) || 10,
-        project_max: parseInt(document.getElementById('projectMax').value) || 10,
-        final_exam_max: parseInt(document.getElementById('finalMax').value) || 10,
+        attendance_pct: document.getElementById('attendancePct') ? parseInt(document.getElementById('attendancePct').value) || 0 : 0,
+        uniform_pct: document.getElementById('uniformPct') ? parseInt(document.getElementById('uniformPct').value) || 0 : 0,
+        behavior_skills_pct: document.getElementById('behaviorPct') ? parseInt(document.getElementById('behaviorPct').value) || 0 : 0,
+        participation_pct: document.getElementById('participationPct') ? parseInt(document.getElementById('participationPct').value) || 0 : 0,
+        fitness_pct: document.getElementById('fitnessPct') ? parseInt(document.getElementById('fitnessPct').value) || 0 : 0,
+        quiz_pct: document.getElementById('quizPct') ? parseInt(document.getElementById('quizPct').value) || 0 : 0,
+        project_pct: document.getElementById('projectPct') ? parseInt(document.getElementById('projectPct').value) || 0 : 0,
+        final_exam_pct: document.getElementById('finalExamPct') ? parseInt(document.getElementById('finalExamPct').value) || 0 : 0,
+        quiz_max: document.getElementById('quizMax') ? parseInt(document.getElementById('quizMax').value) || 10 : 10,
+        project_max: document.getElementById('projectMax') ? parseInt(document.getElementById('projectMax').value) || 10 : 10,
+        final_exam_max: document.getElementById('finalMax') ? parseInt(document.getElementById('finalMax').value) || 10 : 10,
         principal_name: document.getElementById('principalName').value.trim(),
         teacher_name: document.getElementById('teacherName').value.trim()
     };
@@ -214,7 +214,8 @@ async function saveSchoolSettings() {
         showToast(res.message, 'success');
         refreshBranding();
     } else {
-        showToast(res?.message || 'تعذر الحفظ', 'error');
+        console.error('Save School Error:', res);
+        showToast(res?.error || res?.message || 'تعذر الحفظ. يرجى مراجعة المدخلات.', 'error');
     }
 }
 

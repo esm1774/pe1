@@ -18,7 +18,49 @@ class Tenant {
         if (self::$resolved) return;
         self::$resolved = true;
 
-        // Priority 1: Session (already logged in)
+        $urlSchoolId = null;
+        $urlSchool = null;
+
+        // Priority 1: URL Slug Exists Anywhere in Path (e.g., example.com/school1 or physical folder /school1/api.php)
+        $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+        if ($uri) {
+            $uriParts = array_filter(explode('/', $uri));
+            $ignoreList = ['api', 'admin', 'assets', 'css', 'js', 'modules', 'api.php', 'index.html', 'install.php', 'register.html', 'welcome.html', 'favicon.ico'];
+            
+            // Search backwards so we pick the most specific folder
+            foreach (array_reverse($uriParts) as $part) {
+                $slug = strtolower(trim($part));
+                if (!empty($slug) && !in_array($slug, $ignoreList)) {
+                    $school = self::findBySlug($slug);
+                    if ($school) {
+                        $urlSchoolId = (int)$school['id'];
+                        $urlSchool = $school;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Check for Tenant Mismatch
+        // If the URL dictates a specific school, but the session has a DIFFERENT school logged in,
+        // we must CLEAR the old session so the user gets a fresh login screen for the new school.
+        if ($urlSchoolId) {
+            if (isset($_SESSION['school_id']) && $_SESSION['school_id'] != $urlSchoolId) {
+                // They switched schools in the same browser. Clear old session.
+                unset($_SESSION['school_id']);
+                unset($_SESSION['user_id']);
+                unset($_SESSION['user_role']);
+                unset($_SESSION['user_name']);
+                unset($_SESSION['class_id']);
+                unset($_SESSION['is_impersonating']); // clear impersonation if they manually switch
+            }
+            self::$schoolId = $urlSchoolId;
+            self::$school = $urlSchool;
+            $_SESSION['school_id'] = $urlSchoolId;
+            return;
+        }
+
+        // Priority 2: Session (already logged in)
         if (isset($_SESSION['school_id'])) {
             $sid = (int)$_SESSION['school_id'];
             $school = self::findById($sid);
@@ -31,29 +73,6 @@ class Tenant {
                 unset($_SESSION['school_id']);
                 unset($_SESSION['user_id']);
                 if (session_status() === PHP_SESSION_ACTIVE) session_destroy();
-            }
-        }
-
-        // Priority 2: URL Slug (e.g., example.com/school1)
-        $uri = $_SERVER['REQUEST_URI'] ?? '';
-        $basePath = dirname($_SERVER['SCRIPT_NAME'] ?? '');
-        // Strip base path from URI
-        $relativeUri = ltrim(substr($uri, strlen($basePath)), '/');
-        $uriParts = explode('/', $relativeUri);
-        
-        if (!empty($uriParts[0])) {
-            $slug = explode('?', $uriParts[0])[0];
-            $slug = strtolower($slug);
-            // Skip common paths that are NOT school slugs
-            if (!in_array($slug, ['api', 'admin', 'assets', 'css', 'js', 'modules', 'api.php', 'index.html', 'install.php', 'register.html', 'welcome.html', 'favicon.ico'])) {
-                $school = self::findBySlug($slug);
-                if ($school) {
-                    self::$schoolId = (int)$school['id'];
-                    self::$school = $school;
-                    // Store in session for consistency
-                    $_SESSION['school_id'] = self::$schoolId;
-                    return;
-                }
             }
         }
 

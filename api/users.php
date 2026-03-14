@@ -8,7 +8,7 @@ function getUsers() {
     requireRole(['admin']);
     $sid = schoolId();
     // Fix #10: Use prepared statement instead of direct interpolation
-    $sql = "SELECT id, username, name, role, active, last_login, created_at FROM users WHERE active = 1";
+    $sql = "SELECT id, username, name, email, role, active, last_login, created_at FROM users WHERE active = 1";
     $params = [];
     if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
     $sql .= " ORDER BY id";
@@ -20,52 +20,94 @@ function getUsers() {
 function saveUser() {
     requireRole(['admin']);
     $data     = getPostData();
-    validateRequired($data, ['name', 'username', 'role']);
+    validateRequired($data, ['name', 'username', 'role', 'email']);
     $db       = getDB();
     $id       = $data['id'] ?? null;
     $name     = sanitize($data['name']);
     $username = sanitize($data['username']);
+    $email    = sanitize($data['email']);
     $role     = sanitize($data['role']);
     $password = $data['password'] ?? '';
     $sid      = schoolId();
     if (!in_array($role, ['admin', 'teacher', 'viewer', 'supervisor'])) jsonError('دور غير صالح');
 
-    // Fix #5: Allow each school admin to create admins within their own school ONLY
-    if ($role === 'admin' && $sid) {
-        // Platform admin (no school context) can create admins anywhere
-        // School admin can only create admins for their own school
-        if (isset($_SESSION['school_id']) && $_SESSION['school_id'] != $sid) {
-            jsonError('لا تملك صلاحية إنشاء مستخدم بدور مدير في مدرسة أخرى');
+    // Platform-wide Email Uniqueness check
+    $emailStmt = $db->prepare("SELECT id FROM users WHERE email = ?");
+    $emailStmt->execute([$email]);
+    $existingGlobalUser = $emailStmt->fetch();
+
+    if (!$id && $existingGlobalUser) {
+        // User already exists in the system (another school). 
+        // We link them to this school instead of creating a duplicate user record.
+        $db->prepare("INSERT IGNORE INTO user_school_access (user_id, school_id, role, is_primary) VALUES (?, ?, ?, 0)")
+           ->execute([$existingGlobalUser['id'], $sid, $role]);
+        logActivity('link_user', 'user', $existingGlobalUser['id'], "Linked to school: $sid");
+        jsonSuccess(['id' => (int)$existingGlobalUser['id']], 'تم العثور على المستخدم وربطه بالمدرسة بنجاح');
+        return;
+    }
+
+    if ($email && $existingGlobalUser && (int)$existingGlobalUser['id'] !== (int)$id) {
+        if ($id) {
+            // MERGE LOGIC: The admin is setting an email for an existing local account, 
+            // but this email already belongs to a global account.
+            // We migrate access to the global account and deactivate the local one.
+            $globalId = (int)$existingGlobalUser['id'];
+            $localId = (int)$id;
+
+            // 1. Transfer School Access
+            $db->prepare("INSERT IGNORE INTO user_school_access (user_id, school_id, role, is_primary) 
+                          SELECT ?, school_id, role, 0 FROM user_school_access WHERE user_id = ?")
+               ->execute([$globalId, $localId]);
+            
+            // Ensure the specific school being edited is also linked
+            $db->prepare("INSERT IGNORE INTO user_school_access (user_id, school_id, role, is_primary) VALUES (?, ?, ?, 0)")
+               ->execute([$globalId, $sid, $role]);
+
+            // 2. Transfer Teacher Assignments
+            $db->prepare("UPDATE teacher_assignments SET teacher_id = ? WHERE teacher_id = ?")->execute([$globalId, $localId]);
+
+            // 3. Deactivate local record
+            $db->prepare("UPDATE users SET active = 0, email = CONCAT(email, '_merged_', ?) WHERE id = ?")->execute([$localId, $localId]);
+            
+            logActivity('merge_user', 'user', $globalId, "Merged from local ID: $localId");
+            jsonSuccess(['id' => $globalId], 'تم دمج هذا الحساب مع الحساب العالمي الموجود مسبقاً بهذا البريد الإلكتروني');
+            return;
+        } else {
+            // New user but email exists -> Handled by the next block (Linking)
         }
     }
 
-    // Duplicate check scoped to school
+    // Duplicate check scoped to school for username
     $dupSql = "SELECT id FROM users WHERE username = ? AND id != ?";
     $dupParams = [$username, $id ?? 0];
     if ($sid) { $dupSql .= " AND school_id = ?"; $dupParams[] = $sid; }
     $stmt = $db->prepare($dupSql);
     $stmt->execute($dupParams);
-    if ($stmt->fetch()) jsonError('اسم المستخدم مستخدم بالفعل');
+    if ($stmt->fetch()) jsonError('اسم المستخدم مستخدم بالفعل في هذه المدرسة');
 
     if ($id) {
         // Security: Verify the user being edited belongs to the current school
         if ($sid) {
-            $ownerCheck = $db->prepare("SELECT id FROM users WHERE id = ? AND school_id = ?");
-            $ownerCheck->execute([$id, $sid]);
+            $ownerCheck = $db->prepare("SELECT id FROM users WHERE id = ? AND (school_id = ? OR id IN (SELECT user_id FROM user_school_access WHERE school_id = ?))");
+            $ownerCheck->execute([$id, $sid, $sid]);
             if (!$ownerCheck->fetch()) jsonError('لا تملك صلاحية تعديل هذا المستخدم', 403);
         }
         if (!empty($password)) {
             $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
-            $db->prepare("UPDATE users SET name=?, username=?, password=?, role=?, must_change_password = 0 WHERE id=?")->execute([$name, $username, $hash, $role, $id]);
+            $db->prepare("UPDATE users SET name=?, username=?, email=?, password=?, role=?, must_change_password = 0 WHERE id=?")->execute([$name, $username, $email, $hash, $role, $id]);
         } else {
-            $db->prepare("UPDATE users SET name=?, username=?, role=? WHERE id=?")->execute([$name, $username, $role, $id]);
+            $db->prepare("UPDATE users SET name=?, username=?, email=?, role=? WHERE id=?")->execute([$name, $username, $email, $role, $id]);
         }
     } else {
         Subscription::requireLimit('teachers');
         if (empty($password)) jsonError('كلمة المرور مطلوبة');
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
-        $db->prepare("INSERT INTO users (school_id, username, password, name, role, must_change_password) VALUES (?,?,?,?,?,1)")->execute([$sid, $username, $hash, $name, $role]);
+        $db->prepare("INSERT INTO users (school_id, username, email, password, name, role, must_change_password) VALUES (?,?,?,?,?,?,1)")->execute([$sid, $username, $email, $hash, $name, $role]);
         $id = $db->lastInsertId();
+
+        // Ensure primary school access record
+        $db->prepare("INSERT IGNORE INTO user_school_access (user_id, school_id, role, is_primary) VALUES (?, ?, ?, 1)")
+           ->execute([$id, $sid, $role]);
     }
     logActivity($id ? 'update' : 'create', 'user', $id, $name);
     jsonSuccess(['id' => (int)$id], 'تم حفظ المستخدم');
@@ -238,8 +280,15 @@ function updateMyProfile() {
         $_SESSION['user_name'] = $data['name'];
     }
     if (isset($data['email'])) {
+        $email = sanitize($data['email']);
+        // Verify unique if staff
+        if ($role !== 'parent' && $role !== 'student' && !empty($email)) {
+            $dup = $db->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $dup->execute([$email, $uid]);
+            if ($dup->fetch()) jsonError('البريد الإلكتروني مسجل لنظام مستخدم آخر');
+        }
         $fields[] = "email = ?";
-        $params[] = sanitize($data['email']);
+        $params[] = $email;
     }
     if (isset($data['phone'])) {
         $fields[] = "phone = ?";
@@ -396,4 +445,45 @@ function uploadProfilePhoto() {
     } else {
         jsonError('حدث خطأ أثناء حفظ الملف على الخادم.');
     }
+}
+
+/**
+ * Switch current school context for a user with multiple schools
+ */
+function switchSchool() {
+    requireLogin();
+    $data = getPostData();
+    $targetSchoolId = (int)($data['school_id'] ?? 0);
+    $userId = $_SESSION['user_id'] ?? 0;
+
+    if (!$targetSchoolId) jsonError('يجب تحديد المدرسة');
+
+    $db = getDB();
+    
+    // Verify user has access to this school
+    $stmt = $db->prepare("
+        SELECT usa.role, s.slug
+        FROM user_school_access usa
+        JOIN schools s ON s.id = usa.school_id
+        WHERE usa.user_id = ? AND usa.school_id = ? AND s.active = 1
+    ");
+    $stmt->execute([$userId, $targetSchoolId]);
+    $access = $stmt->fetch();
+
+    if (!$access) {
+        jsonError('ليس لديك صلاحية للدخول لهذه المدرسة');
+    }
+
+    // Update session
+    $_SESSION['school_id'] = $targetSchoolId;
+    $_SESSION['user_role'] = $access['role'];
+    Tenant::setId($targetSchoolId);
+
+    logActivity('switch_school', 'auth', $userId, "Switched to: " . $access['slug']);
+    
+    jsonSuccess([
+        'school_id' => $targetSchoolId,
+        'school_slug' => $access['slug'],
+        'role' => $access['role']
+    ], 'تم تبديل المدرسة بنجاح');
 }

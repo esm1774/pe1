@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PE Smart School System v3.0</title>
-    <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PE Smart">
@@ -30,13 +29,20 @@
                     basePath = '/' + parts[1] + '/';
                 }
             } else {
-                // Production: If we know the app is in a specific folder, we can detect it here
-                if (parts.length > 1 && parts[1] !== '' && !['default', 'school1', 'test', 'login', 'register'].includes(parts[1])) {
+                // Production: If we are in the root of the domain, basePath is /
+                // If the URL is domain.com/pe1/ (subfolder), parts[1] will be 'pe1'
+                // But we must be careful not to treat school slugs as folders.
+                // If there's only one part after domain (e.g. /abubakr/), it's likely a slug.
+                if (parts.length > 2 && parts[1] !== '' && !['default', 'school1', 'test', 'login', 'register'].includes(parts[1])) {
+                    // Only treat as folder if there's more than one level OR we know it's a folder
+                    // This is a safe heuristic for Hostinger root vs subfolder
                     basePath = '/' + parts[1] + '/';
                 }
+                // Default to / for production if not obviously a folder
             }
 
             document.write('<base href="' + basePath + '">');
+            document.write('<link rel="manifest" href="' + basePath + 'manifest.json">');
             window.APP_BASE = basePath; // Exposed for global use Reference
             console.log("📍 Base Path Detected:", basePath);
         })();
@@ -81,7 +87,7 @@
             document.documentElement.setAttribute('data-theme', saved);
         })();
     </script>
-    <link rel="stylesheet" href="css/style.css?v=3.2.1">
+    <link rel="stylesheet" href="css/style.css?v=3.2.2">
 </head>
 
 <body class="min-h-screen">
@@ -292,6 +298,13 @@
                             class="flex items-center gap-3 px-4 py-3 text-sm text-main hover:bg-primary-light hover:text-primary transition">
                             <span class="text-lg">👤</span> ملفي الشخصي (CV)
                         </a>
+                        <!-- Switch School Button -->
+                        <div id="switchSchoolMenuItem" class="hidden">
+                            <a href="javascript:void(0)" onclick="triggerSchoolSwitch();toggleUserDropdown()"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-main hover:bg-primary-light hover:text-primary transition font-bold">
+                                <span class="text-lg">🔄</span> تبديل المدرسة
+                            </a>
+                        </div>
                         <div class="border-t border-color my-1"></div>
                         <a href="javascript:void(0)" onclick="handleLogout()"
                             class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition font-bold">
@@ -538,33 +551,34 @@
     <!-- JAVASCRIPT FILES -->
     <!-- ============================================================ -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="js/common.js?v=3.2.1"></script>
-    <script src="js/dashboard.js?v=3.2.1"></script>
-    <script src="js/grades.js?v=3.2.1"></script>
-    <script src="js/students.js?v=3.2.1"></script>
-    <script src="js/attendance.js?v=3.2.1"></script>
-    <script src="js/assessments.js?v=3.2.1"></script>
-    <script src="js/fitness.js?v=3.2.1"></script>
-    <script src="js/competition.js?v=3.2.1"></script>
+    <script src="js/common.js?v=3.2.5"></script>
+    <script src="js/dashboard.js?v=3.2.3"></script>
+    <script src="js/grades.js?v=3.2.3"></script>
+    <script src="js/students.js?v=3.2.3"></script>
+    <script src="js/attendance.js?v=3.2.3"></script>
+    <script src="js/assessments.js?v=3.2.3"></script>
+    <script src="js/fitness.js?v=3.2.3"></script>
+    <script src="js/competition.js?v=3.2.3"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="js/reports.js?v=3.2.1"></script>
-    <script src="js/users.js?v=3.2.1"></script>
-    <script src="js/user_profile.js?v=3.2.1"></script>
-    <script src="js/profile.js?v=3.2.1"></script>
-    <script src="js/tournaments.js?v=3.2.1"></script>
-    <script src="js/live_match.js?v=3.2.1"></script>
-    <script src="js/sports_teams.js?v=3.2.1"></script>
-    <script src="js/student_dashboard.js?v=3.2.1"></script>
-    <script src="js/parent_dashboard.js?v=3.2.1"></script>
-    <script src="js/parents.js?v=3.2.1"></script>
-    <script src="js/notifications.js?v=3.2.1"></script>
-    <script src="js/badges_admin.js?v=3.2.1"></script>
-    <script src="js/calendar.js?v=3.2.1"></script>
-    <script src="js/analytics.js?v=3.2.1"></script>
-    <script src="js/audit_log.js?v=3.2.1"></script>
-    <script src="js/timetable.js?v=3.2.1"></script>
-    <script src="js/school_settings.js?v=3.2.1"></script>
-    <script src="js/subscription.js?v=3.2.1"></script>
+    <script src="js/pdf_builder.js?v=1.0.0"></script>
+    <script src="js/reports.js?v=3.2.3"></script>
+    <script src="js/users.js?v=3.2.3"></script>
+    <script src="js/user_profile.js?v=3.2.3"></script>
+    <script src="js/profile.js?v=3.2.3"></script>
+    <script src="js/tournaments.js?v=3.2.3"></script>
+    <script src="js/live_match.js?v=3.2.3"></script>
+    <script src="js/sports_teams.js?v=3.2.3"></script>
+    <script src="js/student_dashboard.js?v=3.2.3"></script>
+    <script src="js/parent_dashboard.js?v=3.2.3"></script>
+    <script src="js/parents.js?v=3.2.3"></script>
+    <script src="js/notifications.js?v=3.2.3"></script>
+    <script src="js/badges_admin.js?v=3.2.4"></script>
+    <script src="js/calendar.js?v=3.2.3"></script>
+    <script src="js/analytics.js?v=3.2.3"></script>
+    <script src="js/audit_log.js?v=3.2.3"></script>
+    <script src="js/timetable.js?v=3.2.3"></script>
+    <script src="js/school_settings.js?v=3.2.3"></script>
+    <script src="js/subscription.js?v=3.2.3"></script>
 
     <!-- Initialize app AFTER all scripts are loaded -->
     <script>
@@ -578,17 +592,23 @@
         // PWA Service Worker — Auto Update Detection
         // ============================================================
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(reg => {
-                // Check for updates every 60 seconds while page is open
-                setInterval(() => reg.update(), 60000);
+            // Need to wait until APP_BASE is defined
+            window.addEventListener('load', () => {
+                const swPath = window.APP_BASE + 'sw.js';
+                navigator.serviceWorker.register(swPath).then(reg => {
+                    // Check for updates every 60 seconds while page is open
+                    setInterval(() => reg.update(), 60000);
 
-                reg.addEventListener('updatefound', () => {
-                    const newWorker = reg.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            showUpdateBanner();
-                        }
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                showUpdateBanner();
+                            }
+                        });
                     });
+                }).catch(err => {
+                    console.error('Service Worker registration failed:', err);
                 });
             });
 

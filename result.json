@@ -1,0 +1,25 @@
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 99
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 100
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 101
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 102
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 105
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 108
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 111
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 112
+
+Warning: ini_set(): Session ini settings cannot be changed when a session is active in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 117
+
+Warning: Cannot modify header information - headers already sent by (output started at /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php:99) in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 139
+
+Warning: Cannot modify header information - headers already sent by (output started at /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php:99) in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 631
+
+Warning: Cannot modify header information - headers already sent by (output started at /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php:99) in /Applications/XAMPP/xamppfiles/htdocs/pe1/config.php on line 632
+{"success":true,"message":"تم تكوين وإرسال الـ PDF بنجاح عبر البريد الإلكتروني (وضع المطور).","data":{"email":"test@test.com"}}

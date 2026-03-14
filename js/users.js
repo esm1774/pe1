@@ -55,6 +55,7 @@ async function renderUsers() {
                         </td>
                         <td class="px-8 py-5">
                             <div class="text-sm font-black text-emerald-600">@${esc(u.username)}</div>
+                            ${u.email ? `<div class="text-[10px] text-gray-500 font-bold">${esc(u.email)}</div>` : ''}
                         </td>
                         <td class="px-8 py-5">
                             <span class="inline-flex px-4 py-1 rounded-full text-[10px] font-black uppercase border ${roleColors[u.role].replace('bg-', 'border-').replace('text-', 'text-')} ${roleColors[u.role]}">
@@ -71,6 +72,7 @@ async function renderUsers() {
                                     data-uid="${u.id}"
                                     data-uname="${esc(u.name)}"
                                     data-uusername="${esc(u.username)}"
+                                    data-uemail="${esc(u.email || '')}"
                                     data-urole="${u.role}"
                                     onclick="showUserFormFromBtn(this)"
                                     class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition" title="تعديل">✏️</button>
@@ -95,6 +97,7 @@ async function renderUsers() {
                         <div>
                             <h3 class="font-black text-gray-800 leading-tight">${esc(u.name)}</h3>
                             <p class="text-xs text-emerald-600 font-bold">@${esc(u.username)}</p>
+                            ${u.email ? `<p class="text-[9px] text-gray-400 font-bold mt-1">${esc(u.email)}</p>` : ''}
                         </div>
                     </div>
                     <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${roleColors[u.role]}">${roleNames[u.role].split(' ')[1]}</span>
@@ -111,9 +114,10 @@ async function renderUsers() {
                         data-uid="${u.id}"
                         data-uname="${esc(u.name)}"
                         data-uusername="${esc(u.username)}"
+                        data-uemail="${esc(u.email || '')}"
                         data-urole="${u.role}"
                         onclick="showUserFormFromBtn(this)"
-                        class="${u.role === 'teacher' ? 'w-14' : 'flex-1'} h-14 flex items-center justify-center bg-gray-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition">✏️</button>
+                        class="${u.role === 'teacher' ? 'w-14' : 'flex-1'} h-14 flex items-center justify-center bg-gray-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition">✏️</button>
                     ${u.id != 1 ? `
                         <button onclick="deleteUser(${u.id})" class="w-14 h-14 flex items-center justify-center bg-gray-50 text-red-600 rounded-2xl hover:bg-red-600 hover:text-white transition">🗑️</button>
                     ` : ''}
@@ -269,11 +273,12 @@ function showUserFormFromBtn(btn) {
     const id = parseInt(btn.dataset.uid) || null;
     const name = btn.dataset.uname || '';
     const username = btn.dataset.uusername || '';
+    const email = btn.dataset.uemail || '';
     const role = btn.dataset.urole || 'teacher';
-    showUserForm(id, name, username, role);
+    showUserForm(id, name, username, email, role);
 }
 
-function showUserForm(id = null, name = '', username = '', role = 'teacher') {
+function showUserForm(id = null, name = '', username = '', email = '', role = 'teacher') {
     showModal(`
         <div class="p-6">
             <h3 class="text-xl font-bold mb-4">${id ? 'تعديل' : 'إضافة'} مستخدم</h3>
@@ -284,11 +289,15 @@ function showUserForm(id = null, name = '', username = '', role = 'teacher') {
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">اسم المستخدم</label>
-                    <input type="text" id="userUsername" value="${username}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                    <input type="text" id="userUsername" value="${username}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">البريد الإلكتروني</label>
+                    <input type="email" id="userEmail" value="${email}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" dir="ltr" placeholder="example@email.com">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">${id ? 'كلمة مرور جديدة (اختياري)' : 'كلمة المرور'}</label>
-                    <input type="password" id="userPassword" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                    <input type="password" id="userPassword" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" dir="ltr">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">الدور</label>
@@ -313,12 +322,13 @@ async function saveUser(id) {
         id,
         name: document.getElementById('userName').value.trim(),
         username: document.getElementById('userUsername').value.trim(),
+        email: document.getElementById('userEmail').value.trim(),
         password: document.getElementById('userPassword').value,
         role: document.getElementById('userRole').value
     };
 
-    if (!data.name || !data.username) {
-        showToast('أكمل الحقول', 'error');
+    if (!data.name || !data.username || !data.email) {
+        showToast('أكمل الحقول (الاسم، اسم المستخدم، البريد الإلكتروني)', 'error');
         return;
     }
 
