@@ -29,11 +29,11 @@ class Subscription {
 
             // Active subscription
             if ($status === 'active') {
-                // If it hasn't started yet, it is not active
-                if ($school['subscription_starts_at'] && $school['subscription_starts_at'] > $today) return false;
+                // If starts_at is set and in the future, it is not active yet
+                if (!empty($school['subscription_starts_at']) && $school['subscription_starts_at'] > $today) return false;
                 
-                // If it is already expired
-                if ($school['subscription_ends_at'] && $school['subscription_ends_at'] < $today) {
+                // If ends_at is set and in the past, it is expired
+                if (!empty($school['subscription_ends_at']) && $school['subscription_ends_at'] < $today) {
                     self::suspend($schoolId, 'انتهت صلاحية الاشتراك تلقائياً');
                     return false;
                 }
@@ -257,7 +257,8 @@ class Subscription {
                 $now = new DateTime();
                 if ($end > $now) {
                     $diff = $now->diff($end);
-                    $info['days_left'] = $diff->days;
+                    $info['days_left'] = (int)$diff->format('%a'); // Use %a for total days difference
+                    if ($info['days_left'] == 0 && $end > $now) $info['days_left'] = 1; // At least 1 day if not yet expired today
                 }
             }
 
@@ -290,19 +291,49 @@ class Subscription {
     }
 
     /**
-     * Activate a school subscription
+     * Activate a school subscription with full parameters
      */
-    public static function activate(int $schoolId, int $planId, string $endsAt): void {
+    public static function activate(int $schoolId, ?int $planId, ?string $endsAt, ?string $startsAt = null, ?array $features = null, ?array $limits = null): void {
         try {
             $db = getDB();
-            $db->prepare("
-                UPDATE schools 
-                SET subscription_status = 'active', 
-                    plan_id = ?,
-                    subscription_ends_at = ?,
-                    updated_at = NOW() 
-                WHERE id = ?
-            ")->execute([$planId, $endsAt, $schoolId]);
+            
+            $sql = "UPDATE schools SET 
+                    subscription_status = 'active', 
+                    active = 1,
+                    updated_at = NOW()";
+            $params = [];
+
+            if ($planId !== null) {
+                $sql .= ", plan_id = ?";
+                $params[] = $planId;
+            }
+            if ($endsAt !== null && $endsAt !== '') {
+                $sql .= ", subscription_ends_at = ?";
+                $params[] = $endsAt;
+            } else {
+                // If activating without an end date, default to +30 days from starts_at or now
+                $base = (!empty($startsAt) && $startsAt !== '') ? $startsAt : date('Y-m-d');
+                $sql .= ", subscription_ends_at = ?";
+                $params[] = date('Y-m-d', strtotime($base . ' +30 days'));
+            }
+            if ($startsAt !== null) {
+                $sql .= ", subscription_starts_at = ?";
+                $params[] = $startsAt;
+            }
+            if ($features !== null) {
+                $sql .= ", features = ?";
+                $params[] = json_encode($features, JSON_UNESCAPED_UNICODE);
+            }
+            if ($limits !== null) {
+                if (isset($limits['max_students'])) { $sql .= ", max_students = ?"; $params[] = $limits['max_students']; }
+                if (isset($limits['max_teachers'])) { $sql .= ", max_teachers = ?"; $params[] = $limits['max_teachers']; }
+                if (isset($limits['max_classes']))  { $sql .= ", max_classes = ?";  $params[] = $limits['max_classes']; }
+            }
+
+            $sql .= " WHERE id = ?";
+            $params[] = $schoolId;
+
+            $db->prepare($sql)->execute($params);
         } catch (Exception $e) {
             // Silent
         }
@@ -318,6 +349,7 @@ class Subscription {
             $db->prepare("
                 UPDATE schools 
                 SET subscription_status = 'trial', 
+                    active = 1,
                     trial_ends_at = ?,
                     updated_at = NOW() 
                 WHERE id = ?

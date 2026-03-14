@@ -16,7 +16,11 @@ if (Tenant::isSaasMode() && !Tenant::isPlatformAdmin()) {
     $school = Tenant::school();
     if ($school && $school['active'] == 0) {
         http_response_code(403);
-        die(json_encode(['success' => false, 'error' => 'هذا الحساب معطل حالياً، يرجى مراجعة مدير المنصة']));
+        $msg = 'هذا الحساب معطل حالياً، يرجى مراجعة مدير المنصة';
+        if ($school['subscription_status'] === 'pending_payment') {
+            $msg = 'حسابك بانتظار تفعيل الاشتراك. يرجى إرسال إيصال الدفع عبر الواتساب للتفعيل.';
+        }
+        die(json_encode(['success' => false, 'error' => $msg]));
     }
 }
 
@@ -262,11 +266,9 @@ function registerSchool() {
     $data = getPostData();
     validateRequired($data, ['name', 'slug', 'admin_username', 'admin_password']);
     
-    // Fix: Enforce minimum password strength
-    $adminPass = $data['admin_password'];
-    if (strlen($adminPass) < 8) {
-        jsonError('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
-    }
+    // Enforce strong password criteria
+    $pwCheck = validatePasswordStrength($data['admin_password']);
+    if ($pwCheck !== true) jsonError($pwCheck);
 
     $db = getDB();
     $name = sanitize($data['name']);
@@ -287,20 +289,25 @@ function registerSchool() {
 
     $db->beginTransaction();
     try {
-        // Find plan limits
-        $maxStudents = 100; $maxTeachers = 5;
+        // Find plan limits and price
+        $maxStudents = 100; $maxTeachers = 5; $isPaid = false;
         if ($planId) {
-            $p = $db->prepare("SELECT max_students, max_teachers FROM plans WHERE id = ?");
+            $p = $db->prepare("SELECT max_students, max_teachers, price_monthly FROM plans WHERE id = ?");
             $p->execute([$planId]);
             $plan = $p->fetch();
             if ($plan) {
                 $maxStudents = (int)$plan['max_students'];
                 $maxTeachers = (int)$plan['max_teachers'];
+                $isPaid = ((float)$plan['price_monthly'] > 0);
             }
         }
 
-        $stmt = $db->prepare("INSERT INTO schools (name, slug, email, plan_id, max_students, max_teachers, subscription_status, trial_ends_at) VALUES (?,?,?,?,?,?,'trial',?)");
-        $stmt->execute([$name, $slug, $adminEmail, $planId, $maxStudents, $maxTeachers, date('Y-m-d', strtotime('+14 days'))]);
+        $subscriptionStatus = $isPaid ? 'pending_payment' : 'trial';
+        $active = $isPaid ? 0 : 1; // Paid plans start as inactive until confirmed
+        $trialEnds = $isPaid ? null : date('Y-m-d', strtotime('+14 days'));
+
+        $stmt = $db->prepare("INSERT INTO schools (name, slug, email, plan_id, max_students, max_teachers, subscription_status, active, trial_ends_at) VALUES (?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([$name, $slug, $adminEmail, $planId, $maxStudents, $maxTeachers, $subscriptionStatus, $active, $trialEnds]);
         $schoolId = $db->lastInsertId();
 
         // Create Admin User
@@ -313,7 +320,18 @@ function registerSchool() {
         $db->prepare("INSERT INTO grades (school_id, name, code, sort_order) VALUES (?,?,?,?)")->execute([$schoolId, 'الصف الثاني', '2', 2]);
 
         $db->commit();
-        jsonSuccess(['slug' => $slug], 'تم تسجيل مدرستك بنجاح!');
+        if ($isPaid) {
+            $paymentInfo = [
+                'bank'     => getPlatformSetting('payment_bank', PAYMENT_BANK_NAME),
+                'iban'     => getPlatformSetting('payment_iban', PAYMENT_IBAN),
+                'holder'   => getPlatformSetting('payment_holder', PAYMENT_HOLDER),
+                'stc_pay'  => getPlatformSetting('payment_stc_pay', PAYMENT_STC_PAY),
+                'whatsapp' => getPlatformSetting('payment_whatsapp', PAYMENT_WHATSAPP)
+            ];
+            jsonSuccess(['slug' => $slug, 'isPaid' => true, 'paymentInfo' => $paymentInfo], 'تم تسجيل طلبك بنجاح! يرجى إكمال عملية الدفع التفعيل.');
+        } else {
+            jsonSuccess(['slug' => $slug, 'isPaid' => false], 'تم تسجيل مدرستك بنجاح!');
+        }
     } catch (Exception $e) {
         $db->rollBack();
         jsonError('خطأ أثناء الإنشاء: ' . $e->getMessage());

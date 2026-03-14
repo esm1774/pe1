@@ -57,6 +57,15 @@ define('MAIL_FROM_NAME',  APP_NAME);         // اسم المُرسِل
 
 
 // ============================================================
+// PAYMENT SETTINGS - إعدادات الدفع
+// ============================================================
+define('PAYMENT_BANK_NAME', 'Bank Al-Rajhi');
+define('PAYMENT_IBAN',      'SA00 0000 0000 0000 0000 0000');
+define('PAYMENT_HOLDER',    'PE Smart School Est.');
+define('PAYMENT_STC_PAY',   '0500000000');
+define('PAYMENT_WHATSAPP',  '966500000000'); // International format without +
+
+// ============================================================
 // SECURITY SETTINGS - إعدادات الأمان
 // ============================================================
 define('HASH_COST', 12); // bcrypt cost factor
@@ -663,6 +672,19 @@ function jsonSuccess($data = null, $message = 'تمت العملية بنجاح'
     $response = ['success' => true, 'message' => $message];
     if ($data !== null) $response['data'] = $data;
     jsonResponse($response);
+}
+
+/**
+ * Check password strength
+ * Returns true if strong, or an error message string if weak
+ */
+function validatePasswordStrength($password) {
+    if (strlen($password) < 8) return 'كلمة المرور يجب أن لا تقل عن 8 أحرف';
+    if (!preg_match('/[A-Z]/', $password)) return 'يجب أن تحتوي على حرف كبير واحد على الأقل (A-Z)';
+    if (!preg_match('/[a-z]/', $password)) return 'يجب أن تحتوي على حرف صغير واحد على الأقل (a-z)';
+    if (!preg_match('/[0-9]/', $password)) return 'يجب أن تحتوي على رقم واحد على الأقل (0-9)';
+    if (!preg_match('/[\W]/', $password)) return 'يجب أن تحتوي على رمز خاص واحد على الأقل (مثل @#$%)';
+    return true;
 }
 
 /**

@@ -4,7 +4,7 @@
  */
 
 // SaaS/Localhost: Auto-detect project root
-window.APP_BASE = (function () {
+window.APP_BASE = window.APP_BASE || (function () {
     // 1. Check for <base> tag (highest priority)
     const baseTag = document.querySelector('base');
     if (baseTag && baseTag.href) {
@@ -417,7 +417,7 @@ async function exitImpersonation() {
     try {
         const r = await API.post('exit_impersonation');
         if (r && r.success) {
-            window.location.href = '../admin/';
+            window.location.href = window.APP_BASE + 'admin/';
         } else {
             showToast(r?.error || 'فشل الخروج من الإشراف', 'error');
         }

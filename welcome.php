@@ -172,9 +172,42 @@ function esc($str) {
                 <a href="register.html"
                     class="px-6 py-2.5 text-sm font-black text-white emerald-gradient rounded-full shadow-lg shadow-emerald-500/30 transform transition-transform hover:scale-105">تأسيس
                     مدرستك</a>
+                
+                <!-- Mobile Toggle -->
+                <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-full transition-all">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
             </div>
         </nav>
     </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenu" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="toggleMobileMenu()"></div>
+        <div id="mobileMenuPanel" class="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col p-8 transform transition-transform duration-500 translate-x-full">
+            <div class="flex items-center justify-between mb-10">
+                <span class="text-xl font-black text-emerald-600">القائمة</span>
+                <button onclick="toggleMobileMenu()" class="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 rounded-xl hover:text-rose-500 transition-all">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <nav class="flex flex-col gap-6 font-bold text-slate-600 text-right">
+                <a href="#features" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المقومات الشاملة</a>
+                <a href="#analytics" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">التحليلات والصحة</a>
+                <a href="#tournaments" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">محرك البطولات</a>
+                <a href="#blog" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المدونة</a>
+                <a href="#faq" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">أسئلة شائعة</a>
+                <a href="#pricing" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">الأسعار</a>
+                <hr class="border-slate-100 my-4">
+                <a href="index.html" class="flex items-center justify-end gap-3 text-emerald-600">
+                    تسجيل الدخول <i data-lucide="log-in" class="w-5 h-5"></i>
+                </a>
+                <a href="register.html" class="emerald-gradient text-white py-3 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4">
+                    تأسيس مدرستك
+                </a>
+            </nav>
+        </div>
+    </div>
 
     <!-- Hero Section -->
     <section class="relative pt-40 pb-32 px-4 overflow-hidden hero-bg min-h-screen flex items-center">
@@ -975,6 +1008,27 @@ function esc($str) {
     <!-- Init -->
     <script>
         lucide.createIcons();
+
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const panel = document.getElementById('mobileMenuPanel');
+            const isOpen = !menu.classList.contains('hidden');
+
+            if (isOpen) {
+                panel.classList.add('translate-x-full');
+                setTimeout(() => {
+                    menu.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }, 500);
+            } else {
+                menu.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                setTimeout(() => {
+                    panel.classList.remove('translate-x-full');
+                }, 10);
+            }
+        }
 
         // Reveal Animation Observer
         const revealCb = (entries) => {

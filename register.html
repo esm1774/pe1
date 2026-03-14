@@ -165,8 +165,8 @@
 
             <div style="text-align:center; padding-bottom:100px">
                 <div id="errorMsg" class="login-error hidden"></div>
-                <button onclick="submitRegistration()" class="btn btn-primary" style="max-width:300px">
-                    🚀 اتمام التسجيل وبدء الفترة التجريبية
+                <button id="submitBtn" onclick="submitRegistration()" class="btn btn-primary" style="max-width:300px">
+                    🚀 إتمام التسجيل وبدء الفترة التجريبية
                 </button>
                 <p style="margin-top:16px; font-size:13px; color:var(--text-secondary)">
                     بالضغط على تسجيل، أنت توافق على شروط الخدمة وسياسة الخصوصية
@@ -174,25 +174,40 @@
             </div>
         </div>
 
-        <div id="successState" class="success-state hidden">
+        <div id="paymentState" class="success-state hidden">
             <div class="panel">
+                <div class="panel-header" style="background:var(--accent-amber); color:#fff">
+                    <h3>💳 بانتظار تفعيل الاشتراك والدفع</h3>
+                </div>
                 <div class="panel-body">
-                    <div style="font-size:64px; margin-bottom:24px">🎉</div>
-                    <h2 style="margin-bottom:16px">تهانينا! تم إنشاء حساب مدرستك بنجاح</h2>
+                    <div style="font-size:64px; margin-bottom:24px">📬</div>
+                    <h2 style="margin-bottom:16px">تم تسجيل طلبك بنجاح</h2>
                     <p style="color:var(--text-secondary); margin-bottom:32px">
-                        يمكنك الآن تسجيل الدخول باستخدام الرابط الخاص بك:
-                        <br><br>
-                        <a id="schoolLink" href="#"
-                            style="color:var(--accent-emerald); font-weight:700; font-size:20px; text-decoration:none"></a>
+                        حسابك جاهز تقريباً! بما أنك اخترت باقة مدفوعة، يرجى إتمام عملية التحويل وتزويدنا بإيصال الدفع
+                        للتفعيل الفوري.
                     </p>
+
                     <div
-                        style="background:var(--bg-glass); padding:20px; border-radius:var(--radius-md); text-align:right; margin-bottom:32px">
-                        <h4 style="margin-bottom:12px">بيانات الدخول:</h4>
-                        <p>اسم المستخدم: <strong id="dispUsername"></strong></p>
-                        <p>كلمة المرور: <strong>المختارة مسبقاً</strong></p>
+                        style="background:var(--bg-glass); padding:24px; border-radius:var(--radius-md); text-align:right; margin-bottom:32px; border:1px solid var(--border-glass)">
+                        <h4 style="margin-bottom:16px; color:var(--accent-emerald)">بيانات التحويل البنكي:</h4>
+                        <p style="margin-bottom:8px">البنك: <strong id="payBank"></strong></p>
+                        <p style="margin-bottom:8px">الآيبان (IBAN): <strong id="payIban" dir="ltr"></strong></p>
+                        <p style="margin-bottom:8px">المستفيد: <strong id="payHolder"></strong></p>
+                        <hr style="margin:16px 0; border:0; border-top:1px solid var(--border-glass)">
+                        <p>رقم STC Pay: <strong id="payStc"></strong></p>
                     </div>
-                    <button onclick="goToSchool()" class="btn btn-primary" style="max-width:260px">🚀 انتقل إلى لوحة
-                        التحكم</button>
+
+                    <p style="font-size:14px; color:var(--text-secondary); margin-bottom:20px">بعد التحويل، يرجى الضغط
+                        على الزر أدناه لإرسال الإيصال عبر الواتساب:</p>
+
+                    <a id="whatsappBtn" href="#" target="_blank" class="btn btn-primary"
+                        style="background:#25D366; border-color:#25D366; max-width:320px; display:inline-flex; align-items:center; justify-content:center; gap:10px">
+                        <svg style="width:20px; height:20px; fill:currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M12.031 6.172c-2.32 0-4.591.906-6.233 2.548s-2.548 3.913-2.548 6.233c0 1.252.274 2.455.786 3.53l-.868 3.176 3.246-.851c1.035.539 2.193.823 3.38.823 2.32 0 4.591-.906 6.233-2.548s2.548-3.913 2.548-6.233c0-4.847-3.945-8.793-8.794-8.793zm4.942 12.339c-.198.558-1.558 1.056-2.147 1.121-.59.065-1.168.32-3.877-.775-3.264-1.321-5.384-4.636-5.548-4.854-.164-.218-1.332-1.771-1.332-3.375 0-1.604.836-2.394 1.131-2.721.295-.327.656-.409.873-.409.217 0 .434.004.623.013.195.008.455-.074.713.547.266.643.91 2.219.988 2.379.078.16.131.347.026.556-.105.209-.158.34-.311.516-.153.176-.321.393-.458.527-.153.149-.313.313-.135.619.178.306.791 1.306 1.697 2.112.167.148.812.8 1.488 1.121.64.305 1.033.455 1.408.455.375 0 .713-.158.988-.455.275-.298 1.131-1.317 1.432-1.765.301-.448.602-.375.988-.225.4.15 2.536 1.196 2.97 1.413.434.217.723.327.828.516.105.189.105 1.096-.093 1.654z" />
+                        </svg>
+                        إرسال إيصال الدفع عبر واتساب
+                    </a>
                 </div>
             </div>
         </div>
@@ -217,7 +232,7 @@
                 }
 
                 container.innerHTML = plans.map(p => `
-                <div class="plan-card ${p.slug === 'basic' ? 'selected' : ''}" onclick="selectPlan(${p.id}, this)">
+                <div class="plan-card ${p.slug === 'basic' ? 'selected' : ''}" onclick="selectPlan(${p.id}, this, ${p.price_monthly})">
                     <h4>${p.name}</h4>
                     <div class="price">${p.price_monthly > 0 ? p.price_monthly + ' ر.س' : 'مجاني'}</div>
                     <ul>
@@ -229,16 +244,30 @@
             `).join('');
 
                 const defaultPlan = plans.find(p => p.slug === 'basic') || plans[0];
-                if (defaultPlan) selectedPlanId = defaultPlan.id;
+                if (defaultPlan) {
+                    selectedPlanId = defaultPlan.id;
+                    updateSubmitButtonText(defaultPlan.price_monthly);
+                }
             } catch (e) {
                 console.error(e);
             }
         }
 
-        function selectPlan(id, el) {
+        function selectPlan(id, el, price) {
             selectedPlanId = id;
             document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
+            updateSubmitButtonText(price);
+        }
+
+        function updateSubmitButtonText(price) {
+            const btn = document.getElementById('submitBtn');
+            const isPaid = parseFloat(price) > 0;
+            if (isPaid) {
+                btn.innerHTML = '🚀 إتمام التسجيل وطلب التفعيل';
+            } else {
+                btn.innerHTML = '🚀 إتمام التسجيل وبدء الفترة التجريبية';
+            }
         }
 
         async function submitRegistration() {
@@ -272,15 +301,31 @@
 
                 if (res.success) {
                     createdSlug = data.slug;
-                    document.getElementById('registerForm').classList.add('hidden');
-                    document.getElementById('successState').classList.remove('hidden');
-
-                    const link = window.location.origin + window.location.pathname.replace('register.html', '') + '?school=' + data.slug;
-                    const linkEl = document.getElementById('schoolLink');
-                    linkEl.href = link;
-                    linkEl.textContent = link;
-                    document.getElementById('dispUsername').textContent = data.admin_username;
                     window.scrollTo(0, 0);
+
+                    if (res.data.isPaid) {
+                        const pi = res.data.paymentInfo;
+                        document.getElementById('registerForm').classList.add('hidden');
+                        document.getElementById('paymentState').classList.remove('hidden');
+
+                        document.getElementById('payBank').textContent = pi.bank;
+                        document.getElementById('payIban').textContent = pi.iban;
+                        document.getElementById('payHolder').textContent = pi.holder;
+                        document.getElementById('payStc').textContent = pi.stc_pay;
+
+                        // WhatsApp link
+                        const waMsg = encodeURIComponent(`مرحباً، قمت بتسجيل مدرسة (${data.name}) وحولت مبلغ الاشتراك لـ (باقة ${selectedPlanId})، مرفق لكم إيصال الدفع للتفعيل.\nالمعرف: ${data.slug}`);
+                        document.getElementById('whatsappBtn').href = `https://wa.me/${pi.whatsapp}?text=${waMsg}`;
+                    } else {
+                        document.getElementById('registerForm').classList.add('hidden');
+                        document.getElementById('successState').classList.remove('hidden');
+
+                        const link = window.location.origin + window.location.pathname.replace('register.html', '') + '?school=' + data.slug;
+                        const linkEl = document.getElementById('schoolLink');
+                        linkEl.href = link;
+                        linkEl.textContent = link;
+                        document.getElementById('dispUsername').textContent = data.admin_username;
+                    }
                 } else {
                     errorEl.textContent = res.error || 'حدث خطأ أثناء التسجيل';
                     errorEl.classList.remove('hidden');

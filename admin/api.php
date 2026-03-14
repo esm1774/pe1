@@ -146,17 +146,33 @@ function updateSchoolSubscription() {
     $id = (int)($data['id'] ?? 0);
     $status = sanitize($data['status'] ?? '');
     $planId = !empty($data['plan_id']) ? (int)$data['plan_id'] : null;
-    $endsAt = sanitize($data['ends_at'] ?? '');
+    $startsAt = !empty($data['starts_at']) ? sanitize($data['starts_at']) : null;
+    $endsAt = !empty($data['ends_at']) ? sanitize($data['ends_at']) : null;
+    $features = $data['features'] ?? null;
+    $notes = isset($data['subscription_notes']) ? sanitize($data['subscription_notes']) : null;
+    
+    $limits = [
+        'max_students' => !empty($data['max_students']) ? (int)$data['max_students'] : null,
+        'max_teachers' => !empty($data['max_teachers']) ? (int)$data['max_teachers'] : null,
+        'max_classes'  => !empty($data['max_classes'])  ? (int)$data['max_classes']  : null,
+    ];
 
     if (!$id) jsonError('معرف غير صالح');
 
     $db = getDB();
+
+    // If notes provided, update them separately or via activate
+    if ($notes !== null) {
+        $db->prepare("UPDATE schools SET subscription_notes = ? WHERE id = ?")->execute([$notes, $id]);
+    }
+
     if ($status === 'active') {
-        Subscription::activate($id, $planId, $endsAt);
+        Subscription::activate($id, $planId, $endsAt, $startsAt, $features, $limits);
     } elseif ($status === 'suspended') {
         Subscription::suspend($id);
     } elseif ($status === 'trial') {
-        Subscription::startTrial($id, 14);
+        $days = !empty($data['trial_days']) ? (int)$data['trial_days'] : 14;
+        Subscription::startTrial($id, $days);
     }
 
     jsonSuccess(null, 'تم تحديث حالة الاشتراك');
@@ -222,82 +238,7 @@ function deletePlan() {
     jsonSuccess(null, 'تم مسح الخطة');
 }
 
-function updateSchoolSubscriptionFull() {
-    requirePlatformAdmin();
-    $data = getPostData();
-    $id = (int)($data['id'] ?? 0);
-    if (!$id) jsonError('معرف غير صالح');
-
-    $db         = getDB();
-    $status     = sanitize($data['status'] ?? '');
-    $planId     = !empty($data['plan_id']) ? (int)$data['plan_id'] : null;
-    $startsAt   = sanitize($data['starts_at'] ?? '');
-    $endsAt     = sanitize($data['ends_at'] ?? '');
-    $trialDays  = (int)($data['trial_days'] ?? 14);
-    $maxStudents= !empty($data['max_students']) ? (int)$data['max_students'] : null;
-    $maxTeachers= !empty($data['max_teachers']) ? (int)$data['max_teachers'] : null;
-    $maxClasses = !empty($data['max_classes'])  ? (int)$data['max_classes']  : null;
-    $notes      = sanitize($data['subscription_notes'] ?? '');
-    $features   = $data['features'] ?? null;
-
-    if (is_array($features)) {
-        $features = json_encode($features, JSON_UNESCAPED_UNICODE);
-    }
-
-    // Prepare update parameters
-    // We update subscription_starts_at always if sent, even if empty (sets to NULL)
-    $updateData = [
-        'subscription_status' => $status,
-        'subscription_notes'  => $notes,
-        'subscription_starts_at' => !empty($startsAt) ? $startsAt : null,
-        'max_students'        => $maxStudents,
-        'max_teachers'        => $maxTeachers,
-        'max_classes'         => $maxClasses,
-        'features'            => $features
-    ];
-
-    if ($planId !== null) {
-        $updateData['plan_id'] = $planId;
-    }
-
-    // Fix: Only update dates when explicitly provided or when switching status to trial
-    // Previously this was recalculating trial_ends_at = today+14 on EVERY save,
-    // causing the trial countdown to reset and never expire.
-    if ($status === 'trial') {
-        if (!empty($endsAt)) {
-            // Admin explicitly set a specific end date → save it
-            $updateData['trial_ends_at'] = $endsAt;
-        } else {
-            // Check current status: only auto-set +N days if switching INTO trial (new trial)
-            $curStmt = $db->prepare("SELECT subscription_status, trial_ends_at FROM schools WHERE id = ?");
-            $curStmt->execute([$id]);
-            $current = $curStmt->fetch();
-            if ($current && $current['subscription_status'] !== 'trial') {
-                // School was NOT on trial before → start a fresh trial countdown
-                $updateData['trial_ends_at'] = date('Y-m-d', strtotime("+{$trialDays} days"));
-            }
-            // If already on trial → do NOT touch trial_ends_at (preserve original expiry)
-        }
-    } else {
-        if (!empty($endsAt)) {
-            $updateData['subscription_ends_at'] = $endsAt;
-        }
-    }
-
-    // Build query
-    $sets = [];
-    $params = [];
-    foreach ($updateData as $col => $val) {
-        $sets[] = "$col = ?";
-        $params[] = $val;
-    }
-    $params[] = $id;
-
-    $sql = "UPDATE schools SET " . implode(", ", $sets) . " WHERE id = ?";
-    $db->prepare($sql)->execute($params);
-
-    jsonSuccess(null, 'تم تحديث بيانات الاشتراك والميزات للمدرسة بنجاح');
-}
+// Consolidated: updateSchoolSubscriptionFull now points to updateSchoolSubscription or we just point the router
 
 // ============================================================
 // PLATFORM ANALYTICS
@@ -528,7 +469,7 @@ try {
         case 'school_save':       saveSchool(); break;
         case 'school_toggle':     toggleSchool(); break;
         case 'school_delete':     deleteSchool(); break;
-        case 'school_subscription': updateSchoolSubscriptionFull(); break;
+        case 'school_subscription': updateSchoolSubscription(); break;
         case 'plans':             getPlans(); break;
         case 'plan_save':         savePlan(); break;
         case 'plan_delete':       deletePlan(); break;
@@ -541,8 +482,8 @@ try {
         case 'announcement_delete': deleteAnnouncement(); break;
         case 'global_audit_logs':    getGlobalAuditLogs(); break;
         case 'advanced_analytics':   getAdvancedAnalytics(); break;
-        case 'maintenance_get':      getMaintenanceSettings(); break;
-        case 'maintenance_save':     saveMaintenanceSettings(); break;
+        case 'maintenance_get':      getPlatformSettingsExtended(); break;
+        case 'maintenance_save':     savePlatformSettingsExtended(); break;
         case 'export_subscribers':   exportSubscribers(); break;
         case 'system_health':        getPlatformHealth(); break;
         case 'blocked_accounts':     getBlockedAccounts(); break;
@@ -600,6 +541,44 @@ function saveMaintenanceSettings() {
     }
 
     logActivity('update', 'platform_settings', 0, 'تم تحديث إعدادات وضع الصيانة');
+    jsonSuccess(null, 'تم حفظ الإعدادات بنجاح');
+}
+
+function getPlatformSettingsExtended() {
+    requirePlatformAdmin();
+    jsonSuccess([
+        'payment_bank'     => getPlatformSetting('payment_bank', PAYMENT_BANK_NAME),
+        'payment_iban'     => getPlatformSetting('payment_iban', PAYMENT_IBAN),
+        'payment_holder'   => getPlatformSetting('payment_holder', PAYMENT_HOLDER),
+        'payment_stc_pay'  => getPlatformSetting('payment_stc_pay', PAYMENT_STC_PAY),
+        'payment_whatsapp' => getPlatformSetting('payment_whatsapp', PAYMENT_WHATSAPP),
+        'maintenance_mode' => getPlatformSetting('maintenance_mode', '0'),
+        'maintenance_message' => getPlatformSetting('maintenance_message', ''),
+        'maintenance_until' => getPlatformSetting('maintenance_until', '')
+    ]);
+}
+
+function savePlatformSettingsExtended() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $db = getDB();
+
+    $settings = [];
+    $fields = ['payment_bank', 'payment_iban', 'payment_holder', 'payment_stc_pay', 'payment_whatsapp', 'maintenance_mode', 'maintenance_message', 'maintenance_until'];
+    
+    foreach ($fields as $field) {
+        if (isset($data[$field])) {
+            $val = ($field === 'maintenance_mode') ? (string)$data[$field] : sanitize($data[$field]);
+            $settings[$field] = $val;
+        }
+    }
+
+    foreach ($settings as $key => $val) {
+        $db->prepare("INSERT INTO platform_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?")
+           ->execute([$key, $val, $val]);
+    }
+
+    logActivity('update', 'platform_settings', 0, 'تم تحديث إعدادات المنصة');
     jsonSuccess(null, 'تم حفظ الإعدادات بنجاح');
 }
 

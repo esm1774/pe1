@@ -1064,6 +1064,11 @@ async function openSubModal(schoolId) {
             <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
         </div>
     `, 'lg');
+
+    // Auto-calculate if active and endsAt is empty
+    if (school.subscription_status === 'active' && !school.subscription_ends_at) {
+        recalculateExpiry();
+    }
 }
 
 async function updateSubscription(schoolId) {
@@ -1123,9 +1128,9 @@ function recalculateExpiry() {
     } else if (status === 'active') {
         const period = document.getElementById('subPeriod')?.value;
         if (period === 'monthly') {
-            date.setMonth(date.getMonth() + 1);
+            date.setDate(date.getDate() + 30);
         } else if (period === 'yearly') {
-            date.setFullYear(date.getFullYear() + 1);
+            date.setDate(date.getDate() + 365);
         }
     } else {
         // Suspended or cancelled - usually don't touch or clear
@@ -1527,53 +1532,90 @@ async function renderPlatformSettings() {
     mc.innerHTML = `
         <div class="page-header">
             <h1>⚙️ إعدادات المنصة العامة</h1>
-            <p>التحكم في حالة المنصة، وضع الصيانة، والرسائل التحذيرية العامة.</p>
+            <p>التحكم في بيانات الدفع، حالة المنصة، ووضع الصيانة.</p>
         </div>
 
-        <div class="panel" style="max-width: 800px;">
-            <div class="panel-header"><h3>🛠️ وضع الصيانة (Maintenance Mode)</h3></div>
-            <div class="p-6">
-                <div class="form-group mb-6">
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="maintMode" ${s.mode === '1' ? 'checked' : ''} style="width:20px; height:20px">
-                        <span style="font-weight:700; font-size:1.1rem">تفعيل وضع الصيانة</span>
-                    </label>
-                    <p class="text-muted mt-2">عند التفعيل، لن يتمكن مدراء المدارس والمعلمون من الدخول، وستظهر لهم صفحة الصيانة.</p>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Payment Info -->
+            <div class="panel">
+                <div class="panel-header"><h3>💳 بيانات تحويل الاشتراك (Payment Info)</h3></div>
+                <div class="p-6">
+                    <div class="form-group mb-4">
+                        <label>إسم البنك</label>
+                        <input type="text" id="payBank" class="form-input" placeholder="مثال: مصرف الراجحي" value="${esc(s.payment_bank || '')}">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>رقم الآيبان (IBAN)</label>
+                        <input type="text" id="payIban" class="form-input" placeholder="SA..." value="${esc(s.payment_iban || '')}">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>إسم صاحب الحساب</label>
+                        <input type="text" id="payHolder" class="form-input" value="${esc(s.payment_holder || '')}">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>رقم STC Pay</label>
+                        <input type="text" id="payStc" class="form-input" value="${esc(s.payment_stc_pay || '')}">
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>رقم الواتساب للاشتراكات (بدون +)</label>
+                        <input type="text" id="payWhatsapp" class="form-input" placeholder="9665..." value="${esc(s.payment_whatsapp || '')}">
+                        <p class="text-muted mt-1" style="font-size:11px">يستخدم لإرسال إيصالات الدفع تلقائياً عبر رابط مباشر.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance Mode -->
+            <div>
+                <div class="panel">
+                    <div class="panel-header"><h3>🛠️ وضع الصيانة (Maintenance Mode)</h3></div>
+                    <div class="p-6">
+                        <div class="form-group mb-6">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" id="maintMode" ${s.maintenance_mode === '1' ? 'checked' : ''} style="width:20px; height:20px">
+                                <span style="font-weight:700; font-size:1.1rem">تفعيل وضع الصيانة</span>
+                            </label>
+                            <p class="text-muted mt-2">عند التفعيل، سيتم حجب دخول المدارس والطلاب مع إظهار رسالة التنبيه.</p>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label>رسالة الصيانة</label>
+                            <textarea id="maintMessage" class="form-input" rows="3">${esc(s.maintenance_message || '')}</textarea>
+                        </div>
+
+                        <div class="form-group mb-6">
+                            <label>الوقت المتوقع للعودة</label>
+                            <input type="text" id="maintUntil" class="form-input" value="${esc(s.maintenance_until || '')}">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group mb-4">
-                    <label>رسالة الصيانة</label>
-                    <textarea id="maintMessage" class="form-input" rows="3" placeholder="اكتب هنا الرسالة التي ستظهر للمستخدمين...">${esc(s.message)}</textarea>
+                <div class="panel mt-6" style="border: 1px dashed var(--accent-orange); background: rgba(245, 158, 11, 0.05)">
+                    <div class="p-4 flex gap-4">
+                        <div style="font-size:24px">⚠️</div>
+                        <div class="text-sm text-muted">
+                            يمكنك تعديل هذه البيانات في أي وقت، وسيتم تحديثها فورياً في صفحة "إتمام التسجيل" لجميع المشتركين الجدد.
+                        </div>
+                    </div>
                 </div>
-
-                <div class="form-group mb-6">
-                    <label>الوقت المتوقع للعودة (اختياري)</label>
-                    <input type="text" id="maintUntil" class="form-input" placeholder="مثال: غداً الساعة 10 صباحاً" value="${esc(s.until)}">
-                </div>
-
-                <hr style="border:0; border-top:1px solid var(--border-color); margin:2rem 0">
-
-                <button class="btn btn-emerald" onclick="savePlatformSettings()">💾 حفظ الإعدادات العامة</button>
             </div>
         </div>
 
-        <div class="panel mt-6" style="max-width: 800px; border: 1px dashed var(--accent-orange); background: rgba(245, 158, 11, 0.05)">
-            <div class="p-4 flex gap-4">
-                <div style="font-size:24px">⚠️</div>
-                <div>
-                    <strong style="display:block; margin-bottom:5px">تنبيه هام</strong>
-                    <p class="text-sm text-muted">وضع الصيانة لا يطبق على مدير المنصة (أنت). يمكنك دائماً الدخول للوحة التحكم هذه حتى عند تفعيل الصيانة.</p>
-                </div>
-            </div>
+        <div class="mt-8 flex justify-center">
+            <button class="btn btn-emerald btn-lg px-8" onclick="savePlatformSettings()">💾 حفظ كافة الإعدادات</button>
         </div>
     `;
 }
 
 async function savePlatformSettings() {
     const data = {
-        mode: document.getElementById('maintMode').checked ? '1' : '0',
-        message: document.getElementById('maintMessage').value.trim(),
-        until: document.getElementById('maintUntil').value.trim()
+        payment_bank: document.getElementById('payBank').value.trim(),
+        payment_iban: document.getElementById('payIban').value.trim(),
+        payment_holder: document.getElementById('payHolder').value.trim(),
+        payment_stc_pay: document.getElementById('payStc').value.trim(),
+        payment_whatsapp: document.getElementById('payWhatsapp').value.trim(),
+        maintenance_mode: document.getElementById('maintMode').checked ? '1' : '0',
+        maintenance_message: document.getElementById('maintMessage').value.trim(),
+        maintenance_until: document.getElementById('maintUntil').value.trim()
     };
 
     const btn = document.querySelector('.btn-emerald');
