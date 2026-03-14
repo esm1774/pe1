@@ -545,6 +545,7 @@ try {
         case 'maintenance_save':     saveMaintenanceSettings(); break;
         case 'export_subscribers':   exportSubscribers(); break;
         case 'system_health':        getPlatformHealth(); break;
+        case 'blocked_accounts':     getBlockedAccounts(); break;
         case 'unlock_logins':        unlockLogins(); break;
         
         case 'blog_posts':           getBlogPosts(); break;
@@ -676,12 +677,39 @@ function getPlatformHealth() {
 // ============================================================
 // SECURITY & LOCKOUTS
 // ============================================================
+function getBlockedAccounts() {
+    requirePlatformAdmin();
+    $db = getDB();
+    $lockoutTime = 900; // Match LOGIN_LOCKOUT_TIME from config
+    $maxAttempts = 5;   // Match MAX_LOGIN_ATTEMPTS from config
+
+    $stmt = $db->prepare("
+        SELECT username, COUNT(*) as attempt_count, MAX(attempted_at) as last_attempt
+        FROM login_attempts
+        WHERE attempted_at > DATE_SUB(NOW(), INTERVAL ? SECOND)
+        GROUP BY username
+        HAVING attempt_count >= ?
+        ORDER BY last_attempt DESC
+    ");
+    $stmt->execute([$lockoutTime, $maxAttempts]);
+    jsonSuccess($stmt->fetchAll());
+}
+
 function unlockLogins() {
     requirePlatformAdmin();
     $db = getDB();
-    $db->query("TRUNCATE TABLE login_attempts");
-    logActivity('unlock_logins', 'platform', 0, 'تم فك حظر تسجيل الدخول عن جميع الحسابات المحظورة');
-    jsonSuccess(null, 'تم فك الحظر عن جميع الحسابات بنجاح');
+    $username = sanitize(getParam('username'));
+
+    if ($username) {
+        $stmt = $db->prepare("DELETE FROM login_attempts WHERE username = ?");
+        $stmt->execute([$username]);
+        logActivity('unlock_login', 'platform', 0, "تم فك حظر تسجيل الدخول عن الحساب: $username");
+        jsonSuccess(null, "تم فك الحظر عن الحساب ($username) بنجاح");
+    } else {
+        $db->query("TRUNCATE TABLE login_attempts");
+        logActivity('unlock_logins', 'platform', 0, 'تم فك حظر تسجيل الدخول عن جميع الحسابات المحظورة');
+        jsonSuccess(null, 'تم فك الحظر عن جميع الحسابات بنجاح');
+    }
 }
 
 // ============================================================

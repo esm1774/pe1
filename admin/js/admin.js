@@ -2239,6 +2239,10 @@ async function renderHealth() {
     const dbStatusColor = h.database.status === 'ok' ? 'var(--accent-emerald)' : 'var(--accent-red)';
     const storageStatusColor = h.storage.status === 'ok' ? 'var(--accent-emerald)' : (h.storage.status === 'warning' ? 'var(--accent-orange)' : 'var(--text-muted)');
 
+    // Fetch blocked accounts
+    const br = await API.get('blocked_accounts');
+    const blockedAccounts = (br && br.success) ? br.data : [];
+
     mc.innerHTML = `
         <div class="page-header">
             <h1>🏥 حالة وصحة النظام</h1>
@@ -2271,7 +2275,7 @@ async function renderHealth() {
                 </div>
                 <div class="panel-body">
                     <table class="simple-table">
-                        <tr><td>الإصدار (MySQL/MariaDB):</td><td><strong>${h.database.version || '—'}</strong></td></tr>
+                        <tr><td>إصدار (MySQL/MariaDB):</td><td><strong>${h.database.version || '—'}</strong></td></tr>
                         <tr><td>حالة الاتصال:</td><td><strong style="color:${dbStatusColor}">${h.database.details}</strong></td></tr>
                         <tr><td>إجمالي المدارس:</td><td><strong>${h.counts.schools}</strong></td></tr>
                         <tr><td>إجمالي الطلاب:</td><td><strong>${h.counts.students}</strong></td></tr>
@@ -2299,7 +2303,7 @@ async function renderHealth() {
             </div>
         </div>
 
-        <div class="panel">
+        <div class="panel" style="margin-top: 20px;">
             <div class="panel-header">
                 <h3>📊 إحصائيات الجداول (MB)</h3>
             </div>
@@ -2315,28 +2319,72 @@ async function renderHealth() {
             </div>
         </div>
 
-        <style>
-            .simple-table { width: 100%; border-collapse: collapse; }
-            .simple-table td { padding: 8px 0; border-bottom: 1px solid var(--border-glass); font-size: 13px; }
-            .simple-table tr:last-child td { border-bottom: none; }
-            .simple-table td:first-child { color: var(--text-secondary); width: 60%; }
-            .simple-table td:last-child { text-align: left; }
-        </style>
-
-        <div class="panel" style="margin-top: 20px; border-left: 4px solid var(--accent-red);">
+        <!-- Blocked Accounts Section -->
+        <div class="panel" style="margin-top: 20px; border-left: 4px solid var(--accent-orange);">
             <div class="panel-header">
-                <h3 style="color: var(--accent-red);">🛡️ عمليات الأمان والطوارئ</h3>
+                <h3 style="color: var(--accent-orange);">🔐 الحسابات المحظورة مؤقتاً</h3>
+                <span class="badge" style="background:var(--accent-orange); color:white">${blockedAccounts.length}</span>
             </div>
             <div class="panel-body">
                 <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
-                    في حال تعذر دخول المعلمين أو المدارس بسبب إدخال كلمة المرور بشكل خاطئ أكثر من 5 مرات متتالية، يتم حظر الحسابات مؤقتاً كإجراء أمني. يمكنك فك الحظر عن الجميع فوراً من هنا.
+                    يتم حظر الحسابات تلقائياً لمدة 15 دقيقة بعد 5 محاولات خاطئة. يمكنك فك الحظر عن حساب محدد أو عن الجميع.
                 </p>
-                <button onclick="unlockLogins()" class="btn" style="background:var(--bg-glass); color:var(--accent-red); border: 1px solid var(--accent-red);">
-                    🔓 فك حظر تسجيل الدخول لجميع الحسابات
-                </button>
+                
+                ${blockedAccounts.length > 0 ? `
+                    <div style="margin-bottom: 20px; overflow-x: auto;">
+                        <table class="simple-table">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-glass)">
+                                    <th style="text-align: right; padding: 10px 0;">اسم المستخدم</th>
+                                    <th style="text-align: right; padding: 10px 0;">عدد المحاولات</th>
+                                    <th style="text-align: right; padding: 10px 0;">آخر محاولة</th>
+                                    <th style="text-align: left; padding: 10px 0;">الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${blockedAccounts.map(ba => `
+                                    <tr>
+                                        <td><strong>${ba.username}</strong></td>
+                                        <td><span class="badge badge-trial">${ba.attempt_count}</span></td>
+                                        <td><span style="font-size: 11px;">${new Date(ba.last_attempt).toLocaleString('ar-SA')}</span></td>
+                                        <td style="text-align: left;">
+                                            <button onclick="unlockSpecificAccount('${ba.username}')" class="btn btn-sm" style="background:var(--accent-emerald); color:white; font-size: 11px; padding: 4px 10px; border:none; border-radius:6px; cursor:pointer;">
+                                                🔓 فك الحظر
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<div class="empty-state" style="padding: 20px;"><p>لا توجد حسابات محظورة حالياً ✅</p></div>'}
+
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border-glass);">
+                    <button onclick="unlockLogins()" class="btn btn-outline" style="color:var(--accent-red); border-color:var(--accent-red);">
+                        🔓 فك حظر الجميع فوراً
+                    </button>
+                </div>
             </div>
         </div>
+
+        <style>
+            .simple-table { width: 100%; border-collapse: collapse; }
+            .simple-table td, .simple-table th { padding: 12px 0; border-bottom: 1px solid var(--border-glass); font-size: 13px; }
+            .simple-table tr:last-child td { border-bottom: none; }
+            .simple-table td:first-child { color: var(--text-main); }
+        </style>
     `;
+}
+
+async function unlockSpecificAccount(username) {
+    if (!confirm(`هل أنت متأكد من فك الحظر عن الحساب: ${username}؟`)) return;
+    const r = await API.get(`unlock_logins&username=${encodeURIComponent(username)}`);
+    if (r && r.success) {
+        toast('✅ ' + r.message);
+        renderHealth();
+    } else {
+        toast(r?.error || 'حدث خطأ', 'error');
+    }
 }
 
 async function unlockLogins() {

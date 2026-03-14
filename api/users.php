@@ -10,7 +10,10 @@ function getUsers() {
     // Fix #10: Use prepared statement instead of direct interpolation
     $sql = "SELECT id, username, name, email, role, active, last_login, created_at FROM users WHERE active = 1";
     $params = [];
-    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
+    if ($sid) { 
+        $sql .= " AND (school_id = ? OR id IN (SELECT user_id FROM user_school_access WHERE school_id = ?))"; 
+        $params = [$sid, $sid]; 
+    }
     $sql .= " ORDER BY id";
     $stmt = getDB()->prepare($sql);
     $stmt->execute($params);
@@ -109,6 +112,14 @@ function saveUser() {
         $db->prepare("INSERT IGNORE INTO user_school_access (user_id, school_id, role, is_primary) VALUES (?, ?, ?, 1)")
            ->execute([$id, $sid, $role]);
     }
+
+    // SaaS: Sync identity changes across schools
+    $syncData = ['name' => $name, 'email' => $email];
+    if (!empty($password)) {
+        $syncData['password_hash'] = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
+    }
+    syncGlobalUserIdentity($id, $syncData);
+
     logActivity($id ? 'update' : 'create', 'user', $id, $name);
     jsonSuccess(['id' => (int)$id], 'تم حفظ المستخدم');
 }
@@ -304,7 +315,7 @@ function updateMyProfile() {
     if ($role === 'student') {
         if (isset($data['birth_date'])) {
             $fields[] = "date_of_birth = ?";
-            $params[] = sanitize($data['birth_date']);
+            $params[] = !empty($data['birth_date']) ? sanitize($data['birth_date']) : null;
         }
         $table = "students";
     } elseif ($role === 'parent') {
@@ -329,7 +340,7 @@ function updateMyProfile() {
         }
         if (isset($data['birth_date'])) {
             $fields[] = "birth_date = ?";
-            $params[] = sanitize($data['birth_date']);
+            $params[] = !empty($data['birth_date']) ? sanitize($data['birth_date']) : null;
         }
         $table = "users";
     }
@@ -343,6 +354,20 @@ function updateMyProfile() {
 
     $db->prepare($sql)->execute($params);
     
+    // SaaS: Sync identity changes across schools if applicable
+    $syncData = [];
+    if (isset($data['name'])) $syncData['name'] = $data['name'];
+    if (isset($data['email'])) {
+        $syncData['email'] = $data['email'];
+        $_SESSION['user_email'] = $data['email']; // Update current session
+    }
+    if (!empty($data['password'])) {
+        $syncData['password_hash'] = password_hash($data['password'], PASSWORD_DEFAULT);
+    }
+    if (!empty($syncData)) {
+        syncGlobalUserIdentity($uid, $syncData);
+    }
+
     logActivity('update_profile', $role, $uid, !empty($data['password']) ? "Password updated" : "Info updated");
     jsonSuccess(null, 'تم تحديث البيانات بنجاح');
 }
@@ -460,14 +485,19 @@ function switchSchool() {
 
     $db = getDB();
     
-    // Verify user has access to this school
+    // Verify user has access to this school (check both primary and secondary schools)
     $stmt = $db->prepare("
         SELECT usa.role, s.slug
         FROM user_school_access usa
         JOIN schools s ON s.id = usa.school_id
         WHERE usa.user_id = ? AND usa.school_id = ? AND s.active = 1
+        UNION
+        SELECT u.role, s.slug
+        FROM users u
+        JOIN schools s ON s.id = u.school_id
+        WHERE u.id = ? AND u.school_id = ? AND s.active = 1
     ");
-    $stmt->execute([$userId, $targetSchoolId]);
+    $stmt->execute([$userId, $targetSchoolId, $userId, $targetSchoolId]);
     $access = $stmt->fetch();
 
     if (!$access) {
@@ -486,4 +516,48 @@ function switchSchool() {
         'school_slug' => $access['slug'],
         'role' => $access['role']
     ], 'تم تبديل المدرسة بنجاح');
+}
+/**
+ * SaaS: Synchronize a user's global identity (name, email, password) across all their records in all schools.
+ */
+function syncGlobalUserIdentity($userId, $data) {
+    $db = getDB();
+    // 1. Fetch current record to get identification markers
+    $stmt = $db->prepare("SELECT username, email FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $current = $stmt->fetch();
+    if (!$current) return;
+
+    $username = $current['username'];
+    $email = $current['email'];
+
+    // 2. Build the cross-school update
+    $fields = [];
+    $params = [];
+    if (isset($data['name'])) { $fields[] = "name = ?"; $params[] = $data['name']; }
+    if (isset($data['email'])) { $fields[] = "email = ?"; $params[] = $data['email']; }
+    if (isset($data['password_hash'])) { $fields[] = "password = ?"; $params[] = $data['password_hash']; }
+
+    if (empty($fields)) return;
+
+    $sql = "UPDATE users SET " . implode(", ", $fields) . " WHERE id != ?";
+    $params[] = $userId;
+
+    // 3. Identification: link by same email OR same username
+    // (In SaaS mode, these represent the same physical person)
+    $where = [];
+    $whereParams = [];
+    if (!empty($email)) {
+        $where[] = "email = ?";
+        $whereParams[] = $email;
+    }
+    if (!empty($username)) {
+        $where[] = "username = ?";
+        $whereParams[] = $username;
+    }
+
+    if (empty($where)) return;
+
+    $sql .= " AND (" . implode(" OR ", $where) . ")";
+    $db->prepare($sql)->execute(array_merge($params, $whereParams));
 }

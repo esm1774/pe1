@@ -1124,11 +1124,7 @@ function handleDeactivation(data) {
  * Switch current school for multi-school users
  */
 window.triggerSchoolSwitch = async () => {
-    if (!currentUser || !currentUser.email) {
-        showToast('يجب تسجيل بريد إلكتروني أولاً', 'info');
-        showMandatoryEmailModal();
-        return;
-    }
+    if (!currentUser) return;
 
     // Fetch user schools
     const r = await API.get('check_auth', { include_schools: 1 });
@@ -1180,7 +1176,7 @@ window.selectSchoolAndLogin = async (slug, username, password) => {
  * Check if the user has multiple schools to show the switcher
  */
 function checkMultiSchoolLink() {
-    if (!currentUser || !currentUser.email || currentUser.role === 'student' || currentUser.role === 'parent') return;
+    if (!currentUser || currentUser.role === 'student' || currentUser.role === 'parent') return;
 
     API.get('check_auth', { include_schools: 1 }).then(r => {
         if (r && r.success && r.data.schools && r.data.schools.length > 1) {

@@ -47,12 +47,17 @@ function checkAuth() {
             // Multi-School: Include schools list if requested
             if (isset($_GET['include_schools']) && $_SESSION['user_role'] !== 'student' && $_SESSION['user_role'] !== 'parent') {
                 $stmtSchools = $db->prepare("
-                    SELECT s.id, s.name, s.slug, usa.role
+                    SELECT s.id, s.name, s.slug, usa.role, usa.is_primary
                     FROM user_school_access usa
                     JOIN schools s ON s.id = usa.school_id
                     WHERE usa.user_id = ? AND s.active = 1
+                    UNION
+                    SELECT s.id, s.name, s.slug, u.role, 1 as is_primary
+                    FROM users u
+                    JOIN schools s ON s.id = u.school_id
+                    WHERE u.id = ? AND s.active = 1
                 ");
-                $stmtSchools->execute([$user['id']]);
+                $stmtSchools->execute([$user['id'], $user['id']]);
                 $user['schools'] = $stmtSchools->fetchAll();
             }
             
