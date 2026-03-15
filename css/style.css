@@ -770,3 +770,36 @@ input[type="number"]::-webkit-inner-spin-button {
 #reportOutput .shadow-lg {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
 }
+/* ============================================
+   PASSWORD VALIDATOR
+   ============================================ */
+.password-checklist {
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: right;
+}
+
+.rule-item {
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.rule-item.valid {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.rule-item .bullet {
+    width: 20px;
+    text-align: center;
+}

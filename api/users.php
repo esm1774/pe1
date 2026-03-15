@@ -116,6 +116,8 @@ function saveUser() {
     // SaaS: Sync identity changes across schools
     $syncData = ['name' => $name, 'email' => $email];
     if (!empty($password)) {
+        $pwCheck = validatePasswordStrength($password);
+        if ($pwCheck !== true) jsonError($pwCheck);
         $syncData['password_hash'] = password_hash($password, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
     }
     syncGlobalUserIdentity($id, $syncData);
@@ -306,6 +308,8 @@ function updateMyProfile() {
         $params[] = sanitize($data['phone']);
     }
     if (!empty($data['password'])) {
+        $pwCheck = validatePasswordStrength($data['password']);
+        if ($pwCheck !== true) jsonError($pwCheck);
         $fields[] = "password = ?";
         $params[] = password_hash($data['password'], PASSWORD_DEFAULT);
         $fields[] = "must_change_password = 0";

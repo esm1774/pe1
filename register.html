@@ -159,7 +159,12 @@
                             <label>كلمة المرور *</label>
                             <input type="password" id="adminPassword" class="form-input" placeholder="••••••••">
                         </div>
+                        <div class="form-group-modal">
+                            <label>تأكيد كلمة المرور *</label>
+                            <input type="password" id="adminPasswordConfirm" class="form-input" placeholder="••••••••">
+                        </div>
                     </div>
+                    <div id="passwordCriteria" style="margin-top:10px"></div>
                 </div>
             </div>
 
@@ -270,7 +275,18 @@
             }
         }
 
+        // Initialize Password Validator
+        const passValidator = new PasswordValidator({
+            inputId: 'adminPassword',
+            confirmId: 'adminPasswordConfirm',
+            containerId: 'passwordCriteria'
+        });
+
         async function submitRegistration() {
+            if (!passValidator.validate()) {
+                toast('الرجاء استيفاء معايير كلمة المرور القوية أولاً', 'error');
+                return;
+            }
             const errorEl = document.getElementById('errorMsg');
             errorEl.classList.add('hidden');
 

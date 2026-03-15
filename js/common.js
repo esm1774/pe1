@@ -1185,3 +1185,83 @@ function checkMultiSchoolLink() {
         }
     });
 }
+/**
+ * Password Validator UI Helper
+ * Enforces strong password criteria with real-time feedback
+ */
+class PasswordValidator {
+    constructor(config) {
+        this.input = document.getElementById(config.inputId);
+        this.confirmInput = document.getElementById(config.confirmId);
+        this.container = document.getElementById(config.containerId);
+        this.rules = [
+            { id: 'length', text: '8 أحرف على الأقل', regex: /.{8,}/ },
+            { id: 'upper', text: 'حرف كبير واحد (A-Z)', regex: /[A-Z]/ },
+            { id: 'lower', text: 'حرف صغير واحد (a-z)', regex: /[a-z]/ },
+            { id: 'number', text: 'رقم واحد على الأقل (0-9)', regex: /[0-9]/ },
+            { id: 'symbol', text: 'رمز خاص واحد (@#$%)', regex: /[\W_]/ }
+        ];
+
+        if (this.input) {
+            this.init();
+        }
+    }
+
+    init() {
+        // Create UI HTML
+        let html = `<div class="password-checklist">`;
+        this.rules.forEach(rule => {
+            html += `<div class="rule-item" data-rule="${rule.id}"><span class="bullet">○</span> ${rule.text}</div>`;
+        });
+        if (this.confirmInput) {
+            html += `<div class="rule-item" data-rule="match"><span class="bullet">○</span> تطابق كلمتي المرور</div>`;
+        }
+        html += `</div>`;
+
+        if (this.container) {
+            this.container.innerHTML = html;
+        }
+
+        this.input.addEventListener('input', () => this.validate());
+        if (this.confirmInput) {
+            this.confirmInput.addEventListener('input', () => this.validate());
+        }
+    }
+
+    validate() {
+        const val = this.input.value;
+        const confirmVal = this.confirmInput ? this.confirmInput.value : null;
+        let allValid = true;
+
+        this.rules.forEach(rule => {
+            const el = this.container.querySelector(`[data-rule="${rule.id}"]`);
+            const isValid = rule.regex.test(val);
+            this.updateUI(el, isValid);
+            if (!isValid) allValid = false;
+        });
+
+        if (this.confirmInput) {
+            const el = this.container.querySelector(`[data-rule="match"]`);
+            const isMatch = val === confirmVal && val.length > 0;
+            this.updateUI(el, isMatch);
+            if (!isMatch) allValid = false;
+        }
+
+        return allValid;
+    }
+
+    updateUI(el, isValid) {
+        if (!el) return;
+        const bullet = el.querySelector('.bullet');
+        if (isValid) {
+            el.classList.add('valid');
+            bullet.innerText = '✅';
+        } else {
+            el.classList.remove('valid');
+            bullet.innerText = '○';
+        }
+    }
+}
+
+// Global expose
+window.PasswordValidator = PasswordValidator;

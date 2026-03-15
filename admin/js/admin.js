@@ -565,22 +565,36 @@ async function openResetAdminPasswordModal(schoolId, schoolName) {
             </div>
             <div class="form-group-modal mt-3">
                 <label>كلمة المرور الجديدة</label>
-                <input type="password" id="resetAdminNewPassword" class="form-input" placeholder="••••••" minlength="6">
+                <input type="password" id="resetAdminNewPassword" class="form-input" placeholder="••••••••">
             </div>
+            <div class="form-group-modal mt-3">
+                <label>تأكيد كلمة المرور</label>
+                <input type="password" id="resetAdminConfirmPassword" class="form-input" placeholder="••••••••">
+            </div>
+            <div id="passwordValidatorContainer" class="mt-3"></div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-emerald btn-sm" onclick="resetSchoolAdminPassword()">💾 تعيين كلمة المرور</button>
             <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
         </div>
     `);
+
+    const validator = new PasswordValidator({
+        inputId: 'resetAdminNewPassword',
+        confirmId: 'resetAdminConfirmPassword',
+        containerId: 'passwordValidatorContainer'
+    });
+    window.currentAdminPassValidator = validator;
 }
 
 async function resetSchoolAdminPassword() {
     const adminId = document.getElementById('resetAdminId').value;
     const newPassword = document.getElementById('resetAdminNewPassword').value.trim();
 
-    if (!adminId) return toast('اختر المدير', 'error');
-    if (newPassword.length < 6) return toast('يجب أن تكون كلمة المرور 6 أحرف على الأقل', 'error');
+    const validator = window.currentAdminPassValidator;
+    if (validator && !validator.validate()) {
+        return toast('الرجاء استيفاء معايير كلمة المرور القوية أولاً', 'error');
+    }
 
     const btn = document.querySelector('.modal-footer .btn-emerald');
     if (btn) btn.disabled = true;

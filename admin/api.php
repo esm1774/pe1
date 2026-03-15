@@ -114,6 +114,8 @@ function saveSchool() {
 
         // Create default admin for this school
         if (!empty($data['admin_username']) && !empty($data['admin_password'])) {
+            $pwCheck = validatePasswordStrength($data['admin_password']);
+            if ($pwCheck !== true) jsonError($pwCheck);
             $hash = password_hash($data['admin_password'], PASSWORD_BCRYPT, ['cost' => 12]);
             $db->prepare("INSERT INTO users (school_id, username, password, name, role) VALUES (?,?,?,?,?)")
                ->execute([$newSchoolId, sanitize($data['admin_username']), $hash, 'مدير ' . $name, 'admin']);
@@ -349,7 +351,8 @@ function resetSchoolAdminPassword() {
     $newPassword = $data['new_password'] ?? '';
 
     if (!$userId) jsonError('معرف مستخدم غير صالح');
-    if (strlen($newPassword) < 6) jsonError('يجب أن تتكون كلمة المرور من 6 أحرف على الأقل');
+    $pwCheck = validatePasswordStrength($newPassword);
+    if ($pwCheck !== true) jsonError($pwCheck);
 
     $db = getDB();
     

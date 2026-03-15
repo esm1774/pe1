@@ -136,6 +136,11 @@ async function showEditProfileModal(u) {
                     <label class="block text-sm font-bold text-gray-700 mb-1">كلمة المرور الجديدة</label>
                     <input type="password" id="profPass" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50" placeholder="اتركها فارغة لعدم التغيير">
                 </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">تأكيد كلمة المرور</label>
+                    <input type="password" id="profPassConfirm" class="w-full px-4 py-3 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50" placeholder="تأكيد كلمة المرور الجديدة">
+                </div>
+                <div class="md:col-span-2" id="profPassCriteria"></div>
 
                 ${u.role !== 'student' ? `
                 <div>
@@ -162,6 +167,13 @@ async function showEditProfileModal(u) {
             </div>
         </div>
     `);
+
+    const validator = new PasswordValidator({
+        inputId: 'profPass',
+        confirmId: 'profPassConfirm',
+        containerId: 'profPassCriteria'
+    });
+    window.currentProfPassValidator = validator;
 }
 
 async function handleUpdateProfile() {
@@ -180,6 +192,14 @@ async function handleUpdateProfile() {
     if (!data.name) {
         showToast('الاسم مطلوب', 'error');
         return;
+    }
+
+    if (data.password) {
+        const validator = window.currentProfPassValidator;
+        if (validator && !validator.validate()) {
+            showToast('الرجاء استيفاء معايير كلمة المرور القوية أولاً', 'error');
+            return;
+        }
     }
 
     const r = await API.post('update_my_profile', data);
@@ -216,6 +236,13 @@ function showUploadPhotoModal() {
             </div>
         </div>
     `);
+
+    const validator = new PasswordValidator({
+        inputId: "forceNewPass",
+        confirmId: "forceConfirmPass",
+        containerId: "forcePassCriteria"
+    });
+    window.currentForcePassValidator = validator;
 }
 
 function previewProfilePhoto(input) {
@@ -301,12 +328,13 @@ function showForcePasswordChangeModal() {
             <div class="space-y-4 text-right">
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">كلمة المرور الجديدة</label>
-                    <input type="password" id="forceNewPass" class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50 text-center text-lg" placeholder="6 أحرف على الأقل">
+                    <input type="password" id="forceNewPass" class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50 text-center text-lg" placeholder="••••••••">
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">تأكيد كلمة المرور</label>
-                    <input type="password" id="forceConfirmPass" class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50 text-center text-lg">
+                    <input type="password" id="forceConfirmPass" class="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:outline-none bg-gray-50 text-center text-lg" placeholder="••••••••">
                 </div>
+                <div id="forcePassCriteria" class="text-right"></div>
             </div>
 
             <button onclick="handleForceUpdatePassword()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-4 rounded-2xl font-bold mt-8 hover:shadow-lg transform transition active:scale-95 cursor-pointer shadow-md">
@@ -331,13 +359,9 @@ async function handleForceUpdatePassword() {
     const pass = document.getElementById('forceNewPass').value;
     const confirm = document.getElementById('forceConfirmPass').value;
 
-    if (!pass || pass.length < 6) {
-        showToast('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
-        return;
-    }
-
-    if (pass !== confirm) {
-        showToast('كلمات المرور غير متطابقة', 'error');
+    const validator = window.currentForcePassValidator;
+    if (validator && !validator.validate()) {
+        showToast('الرجاء استيفاء معايير كلمة المرور القوية أولاً', 'error');
         return;
     }
 

@@ -297,8 +297,13 @@ function showUserForm(id = null, name = '', username = '', email = '', role = 't
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">${id ? 'كلمة مرور جديدة (اختياري)' : 'كلمة المرور'}</label>
-                    <input type="password" id="userPassword" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" dir="ltr">
+                    <input type="password" id="userPassword" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" dir="ltr" placeholder="••••••••">
                 </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">تأكيد كلمة المرور</label>
+                    <input type="password" id="userPasswordConfirm" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" dir="ltr" placeholder="••••••••">
+                </div>
+                <div id="userPassCriteria"></div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">الدور</label>
                     <select id="userRole" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
@@ -315,6 +320,13 @@ function showUserForm(id = null, name = '', username = '', email = '', role = 't
             </div>
         </div>
     `);
+
+    const validator = new PasswordValidator({
+        inputId: 'userPassword',
+        confirmId: 'userPasswordConfirm',
+        containerId: 'userPassCriteria'
+    });
+    window.currentUserFormPassValidator = validator;
 }
 
 async function saveUser(id) {
@@ -330,6 +342,16 @@ async function saveUser(id) {
     if (!data.name || !data.username || !data.email) {
         showToast('أكمل الحقول (الاسم، اسم المستخدم، البريد الإلكتروني)', 'error');
         return;
+    }
+
+    if (data.password || !id) {
+        // If it's a new user (!id) password is required by backend validation typically
+        // If it's an existing user (id) and password is provided, validate it
+        const validator = window.currentUserFormPassValidator;
+        if (validator && !validator.validate()) {
+            showToast('الرجاء استيفاء معايير كلمة المرور القوية أولاً', 'error');
+            return;
+        }
     }
 
     const r = await API.post('user_save', data);
