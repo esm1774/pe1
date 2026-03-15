@@ -930,8 +930,21 @@ function uploadMedia() {
     }
 
     $file    = $_FILES['file'];
-    $maxSize = 3 * 1024 * 1024; // 3 MB
+    
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $errorMsg = 'فشل في رفع الملف: ';
+        switch ($file['error']) {
+            case UPLOAD_ERR_INI_SIZE:   $errorMsg .= 'حجم الملف أكبر مما يسمح به الخادم (php.ini)'; break;
+            case UPLOAD_ERR_PARTIAL:    $errorMsg .= 'تم رفع جزء من الملف فقط'; break;
+            case UPLOAD_ERR_NO_FILE:    $errorMsg .= 'لم يتم اختيار ملف'; break;
+            case UPLOAD_ERR_NO_TMP_DIR: $errorMsg .= 'مجلد الملفات المؤقتة مفقود'; break;
+            case UPLOAD_ERR_CANT_WRITE: $errorMsg .= 'فشل الكتابة على القرص'; break;
+            default: $errorMsg .= 'خطأ غير معروف برقم: ' . $file['error'];
+        }
+        jsonError($errorMsg);
+    }
 
+    $maxSize = 3 * 1024 * 1024; // 3 MB
     if ($file['size'] > $maxSize) {
         jsonError('حجم الصورة يتجاوز الحد المسموح (3 MB). يرجى ضغط الصورة أولاً.');
     }
@@ -946,11 +959,27 @@ function uploadMedia() {
     $extMap   = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
     $ext      = $extMap[$mime] ?? 'jpg';
     $filename = 'media_' . time() . '_' . bin2hex(random_bytes(5)) . '.' . $ext;
-    $uploadDir = __DIR__ . '/../uploads/media/';
+    $uploadDir = realpath(__DIR__ . '/../') . '/uploads/media/';
+    
+    // Ensure directory exists
+    if (!is_dir($uploadDir)) {
+        if (!mkdir($uploadDir, 0777, true)) {
+            jsonError('مجلد الرفع غير موجود وفشل إنشاؤه: ' . $uploadDir);
+        }
+    }
+
+    // Check writability
+    if (!is_writable($uploadDir)) {
+        jsonError('مجلد الرفع غير قابل للكتابة (Permissions Issue). المسار: ' . $uploadDir);
+    }
+
     $savePath  = $uploadDir . $filename;
 
     if (!move_uploaded_file($file['tmp_name'], $savePath)) {
-        jsonError('فشل في رفع الملف. تحقق من صلاحيات المجلد.');
+        $lastError = error_get_last();
+        $msg = 'فشل في نقل الملف إلى المجلد النهائي.';
+        if ($lastError) $msg .= ' خطأ الخادم: ' . $lastError['message'];
+        jsonError($msg);
     }
 
     $dimensions = @getimagesize($savePath);

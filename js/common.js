@@ -267,7 +267,9 @@ async function handleLogin() {
                 showApp();
                 checkPostLoginRequirements(r.data);
             } else {
-                window.location.href = window.APP_BASE + r.data.school_slug + '/';
+                const root = window.APP_ROOT || '/';
+                const hash = window.location.hash || '';
+                window.location.href = root + r.data.school_slug + '/' + hash;
             }
         } else {
             showApp();
@@ -334,7 +336,9 @@ window.selectSchoolAndLogin = async (slug, username, password) => {
     if (r && r.success) {
         currentUser = r.data;
         if (r.data.school_slug) {
-            window.location.href = window.APP_BASE + r.data.school_slug + '/';
+            const root = window.APP_ROOT || '/';
+            const hash = window.location.hash || '';
+            window.location.href = root + r.data.school_slug + '/' + hash;
         } else {
             showApp();
         }
@@ -1150,7 +1154,9 @@ window.selectSchoolAndLogin = async (slug, username, password) => {
         if (school) {
             const rSwitch = await API.post('switch_school', { school_id: school.id });
             if (rSwitch && rSwitch.success) {
-                window.location.href = window.APP_BASE + slug + '/';
+                const root = window.APP_ROOT || '/';
+                const hash = window.location.hash || '';
+                window.location.href = root + slug + '/' + hash;
                 return;
             }
         }
@@ -1163,7 +1169,9 @@ window.selectSchoolAndLogin = async (slug, username, password) => {
     if (r && r.success) {
         currentUser = r.data;
         if (r.data.school_slug) {
-            window.location.href = window.APP_BASE + r.data.school_slug + '/';
+            const root = window.APP_ROOT || '/';
+            const hash = window.location.hash || '';
+            window.location.href = root + r.data.school_slug + '/' + hash;
         } else {
             showApp();
         }

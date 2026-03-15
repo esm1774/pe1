@@ -268,6 +268,11 @@ function getMyProfile() {
     $u = $stmt->fetch();
     if (!$u) jsonError('المستخدم غير موجود');
     
+    // SaaS: Ensure school_id reflects the current active tenant during multi-school sessions
+    if (Tenant::isSaasMode()) {
+        $u['school_id'] = Tenant::id();
+    }
+    
     jsonSuccess($u);
 }
 

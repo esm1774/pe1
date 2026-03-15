@@ -22,6 +22,10 @@ function checkAuth() {
         
         $user = $stmt->fetch();
         if ($user) {
+            // SaaS: Ensure school_id reflects the current active tenant during multi-school sessions
+            if (Tenant::isSaasMode()) {
+                $user['school_id'] = Tenant::id();
+            }
             // Include school info if available
             if (!empty($user['school_id']) && Tenant::isSaasMode()) {
                 $school = Tenant::school();
@@ -34,6 +38,8 @@ function checkAuth() {
                     $user['school_name'] = $school['name'];
                     $user['school_slug'] = $school['slug'];
                     $user['school_logo'] = $school['logo_url'];
+                    // Ensure ID is consistent
+                    $user['school_id'] = (int)$school['id'];
                 }
                 // Include subscription info
                 $user['subscription'] = Subscription::getInfo($user['school_id']);

@@ -21,6 +21,10 @@ class Tenant {
         $urlSchoolId = null;
         $urlSchool = null;
 
+        // DEBUG
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        // error_log("Tenant::resolve - URI: " . $uri);
+
         // Priority 1: URL Slug Exists Anywhere in Path (e.g., example.com/school1 or physical folder /school1/api.php)
         $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
         if ($uri) {
@@ -41,18 +45,68 @@ class Tenant {
             }
         }
 
-        // Check for Tenant Mismatch
-        // If the URL dictates a specific school, but the session has a DIFFERENT school logged in,
-        // we must CLEAR the old session so the user gets a fresh login screen for the new school.
         if ($urlSchoolId) {
             if (isset($_SESSION['school_id']) && $_SESSION['school_id'] != $urlSchoolId) {
-                // They switched schools in the same browser. Clear old session.
+                // error_log("Tenant::resolve - MISMATCH: URL=$urlSchoolId, Session=" . $_SESSION['school_id']);
+                
+                $hasAccess = false;
+                $newRole = $_SESSION['user_role'] ?? 'teacher';
+
+                if (self::isPlatformAdmin()) {
+                    $hasAccess = true;
+                    // error_log("Tenant::resolve - Platform Admin allowed switch.");
+                } elseif (isset($_SESSION['user_id'])) {
+                    try {
+                        $db = getDB();
+                        // 1. Check if they are a super_admin globally
+                        $stmt = $db->prepare("SELECT role FROM users WHERE id = ? AND active = 1");
+                        $stmt->execute([$_SESSION['user_id']]);
+                        $globalRole = $stmt->fetchColumn();
+                        
+                        if ($globalRole === 'super_admin') {
+                            $hasAccess = true;
+                            // error_log("Tenant::resolve - Global Super Admin allowed switch.");
+                        } else {
+                            // 2. Check if it's their primary school or linked school
+                            $stmt = $db->prepare("
+                                SELECT role FROM users WHERE id = ? AND school_id = ? AND active = 1
+                                UNION
+                                SELECT role FROM user_school_access WHERE user_id = ? AND school_id = ?
+                            ");
+                            $stmt->execute([$_SESSION['user_id'], $urlSchoolId, $_SESSION['user_id'], $urlSchoolId]);
+                            $foundRole = $stmt->fetchColumn();
+                            
+                            if ($foundRole !== false) {
+                                $hasAccess = true;
+                                $newRole = $foundRole ?: $newRole; // Keep current role if not specified in link
+                                // error_log("Tenant::resolve - Authorized switch for user " . $_SESSION['user_id'] . " to role $newRole");
+                            } else {
+                                // error_log("Tenant::resolve - Unauthorized switch for user " . $_SESSION['user_id']);
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log("Tenant::resolve - DB Error: " . $e->getMessage());
+                    }
+                }
+
+                if ($hasAccess) {
+                    // error_log("Tenant::resolve - Context Switch context to $urlSchoolId for User " . ($_SESSION['user_id'] ?? 'unknown'));
+                    $_SESSION['school_id'] = $urlSchoolId;
+                    $_SESSION['user_role'] = $newRole;
+                    unset($_SESSION['class_id']); 
+                    self::$schoolId = $urlSchoolId;
+                    self::$school = $urlSchool;
+                    return;
+                }
+
+                // If switch not permitted, we must clear session to maintain isolation
+                // error_log("Tenant::resolve - Switch REJECTED. Clearing session.");
                 unset($_SESSION['school_id']);
                 unset($_SESSION['user_id']);
                 unset($_SESSION['user_role']);
                 unset($_SESSION['user_name']);
                 unset($_SESSION['class_id']);
-                unset($_SESSION['is_impersonating']); // clear impersonation if they manually switch
+                unset($_SESSION['is_impersonating']); 
             }
             self::$schoolId = $urlSchoolId;
             self::$school = $urlSchool;

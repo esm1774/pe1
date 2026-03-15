@@ -2201,10 +2201,18 @@ async function confirmDeleteMedia(id, filename) {
 
 function copyMediaUrl(filePath) {
     const base = window.location.origin;
-    const path = window.location.pathname.replace('/admin/index.html', '');
-    const fullUrl = base + path + '/' + filePath;
+    // Get the base path of the app (e.g., / or /pe1/) by removing "admin/..." from the current path
+    let path = window.location.pathname;
+    const adminPos = path.indexOf('/admin/');
+    if (adminPos !== -1) {
+        path = path.substring(0, adminPos);
+    } else if (path.endsWith('/admin')) {
+        path = path.substring(0, path.length - 6);
+    }
+
+    const fullUrl = base + (path.endsWith('/') ? path : path + '/') + filePath;
     navigator.clipboard.writeText(fullUrl).then(() => toast('✅ تم نسخ الرابط')).catch(() => {
-        prompt('انسخ الرابط يدوياً:', base + path + '/' + filePath);
+        prompt('انسخ الرابط يدوياً:', fullUrl);
     });
 }
 

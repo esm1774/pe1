@@ -149,7 +149,7 @@ setcookie('XSRF-TOKEN', $_SESSION['csrf_token'], [
     'expires' => time() + SESSION_LIFETIME,
     'path' => '/',
     'samesite' => 'Lax',
-    'httponly' => true // INCREASED SECURITY: Prevent JS from accessing session ID
+    'httponly' => false // Required for JS to read the token and send it in headers
 ]);
 
 // ============================================================

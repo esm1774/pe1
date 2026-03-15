@@ -18,33 +18,42 @@
          */
         (function () {
             let path = window.location.pathname;
-            let parts = path.split('/');
-            let basePath = '/';
+            let parts = path.split('/').filter(p => p !== '');
+            let appRoot = '/';
+            let schoolSlug = '';
 
-            // Heuristic for XAMPP / Localhost subfolders
+            // Common system folders that are NEVER school slugs
+            const systemFolders = ['admin', 'api', 'assets', 'css', 'js', 'icons', 'vendor', 'modules', 'api.php', 'index.html', 'register.html', 'welcome.php'];
+
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                // If it's localhost and we are in a subfolder (like /pe1/default/), 
-                // the first non-empty part is likely the project root
-                if (parts.length > 1 && parts[1] !== '' && !['default', 'school1', 'test'].includes(parts[1])) {
-                    basePath = '/' + parts[1] + '/';
+                // Heuristic: Localhost usually has a project folder first
+                // e.g., /pe1/school1/ -> parts: ['pe1', 'school1']
+                if (parts.length > 0 && !systemFolders.includes(parts[0].toLowerCase())) {
+                    // First part is likely the project root folder
+                    appRoot = '/' + parts[0] + '/';
+                    // Second part might be a school slug
+                    if (parts.length > 1 && !systemFolders.includes(parts[1].toLowerCase())) {
+                        schoolSlug = parts[1];
+                    }
                 }
             } else {
-                // Production: If we are in the root of the domain, basePath is /
-                // If the URL is domain.com/pe1/ (subfolder), parts[1] will be 'pe1'
-                // But we must be careful not to treat school slugs as folders.
-                // If there's only one part after domain (e.g. /abubakr/), it's likely a slug.
-                if (parts.length > 2 && parts[1] !== '' && !['default', 'school1', 'test', 'login', 'register'].includes(parts[1])) {
-                    // Only treat as folder if there's more than one level OR we know it's a folder
-                    // This is a safe heuristic for Hostinger root vs subfolder
-                    basePath = '/' + parts[1] + '/';
+                // Production: If first part isn't a system folder, it's a school slug 
+                // e.g., domain.com/school1/ -> parts: ['school1']
+                if (parts.length > 0 && !systemFolders.includes(parts[0].toLowerCase())) {
+                    schoolSlug = parts[0];
                 }
-                // Default to / for production if not obviously a folder
+                appRoot = '/';
             }
 
-            document.write('<base href="' + basePath + '">');
-            document.write('<link rel="manifest" href="' + basePath + 'manifest.json">');
-            window.APP_BASE = basePath; // Exposed for global use Reference
-            console.log("📍 Base Path Detected:", basePath);
+            // The <base> tag should be the App Root where shared assets (css, js) live
+            document.write('<base href="' + appRoot + '">');
+
+            // Exposed for global use
+            window.APP_ROOT = appRoot;
+            window.SCHOOL_SLUG = schoolSlug;
+            window.APP_BASE = appRoot; // Backward compatibility
+
+            console.log("📍 Base Path Detected:", appRoot, "(School:", schoolSlug || "None", ")");
         })();
     </script>
 
