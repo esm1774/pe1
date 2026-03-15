@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+
+    <meta charset="UTF-8"/>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <title>تطبيق ويب متكامل لإدارة التربية الرياضية</title>
+
+
+
+    <!-- Fonts -->
+
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+
+
+
+    <!-- Tailwind CSS -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+
+
+    <!-- Vanta.js for background -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+
+
+
+    <style>
+
+        :root {
+
+            --primary: #1e3a8a;
+
+            --secondary: #c0c0c0;
+
+            --accent: #3b82f6;
+
+            --neutral: #f8fafc;
+
+            --base-100: #ffffff;
+
+        }
+
+        
+
+        body {
+
+            font-family: 'Inter', sans-serif;
+
+            line-height: 1.7;
+
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+
+        }
+
+        
+
+        .serif {
+
+            font-family: 'Playfair Display', serif;
+
+        }
+
+        
+
+        .hero-bg {
+
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.95) 0%, rgba(59, 130, 246, 0.85) 100%);
+
+        }
+
+        
+
+        .toc-fixed {
+
+            position: fixed;
+
+            right: 2rem;
+
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            width: 280px;
+
+            max-height: 70vh;
+
+            overflow-y: auto;
+
+            z-index: 50;
+
+            backdrop-filter: blur(10px);
+
+            background: rgba(255, 255, 255, 0.95);
+
+            border: 1px solid rgba(192, 192, 192, 0.2);
+
+        }
+
+        
+
+        .main-content {
+
+            margin-right: 0;
+
+            margin-left: 320px;
+
+            padding: 0 2rem;
+
+        }
+
+        
+
+        @media (min-width: 769px) {
+
+            .toc-fixed {
+
+                display: block;
+
+            }
+
+            .main-content {
+
+                margin-right: 0;
+
+                margin-left: 320px;
+
+            }
+
+        }
+
+        
+
+        @media (max-width: 768px) {
+
+            .toc-fixed {
+
+                position: fixed;
+
+                top: 0;
+
+                right: 0;
+
+                width: 80%;
+
+                height: 100vh;
+
+                margin-right: 0;
+
+                z-index: 100;
+
+                transform: translateX(100%);
+
+                transition: transform 0.3s ease;
+
+            }
+
+            .toc-fixed.active {
+
+                transform: translateX(0);
+
+            }
+
+            .main-content {
+
+                margin-left: 0;
+
+                padding: 0 1rem;
+
+            }
+
+        }
+
+        
+
+        .section-divider {
+
+            background: linear-gradient(90deg, transparent 0%, #c0c0c0 50%, transparent 100%);
+
+            height: 1px;
+
+            margin: 3rem 0;
+
+        }
+
+        
+
+        .chart-container {
+
+            background: white;
+
+            border-radius: 12px;
+
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+            padding: 2rem;
+
+            margin: 2rem 0;
+
+        }
+
+        
+
+        .citation-link {
+
+            color: #3b82f6;
+
+            text-decoration: none;
+
+            font-weight: 500;
+
+            border-bottom: 1px dotted #3b82f6;
+
+            transition: all 0.2s ease;
+
+        }
+
+        
+
+        .citation-link:hover {
+
+            background: rgba(59, 130, 246, 0.1);
+
+            padding: 2px 4px;
+
+            border-radius: 4px;
+
+        }
+
+        
+
+        .pull-quote {
+
+            border-right: 4px solid #1e3a8a;
+
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
+
+            padding: 2rem;
+
+            margin: 2rem 0;
+
+            font-style: italic;
+
+            font-size: 1.1rem;
+
+            border-radius: 0 8px 8px 0;
+
+        }
+
+        
+
+        .vanta-bg {
+
+            position: absolute;
+
+            top: 0;
+
+            left: 0;
+
+            width: 100%;
+
+            height: 100%;
+
+            z-index: -1;
+
+        }
+
+        
+
+        .bento-grid {
+
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 2rem;
+
+            margin: 2rem 0;
+
+        }
+
+        
+
+        @media (max-width: 768px) {
+
+            .bento-grid {
+
+                grid-template-columns: 1fr;
+
+            }
+
+            
+
+            #mobile-toc-toggle {
+
+                display: block;
+
+                position: fixed;
+
+                top: 1rem;
+
+                right: 1rem;
+
+                z-index: 110;
+
+            }
+
+        }
+
+        
+
+        .bento-item {
+
+            background: rgba(255, 255, 255, 0.9);
+
+            backdrop-filter: blur(10px);
+
+            border-radius: 12px;
+
+            padding: 2rem;
+
+            border: 1px solid rgba(192, 192, 192, 0.2);
+
+        }
+
+        
+
+        .hero-title {
+
+            font-size: clamp(2rem, 5vw, 3.5rem);
+
+            line-height: 1.1;
+
+            font-weight: 700;
+
+        }
+
+        
+
+        @media (max-width: 768px) {
+
+            .hero-title {
+
+                font-size: 1.75rem;
+
+            }
+
+            .bento-item {
+
+                padding: 1.5rem;
+
+            }
+
+            .hero-bg {
+
+                padding-top: 4rem;
+
+            }
+
+        }
+
+    </style>
+
+  <base target="_blank">
+
+</head>
+
+
+
+  <body class="bg-gray-50">
+
+    <!-- Mobile TOC Toggle -->
+
+    <button id="mobile-toc-toggle" class="md:hidden fixed top-4 right-4 z-50 bg-blue-600 text-white p-3 rounded-full shadow-lg">
+
+      <i class="fas fa-bars"></i>
+
+    </button>
+
+
+
+    <!-- Fixed Table of Contents -->
+
+    <button id="toc-close" class="md:hidden absolute top-4 left-4 text-gray-600 hover:text-gray-800">
+
+      <i class="fas fa-times"></i>
+
+    </button>
+
+    <nav id="toc-nav" class="toc-fixed rounded-xl shadow-xl p-6 hidden md:block">
+
+      <h3 class="serif text-lg font-bold text-gray-800 mb-4">فهرس المحتويات</h3>
+
+      <ul class="space-y-2 text-sm">
+
+        <li>
+
+          <a href="#executive-summary" class="citation-link block py-1">ملخص تنفيذي</a>
+
+        </li>
+
+        <li>
+
+          <a href="#class-management" class="citation-link block py-1">إدارة الفصول والطلاب</a>
+
+        </li>
+
+        <li>
+
+          <a href="#content-delivery" class="citation-link block py-1">إنشاء وتقديم الدروس</a>
+
+        </li>
+
+        <a href="#student-assessment" class="citation-link block py-1">تقييم أداء الطلاب</a>
+
+        <li>
+
+          <a href="#technical-framework" class="citation-link block py-1">البنية التقنية</a>
+
+        </li>
+
+        <li>
+
+          <a href="#professional-development" class="citation-link block py-1">التطوير المهني</a>
+
+        </li>
+
+      </ul>
+
+    </nav>
+
+
+
+    <!-- Main Content -->
+
+    <div class="main-content">
+
+      <!-- Hero Section -->
+
+      <section class="relative min-h-screen flex items-center justify-center overflow-hidden hero-bg">
+
+        <div id="vanta-bg" class="vanta-bg"></div>
+
+        <div class="container mx-auto px-6 relative z-10">
+
+          <div class="bento-grid items-center">
+
+            <div class="bento-item">
+
+              <h1 class="hero-title serif text-white mb-6">
+
+                تطبيق ويب متكامل
+
+                <br/>
+
+                <em class="text-blue-200">لإدارة التربية الرياضية</em>
+
+              </h1>
+
+              <p class="text-xl text-blue-100 mb-8 leading-relaxed">
+
+                بنية تقنية شاملة تجمع بين إدارة الفصول الدراسية، المحتوى التعليمي التفاعلي، وأدوات التقييم المتعددة الأبعاد
+
+              </p>
+
+            </div>
+
+            <div class="bento-item bg-white/95">
+
+              <img src="https://kimi-web-img.moonshot.cn/img/zh-bounty-pg.com/5bcb7882a2e787e4952cb188d9b24085edf16a0f.jpg" alt="تطبيق إدارة التربية الرياضية على جهاز لوحي" class="w-full rounded-lg shadow-lg mb-4" size="medium" aspect="wide" style="photo" query="تطبيق التربية الرياضية على جهاز لوحي" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+
+              <div class="text-center">
+
+                <div class="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium">
+
+                  <i class="fas fa-chart-line mr-2"></i>
+
+                  تحليلات متقدمة وتقييم شامل
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- Executive Summary -->
+
+      <section id="executive-summary" class="py-16 bg-white">
+
+        <div class="container mx-auto px-6 max-w-4xl">
+
+          <h2 class="serif text-3xl font-bold text-gray-800 mb-8 text-center">ملخص تنفيذي</h2>
+
+
+
+          <div class="grid md:grid-cols-3 gap-8 mb-12">
+
+            <div class="text-center">
+
+              <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                <i class="fas fa-users text-blue-600 text-xl"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-2">إدارة الفصول</h3>
+
+              <p class="text-gray-600 text-sm">هيكل تنظيمي هرمي ديناميكي مع جدولة ذكية للمرافق</p>
+
+            </div>
+
+            <div class="text-center">
+
+              <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                <i class="fas fa-video text-green-600 text-xl"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-2">محتوى تفاعلي</h3>
+
+              <p class="text-gray-600 text-sm">مكتبة فيديوهات تعليمية وأنشطة مصنفة حسب المهارات</p>
+
+            </div>
+
+            <div class="text-center">
+
+              <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                <i class="fas fa-analytics text-purple-600 text-xl"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-2">تقييم متعدد الأبعاد</h3>
+
+              <p class="text-gray-600 text-sm">تتبع اللياقة البدنية وتحليلات بصرية فورية</p>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="pull-quote">
+
+            &#34;يتطلب تطبيق ويب ناجح لمعلمي التربية الرياضية بنية تحتية تقنية متكاملة تجمع بين إدارة الفصول الدراسية، وإدارة المحتوى التعليمي، وأدوات التقييم المتعددة الأبعاد، مع ضمان التكامل مع أنظمة إدارة التعلم (LMS) الشائعة وحماية البيانات الصحية للطلاب وفق أعلى معايير الأمان.&#34;
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <div class="section-divider"></div>
+
+
+
+      <!-- Class &amp; Student Management -->
+
+      <section id="class-management" class="py-16">
+
+        <div class="container mx-auto px-6 max-w-6xl">
+
+          <h2 class="serif text-4xl font-bold text-gray-800 mb-12 text-center">إدارة الفصول والطلاب</h2>
+
+
+
+          <div class="grid lg:grid-cols-2 gap-12 mb-12">
+
+            <div>
+
+              <h3 class="serif text-2xl font-bold text-gray-800 mb-6">إدارة الفصول الدراسية</h3>
+
+
+
+              <div class="space-y-6">
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+
+                  <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                    <i class="fas fa-sitemap text-blue-600 ml-2"></i>
+
+                    الهيكل التنظيمي الهرمي
+
+                  </h4>
+
+                  <p class="text-gray-600 leading-relaxed">
+
+                    يشكل نظام إدارة الفصول الدراسية <strong>العمود الفقري</strong> للتطبيق، مع بنية تحتية قادرة على استيعاب التعقيدات الإدارية للمؤسسات التعليمية. يوفر إمكانية إنشاء هيكل تنظيمي هرمي ديناميكي يمتد من المستوى الإداري العام إلى الوحدات الدقيقة.
+
+                    <a href="https://play.google.com/store/apps/details?id=com.app.myphed&amp;hl=es" class="citation-link">[Physiclass]</a>
+
+                    <a href="https://efacil.es/" class="citation-link">[EFácil]</a>
+
+                  </p>
+
+                </div>
+
+
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+
+                  <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                    <i class="fas fa-calendar-alt text-green-600 ml-2"></i>
+
+                    الجدولة الذكية
+
+                  </h4>
+
+                  <p class="text-gray-600 leading-relaxed">
+
+                    محرك جدولة ذكي يأخذ في الاعتبار القيود المكانية (الملاعب، الصالات الرياضية) كموارد محدودة تحتاج إلى حجز مسبق وتجنب التعارض. يدعم الجداول الدورية وإمكانية تعديلها بشكل فوري في حالات الطوارئ.
+
+                    <a href="https://www.classcardapp.com/solutions/sports-academy" class="citation-link">[Classcard]</a>
+
+                    <a href="https://arbiter.io/" class="citation-link">[Arbiter]</a>
+
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+
+            <div>
+
+              <img src="https://kimi-web-img.moonshot.cn/img/view.tanta.edu.eg/ce4c0b5a4e4843e20e6923a660f8ade7a94de3f7.jpg" alt="نظام جدولة الفصول الرياضية" class="w-full rounded-lg shadow-lg mb-6" size="medium" aspect="wide" style="photo" query="جدولة فصول رياضية" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+
+
+
+              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
+
+                <h4 class="font-bold text-gray-800 mb-3">ميزات التسجيل الإلكتروني</h4>
+
+                <ul class="space-y-2 text-gray-700">
+
+                  <li class="flex items-center"><i class="fas fa-qrcode text-blue-600 ml-2"></i>مسح رموز QR</li>
+
+                  <li class="flex items-center"><i class="fas fa-wifi text-green-600 ml-2"></i>العمل في الوضعين Online/Offline</li>
+
+                  <li class="flex items-center"><i class="fas fa-user-check text-purple-600 ml-2"></i>التسجيل الذاتي للطلاب</li>
+
+                </ul>
+
+                <p class="text-sm text-gray-600 mt-4">
+
+                  <a href="https://sworkit.com/student-management-system" class="citation-link">[Sworkit]</a>
+
+                  <a href="https://www.spea.org.sg/spea-newsletter/2023-issue-no-2-nov-dec/a-super-app-for-pe-teachers" class="citation-link">[Super App for PE]</a>
+
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="bg-white p-8 rounded-lg shadow-lg mb-8">
+
+            <h3 class="serif text-xl font-bold text-gray-800 mb-6">إدارة بيانات الطلاب</h3>
+
+
+
+            <div class="grid md:grid-cols-3 gap-6">
+
+              <div class="text-center">
+
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+
+                  <i class="fas fa-heartbeat text-red-600"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">السجلات الصحية</h4>
+
+                <p class="text-gray-600 text-sm">ملف رقمي شامل يتضمن السجل الصحي الرياضي المفصل والحالات المرضية المزمنة</p>
+
+              </div>
+
+
+
+              <div class="text-center">
+
+                <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+
+                  <i class="fas fa-chart-line text-yellow-600"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">التصنيف الآلي</h4>
+
+                <p class="text-gray-600 text-sm">خوارزميات تحليل البيانات لتقسيم الطلاب تلقائياً حسب المستوى البدني والمهاري</p>
+
+              </div>
+
+
+
+              <div class="text-center">
+
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+
+                  <i class="fas fa-users text-blue-600"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">إدارة الفرق</h4>
+
+                <p class="text-gray-600 text-sm">وحدة إدارة فرق متكاملة مع إمكانية إنشاء مجموعات طلابية تلقائياً</p>
+
+              </div>
+
+            </div>
+
+
+
+            <p class="text-sm text-gray-600 mt-6 text-center">
+
+              <a href="https://www.juventudtecnica.cu/articulos/evalua-tu-rendimiento-fisico-con-pcf/" class="citation-link">[PCF]</a>
+
+              <a href="https://arbiter.io/" class="citation-link">[Arbiter]</a>
+
+              <a href="https://www.spea.org.sg/spea-newsletter/2023-issue-no-2-nov-dec/a-super-app-for-pe-teachers" class="citation-link">[Super App for PE]</a>
+
+              <a href="https://plt4m.com/" class="citation-link">[PLT4M]</a>
+
+              <a href="https://academy.sportlyzer.com/rowing-misc/the-ultimate-list-of-sports-coaching-software/" class="citation-link">[TeamSnap]</a>
+
+              <a href="https://isportz.co/sports/learning-management-system-lms/" class="citation-link">[iSportz]</a>
+
+            </p>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <div class="section-divider"></div>
+
+
+
+      <!-- Content Delivery &amp; Activities -->
+
+      <section id="content-delivery" class="py-16 bg-gray-50">
+
+        <div class="container mx-auto px-6 max-w-6xl">
+
+          <h2 class="serif text-4xl font-bold text-gray-800 mb-12 text-center">إنشاء وتقديم الدروس والأنشطة الرياضية</h2>
+
+
+
+          <div class="grid lg:grid-cols-3 gap-8 mb-12">
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+
+              <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+
+                <i class="fas fa-book-open text-blue-600"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-3">خطط دروس مجدولة</h3>
+
+              <p class="text-gray-600 text-sm leading-relaxed">
+
+                قاعدة بيانات شاملة لخطط الدروس المصممة وفق المناهج الوطنية، مرتبطة بالأهداف التعليمية الوطنية ومعايير الأداء واضحة المعايير.
+
+                <a href="https://www.peproapp.com/" class="citation-link">[PE Pro]</a>
+
+                <a href="https://blog.gophersport.com/dynamic-pe-asap-a-free-curriculum-building-tool/" class="citation-link">[Dynamic PE ASAP]</a>
+
+              </p>
+
+            </div>
+
+
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+
+              <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+
+                <i class="fas fa-video text-green-600"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-3">فيديوهات تفاعلية</h3>
+
+              <p class="text-gray-600 text-sm leading-relaxed">
+
+                مكتبة فيديو شاملة تضم مئات المقاطع عالية الجودة توضح كيفية أداء المهارات الرياضية المختلفة، مع شرح صوتي واضح وإمكانية التكبير والتصغير.
+
+                <a href="https://adchitects.co/case-studies/heykanga-innovative-learning-webapp" class="citation-link">[Hey Kanga]</a>
+
+                <a href="https://plt4m.com/" class="citation-link">[PLT4M]</a>
+
+              </p>
+
+            </div>
+
+
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+
+              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+
+                <i class="fas fa-gamepad text-purple-600"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-3">قاعدة بيانات الألعاب</h3>
+
+              <p class="text-gray-600 text-sm leading-relaxed">
+
+                قاعدة بيانات منظمة تحتوي على مئات الألعاب الرياضية المصنفة حسب المهارة الحركية، عدد المشاركين، المعدات المطلوبة، والمساحة المتاحة.
+
+                <a href="https://www.pescholar.com/insight/free-resources-for-physical-education-pe-teachers/" class="citation-link">[PE Scholar]</a>
+
+                <a href="https://www.cambslearntogether.co.uk/cambridgeshire-services-to-schools/cambridgeshire-physical-education/technology-to-support-learning-in-pe" class="citation-link">[G.A.P.S. Sports Coaching]</a>
+
+              </p>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="bg-white p-8 rounded-lg shadow-lg">
+
+            <h3 class="serif text-2xl font-bold text-gray-800 mb-8">أدوات تصميم الدروس المتقدمة</h3>
+
+
+
+            <div class="grid md:grid-cols-2 gap-8">
+
+              <div>
+
+                <img src="https://kimi-web-img.moonshot.cn/img/microless.com/608654d56caf5452d91ecc0c8d774022ac5daeeb.jpg" alt="معلم يستخدم تطبيق سحب وإفلات على جهاز لوحي" class="w-full rounded-lg shadow-md mb-6" size="medium" aspect="wide" style="photo" query="معلم يستخدم تطبيق سحب وإفلات على جهاز لوحي" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+
+
+
+                <div class="bg-blue-50 p-4 rounded-lg">
+
+                  <h4 class="font-bold text-gray-800 mb-2">التخصيص الذكي</h4>
+
+                  <p class="text-gray-600 text-sm">
+
+                    أدوات ذكية لتخصيص المحتوى تلقائياً بناءً على بيانات الطلاب، مع دمج الوسائط المتعددة والتعليمات الصوتية.
+
+                    <a href="https://www.amaven.co.uk/physical-education-teaching-platform" class="citation-link">[Amaven]</a>
+
+                    <a href="https://completeeducationsolutions.uk/products/ipep-interactive-pe-lesson-planner-and-assessment/" class="citation-link">[iPEP]</a>
+
+                  </p>
+
+                </div>
+
+              </div>
+
+
+
+              <div class="space-y-6">
+
+                <div class="border-l-4 border-blue-500 pl-6">
+
+                  <h4 class="font-bold text-gray-800 mb-3">منشئ خطط دروس مرئي</h4>
+
+                  <p class="text-gray-600 leading-relaxed mb-4">
+
+                    واجهة سحب وإفلات بديهية تمكن المعلم من بناء الحصة الرياضية من خلال اختيار الأنشطة من المكتبة وترتيبها في تسلسل زمني منطقي.
+
+                  </p>
+
+                  <ul class="text-sm text-gray-600 space-y-1">
+
+                    <li>• إضافة محتوى متعدد الوسائط مباشرة</li>
+
+                    <li>• ربط الأنشطة بالأهداف التعليمية</li>
+
+                    <li>• حفظ خطط الدروس كقوالب لإعادة الاستخدام</li>
+
+                  </ul>
+
+                  <p class="text-xs text-gray-500 mt-2">
+
+                    <a href="https://completeeducationsolutions.uk/products/ipep-interactive-pe-lesson-planner-and-assessment/" class="citation-link">[iPEP]</a>
+
+                    <a href="https://blog.gophersport.com/dynamic-pe-asap-a-free-curriculum-building-tool/" class="citation-link">[Dynamic PE ASAP]</a>
+
+                    <a href="https://www.instructure.com/lms-learning-management-system" class="citation-link">[Canvas LMS]</a>
+
+                  </p>
+
+                </div>
+
+
+
+                <div class="border-l-4 border-green-500 pl-6">
+
+                  <h4 class="font-bold text-gray-800 mb-3">التكيف حسب الفئة العمرية</h4>
+
+                  <p class="text-gray-600 leading-relaxed">
+
+                    ميزة &#34;التخطيط للخلف&#34; (backward design) حيث يبدأ المعلم بتحديد الأهداف التعليمية، ثم يساعده النظام في اختيار الأنشطة المناسبة مع تطبيق نموذج STEP للتكيف.
+
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <div class="section-divider"></div>
+
+
+
+      <!-- Student Assessment -->
+
+      <section id="student-assessment" class="py-16">
+
+        <div class="container mx-auto px-6 max-w-6xl">
+
+          <h2 class="serif text-4xl font-bold text-gray-800 mb-12 text-center">تقييم أداء الطلاب والمتابعة</h2>
+
+
+
+          <div class="grid lg:grid-cols-2 gap-12 mb-12">
+
+            <div>
+
+              <h3 class="serif text-2xl font-bold text-gray-800 mb-6">أدوات التقييم المدمجة</h3>
+
+
+
+              <div class="space-y-6">
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+
+                  <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                    <i class="fas fa-running text-blue-600 ml-2"></i>
+
+                    تقييم المهارات الحركية
+
+                  </h4>
+
+                  <p class="text-gray-600 leading-relaxed">
+
+                    مجموعة شاملة من أدوات التقييم المصممة وفقاً للمعايير الوطنية، تشمل اختبارات اللياقة البدنية القياسية وتقييم المهارات الحركية الأساسية الثلاثة.
+
+                    <a href="https://pubmed.ncbi.nlm.nih.gov/40417571/" class="citation-link">[SB-PFT]</a>
+
+                    <a href="https://www.juventudtecnica.cu/articulos/evalua-tu-rendimiento-fisico-con-pcf/" class="citation-link">[PCF]</a>
+
+                  </p>
+
+                </div>
+
+
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+
+                  <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                    <i class="fas fa-heart text-red-600 ml-2"></i>
+
+                    تقييم السلوك الرياضي
+
+                  </h4>
+
+                  <p class="text-gray-600 leading-relaxed">
+
+                    إطارات تقييم لقياس المشاركة الفعالة، الجهد المبذول، الروح الرياضية، ومهارات العمل الجماعي مع إمكانية إنشاء سجلات سلوكية.
+
+                    <a href="https://mlms.mtsd.k12.nj.us/our-school/staff-webpages/hickman-justine/lms-physical-education" class="citation-link">[Montgomery Lower Middle School]</a>
+
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+
+            <div>
+
+              <img src="https://kimi-web-img.moonshot.cn/img/i.ytimg.com/5aaa17c1e0915f6b51ad8567af3cf874d36ed7c1.jpg" alt="تقييم الطالب في حصة التربية الرياضية" class="w-full rounded-lg shadow-lg mb-6" size="medium" aspect="wide" style="photo" query="تقييم طالب رياضي" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+
+
+
+              <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg">
+
+                <h4 class="font-bold text-gray-800 mb-3">مقارنة بالمعايير العمرية</h4>
+
+                <p class="text-gray-600 text-sm leading-relaxed">
+
+                  قاعدة بيانات ضخمة من المعايير التنموية مع مقارنة تلقائية لأداء كل طالب، تصنيف الطلاب إلى فئات (ناشئ، متوقع، متجاوز للتوقعات).
+
+                  <a href="https://www.completepe.com/" class="citation-link">[Complete PE]</a>
+
+                  <a href="https://www.amaven.co.uk/physical-education-teaching-platform" class="citation-link">[Amaven]</a>
+
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="bg-white p-8 rounded-lg shadow-lg">
+
+            <h3 class="serif text-xl font-bold text-gray-800 mb-6">التتبع والتحليل المتقدم</h3>
+
+
+
+            <div class="grid md:grid-cols-3 gap-6">
+
+              <div class="text-center">
+
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                  <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">سجلات الأداء</h4>
+
+                <p class="text-gray-600 text-sm">ملف رقمي شامل يوثق جميع تقييمات الطالب عبر السنوات الدراسية مع إمكانية عرض التطور الزمني</p>
+
+              </div>
+
+
+
+              <div class="text-center">
+
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                  <i class="fas fa-chart-pie text-green-600 text-xl"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">لوحات المعلومات</h4>
+
+                <p class="text-gray-600 text-sm">رسوم بيانية تفاعلية توضح أنماط الأداء على مستوى الفصل أو المدرسة بأكملها</p>
+
+              </div>
+
+
+
+              <div class="text-center">
+
+                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                  <i class="fas fa-certificate text-purple-600 text-xl"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">التقارير والشهادات</h4>
+
+                <p class="text-gray-600 text-sm">تقارير تلقائية وشهادات إنجاز رقمية للطلاب الذين يحققون أهدافاً محددة</p>
+
+              </div>
+
+            </div>
+
+
+
+            <p class="text-sm text-gray-600 mt-6 text-center">
+
+              <a href="https://outcoach.io/performance-tracking/" class="citation-link">[Outcoach]</a>
+
+              <a href="https://www.amaven.co.uk/physical-education-teaching-platform" class="citation-link">[Amaven]</a>
+
+              <a href="https://www.focusedfitness.net/software/modules" class="citation-link">[WELNET]</a>
+
+              <a href="https://www.classroomio.com/" class="citation-link">[ClassroomIO]</a>
+
+              <a href="https://www.instructure.com/lms-learning-management-system" class="citation-link">[Canvas LMS]</a>
+
+            </p>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <div class="section-divider"></div>
+
+
+
+      <!-- Technical Framework -->
+
+      <section id="technical-framework" class="py-16 bg-gray-50">
+
+        <div class="container mx-auto px-6 max-w-6xl">
+
+          <h2 class="serif text-4xl font-bold text-gray-800 mb-12 text-center">البنية التقنية والتكاملات</h2>
+
+
+
+          <div class="grid lg:grid-cols-2 gap-12 mb-12">
+
+            <div>
+
+              <h3 class="serif text-2xl font-bold text-gray-800 mb-6">المعمارية التقنية</h3>
+
+
+
+              <div class="space-y-6">
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+
+                  <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                    <i class="fas fa-mobile-alt text-blue-600 ml-2"></i>
+
+                    تصميم متجاوب
+
+                  </h4>
+
+                  <p class="text-gray-600 leading-relaxed">
+
+                    تصميم متجاوب يضمن تجربة مستخدم مثالية على جميع الأجهزة (Desktops, Tablets, Smartphones) مع واجهات مستخدم مبسطة للاستخدام أثناء الحركة.
+
+                  </p>
+
+                </div>
+
+
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+
+                  <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                    <i class="fas fa-cubes text-green-600 ml-2"></i>
+
+                    معمارية المصغرات
+
+                  </h4>
+
+                  <p class="text-gray-600 leading-relaxed">
+
+                    معمارية المصغرات (Microservices) لضمان قابلية التوسع والصيانة، مع خدمات مستقلة تتواصل عبر واجهات RESTful أو GraphQL.
+
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+
+            <div>
+
+              <img src="https://kimi-web-img.moonshot.cn/img/developer.chrome.com/de5fc55e2fb9cbd70b68d8825715fb5df51f0a6a.jpg" alt="بنية تقنية لتطبيق ويب" class="w-full rounded-lg shadow-lg mb-6" size="medium" aspect="wide" style="photo" query="بنية تقنية تطبيق ويب" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+
+
+
+              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
+
+                <h4 class="font-bold text-gray-800 mb-3">قواعد البيانات المتعددة</h4>
+
+                <p class="text-gray-600 text-sm mb-3">
+
+                  دعم قواعد بيانات موثوقة وقابلة للتوسع: PostgreSQL أو MySQL للبيانات العلائقية، MongoDB للبيانات غير الهيكلية.
+
+                </p>
+
+                <div class="flex justify-around text-xs">
+
+                  <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">PostgreSQL</span>
+
+                  <span class="bg-green-100 text-green-800 px-2 py-1 rounded">MySQL</span>
+
+                  <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">MongoDB</span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="bg-white p-8 rounded-lg shadow-lg mb-8">
+
+            <h3 class="serif text-xl font-bold text-gray-800 mb-6">التكامل مع الأنظمة التعليمية</h3>
+
+
+
+            <div class="grid md:grid-cols-3 gap-6">
+
+              <div class="text-center">
+
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                  <i class="fas fa-graduation-cap text-blue-600 text-xl"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">توافق LMS</h4>
+
+                <p class="text-gray-600 text-sm">توافق مع أنظمة إدارة التعلم الشائعة: Moodle, Canvas, Google Classroom, Schoology</p>
+
+              </div>
+
+
+
+              <div class="text-center">
+
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                  <i class="fas fa-plug text-green-600 text-xl"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">واجهات API</h4>
+
+                <p class="text-gray-600 text-sm">واجهات برمجة تطبيقات قياسية مع دعم معايير OneRoster, Clever, LTI</p>
+
+              </div>
+
+
+
+              <div class="text-center">
+
+                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+
+                  <i class="fas fa-sync text-purple-600 text-xl"></i>
+
+                </div>
+
+                <h4 class="font-bold text-gray-800 mb-2">مزامنة البيانات</h4>
+
+                <p class="text-gray-600 text-sm">مزامنة ثنائية الاتجاه مع استيراد جداول وقوائم طلاب وتصدير درجات التقييمات</p>
+
+              </div>
+
+            </div>
+
+
+
+            <p class="text-sm text-gray-600 mt-6 text-center">
+
+              <a href="https://journals.humankinetics.com/view/journals/jtpe/44/3/article-p413.xml" class="citation-link">[دراسة فعالية LMS]</a>
+
+              <a href="http://users.sch.gr/papadakis/new/wp-content/uploads/2020/06/C31_2016_Kyriakidis_Papadakis_Blended-learning-in-K-12-Education_IABL_p36-_43.pdf" class="citation-link">[بحث Blended Learning]</a>
+
+              <a href="https://arbiter.io/" class="citation-link">[Arbiter]</a>
+
+              <a href="https://www.classcardapp.com/solutions/sports-academy" class="citation-link">[Classcard]</a>
+
+            </p>
+
+          </div>
+
+
+
+          <div class="bg-gradient-to-r from-red-50 to-pink-50 p-8 rounded-lg">
+
+            <h3 class="serif text-xl font-bold text-gray-800 mb-6">الأمان والخصوصية</h3>
+
+
+
+            <div class="grid md:grid-cols-2 gap-8">
+
+              <div>
+
+                <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                  <i class="fas fa-shield-alt text-red-600 ml-2"></i>
+
+                  حماية البيانات
+
+                </h4>
+
+                <p class="text-gray-600 leading-relaxed mb-4">
+
+                  تشفير end-to-end للبيانات أثناء النقل والتخزين، مع الالتزام بمعايير GDPR وFERPA لحماية البيانات الصحية والشخصية للطلاب.
+
+                </p>
+
+                <p class="text-sm text-gray-600">
+
+                  <a href="https://play.google.com/store/apps/details?id=com.app.myphed&amp;hl=es" class="citation-link">[Physiclass]</a>
+
+                  <a href="https://arbiter.io/" class="citation-link">[Arbiter]</a>
+
+                </p>
+
+              </div>
+
+
+
+              <div>
+
+                <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                  <i class="fas fa-user-cog text-blue-600 ml-2"></i>
+
+                  إدارة الصلاحيات
+
+                </h4>
+
+                <p class="text-gray-600 leading-relaxed mb-4">
+
+                  نظام إدارة صلاحيات مرن (RBAC) مع مستويات وصول مختلفة: معلم، إداري، ولي أمر، طالب، مع سجلات تدقيق لجميع عمليات الوصول.
+
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <div class="section-divider"></div>
+
+
+
+      <!-- Professional Development -->
+
+      <section id="professional-development" class="py-16">
+
+        <div class="container mx-auto px-6 max-w-6xl">
+
+          <h2 class="serif text-4xl font-bold text-gray-800 mb-12 text-center">التطوير المهني والموارد المساندة</h2>
+
+
+
+          <div class="grid lg:grid-cols-3 gap-8 mb-12">
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+
+              <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+
+                <i class="fas fa-chalkboard-teacher text-blue-600"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-3">موارد تدريبية</h3>
+
+              <p class="text-gray-600 text-sm leading-relaxed">
+
+                موارد تدريبية شاملة تشمل فيديوهات تعليمية، دورات تدريبية عبر الإنترنت، أدلة استخدام مفصلة، واستراتيجيات للتعامل مع الطلاب ذوي الاحتياجات الخاصة.
+
+                <a href="https://www.pescholar.com/insight/free-resources-for-physical-education-pe-teachers/" class="citation-link">[PE Scholar]</a>
+
+                <a href="https://www.thephysicaleducator.com/blog/getting-started-open" class="citation-link">[OPEN]</a>
+
+              </p>
+
+            </div>
+
+
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+
+              <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+
+                <i class="fas fa-users text-green-600"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-3">مجتمع تعليمي</h3>
+
+              <p class="text-gray-600 text-sm leading-relaxed">
+
+                منصة تواصل داخلية تتيح للمعلمين مشاركة خطط الدروس الناجحة، طرح الأسئلة، والحصول على ملاحظات من الزملاء مع منتديات نقاش منظمة حسب المواضيع.
+
+                <a href="https://www.ayudaparamaestros.com/2024/04/10-paginas-webs-que-tienen-un-objetivo.html" class="citation-link">[El Valor de la Educación Física]</a>
+
+                <a href="https://www.scoop.it/topic/sitios-web-de-docentes-de-educacion-fisica" class="citation-link">[Scoop.it]</a>
+
+              </p>
+
+            </div>
+
+
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+
+              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+
+                <i class="fas fa-map text-purple-600"></i>
+
+              </div>
+
+              <h3 class="font-bold text-gray-800 mb-3">التخطيط الاستراتيجي</h3>
+
+              <p class="text-gray-600 text-sm leading-relaxed">
+
+                أدوات لإنشاء خرائط منهجية تغطي العام الدراسي بأكمله، مع تحديد النقاط الرئيسية للتقييم ومواعيد اختبارات اللياقة البدنية القياسية.
+
+                <a href="https://blog.gophersport.com/dynamic-pe-asap-a-free-curriculum-building-tool/" class="citation-link">[Dynamic PE ASAP]</a>
+
+                <a href="https://thepehub.co.uk/" class="citation-link">[The PE Hub]</a>
+
+              </p>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="bg-white p-8 rounded-lg shadow-lg">
+
+            <h3 class="serif text-xl font-bold text-gray-800 mb-6">إدارة المحتوى والتحديثات</h3>
+
+
+
+            <div class="grid md:grid-cols-2 gap-8">
+
+              <div>
+
+                <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                  <i class="fas fa-sync-alt text-blue-600 ml-2"></i>
+
+                  تحديثات دورية
+
+                </h4>
+
+                <p class="text-gray-600 leading-relaxed mb-4">
+
+                  تحديثات دورية للمكتبة التعليمية تشمل خطط دروس جديدة، ألعاب مبتكرة، وتحديثات للمعايير الوطنية بناءً على ملاحظات المعلمين وتطورات المناهج.
+
+                </p>
+
+                <p class="text-sm text-gray-600">
+
+                  <a href="https://efacil.es/" class="citation-link">[EFácil]</a>
+
+                  <a href="https://www.peproapp.com/" class="citation-link">[PE Pro]</a>
+
+                </p>
+
+              </div>
+
+
+
+              <div>
+
+                <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+
+                  <i class="fas fa-share-alt text-green-600 ml-2"></i>
+
+                  مشاركة الموارد
+
+                </h4>
+
+                <p class="text-gray-600 leading-relaxed mb-4">
+
+                  إمكانية مشاركة الموارد والخطط بين المعلمين داخل المدرسة أو بين المدارس عبر مستودع موارد مشترك مع نظام تصنيف وتقييم من المجتمع التعليمي.
+
+                </p>
+
+                <p class="text-sm text-gray-600">
+
+                  <a href="https://completeeducationsolutions.uk/products/ipep-interactive-pe-lesson-planner-and-assessment/" class="citation-link">[iPEP]</a>
+
+                  <a href="https://www.efdeportes.com/efd195/aula-virtual-con-moodle-en-educacion-fisica.htm" class="citation-link">[Moodle]</a>
+
+                </p>
+
+              </div>
+
+            </div>
+
+
+
+            <div class="mt-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg">
+
+              <div class="text-center">
+
+                <h4 class="font-bold text-gray-800 mb-4">ميزات إضافية</h4>
+
+                <div class="grid md:grid-cols-4 gap-4 text-sm">
+
+                  <div class="flex flex-col items-center">
+
+                    <i class="fas fa-headset text-blue-600 text-xl mb-2"></i>
+
+                    <span class="text-gray-700">دعم فني متاح</span>
+
+                  </div>
+
+                  <div class="flex flex-col items-center">
+
+                    <i class="fas fa-comments text-green-600 text-xl mb-2"></i>
+
+                    <span class="text-gray-700">منتديات نقاش</span>
+
+                  </div>
+
+                  <div class="flex flex-col items-center">
+
+                    <i class="fas fa-star text-yellow-600 text-xl mb-2"></i>
+
+                    <span class="text-gray-700">تقييم الموارد</span>
+
+                  </div>
+
+                  <div class="flex flex-col items-center">
+
+                    <i class="fas fa-bell text-purple-600 text-xl mb-2"></i>
+
+                    <span class="text-gray-700">إشعارات المحتوى الجديد</span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- Footer -->
+
+      <footer class="bg-gray-800 text-white py-12">
+
+        <div class="container mx-auto px-6 text-center">
+
+          <p class="text-gray-300 mb-4">
+
+            تطبيق ويب متكامل لإدارة التربية الرياضية - بنية تقنية شاملة لدعم معلمي التربية الرياضية
+
+          </p>
+
+          <div class="flex justify-center space-x-6 text-sm text-gray-400">
+
+            <span>إدارة الفصول</span>
+
+            <span>•</span>
+
+            <span>محتوى تفاعلي</span>
+
+            <span>•</span>
+
+            <span>تقييم متعدد الأبعاد</span>
+
+            <span>•</span>
+
+            <span>أمان البيانات</span>
+
+          </div>
+
+        </div>
+
+      </footer>
+
+    </div>
+
+
+
+    <script>
+
+        // Initialize Vanta.js background
+
+        VANTA.NET({
+
+            el: "#vanta-bg",
+
+            mouseControls: true,
+
+            touchControls: true,
+
+            gyroControls: false,
+
+            minHeight: 200.00,
+
+            minWidth: 200.00,
+
+            scale: 1.00,
+
+            scaleMobile: 1.00,
+
+            color: 0x3b82f6,
+
+            backgroundColor: 0x1e3a8a,
+
+            points: 8.00,
+
+            maxDistance: 20.00,
+
+            spacing: 15.00
+
+        });
+
+
+
+        // Smooth scrolling for anchor links
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+
+            anchor.addEventListener('click', function (e) {
+
+                e.preventDefault();
+
+                const target = document.querySelector(this.getAttribute('href'));
+
+                if (target) {
+
+                    target.scrollIntoView({
+
+                        behavior: 'smooth',
+
+                        block: 'start'
+
+                    });
+
+                    
+
+                    // Close TOC on mobile after clicking a link
+
+                    if (window.innerWidth <= 768) {
+
+                        document.getElementById('toc-nav').classList.remove('active');
+
+                    }
+
+                }
+
+            });
+
+        });
+
+
+
+        // Mobile TOC toggle
+
+        const tocToggle = document.getElementById('mobile-toc-toggle');
+
+        const tocNav = document.getElementById('toc-nav');
+
+        const tocClose = document.getElementById('toc-close');
+
+        
+
+        if (tocToggle && tocNav && tocClose) {
+
+            tocToggle.addEventListener('click', () => {
+
+                tocNav.classList.toggle('active');
+
+            });
+
+            
+
+            tocClose.addEventListener('click', () => {
+
+                tocNav.classList.remove('active');
+
+            });
+
+        }
+
+    </script>
+
+  
+
+
+
+</body></html>

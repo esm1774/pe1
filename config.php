@@ -149,7 +149,7 @@ setcookie('XSRF-TOKEN', $_SESSION['csrf_token'], [
     'expires' => time() + SESSION_LIFETIME,
     'path' => '/',
     'samesite' => 'Lax',
-    'httponly' => false // REQUIRED for JS to read it
+    'httponly' => true // INCREASED SECURITY: Prevent JS from accessing session ID
 ]);
 
 // ============================================================
@@ -210,6 +210,9 @@ function ensureSchema() {
     $done = true;
     
     // Performance: Only run schema checks if version changed or periodically
+    // Optimized: Skip DB query for version check in production unless forced
+    if (!DEBUG_MODE && !isset($_GET['force_schema'])) return;
+
     $currentVersion = '2.1.9'; 
     $dbVersion = getPlatformSetting('db_schema_version', '0');
     if ($dbVersion === $currentVersion && !isset($_GET['force_schema'])) return;

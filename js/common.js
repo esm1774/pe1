@@ -1265,3 +1265,14 @@ class PasswordValidator {
 
 // Global expose
 window.PasswordValidator = PasswordValidator;
+
+/**
+ * XSS Protection: Escape HTML characters
+ */
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+window.escapeHTML = escapeHTML;
