@@ -711,6 +711,16 @@ function requireLogin() {
     if (!isLoggedIn()) {
         jsonError('غير مسجل الدخول', 401);
     }
+
+    $sid = Tenant::id();
+    // SaaS Security: Ensure session matches the requested tenant
+    if (Tenant::isSaasMode() && !Tenant::isPlatformAdmin()) {
+        if ($sid && isset($_SESSION['school_id']) && $_SESSION['school_id'] != $sid) {
+            // Context mismatch: User is logged into School A but trying to access School B's API
+            jsonError('محاولة وصول غير مصرح بها (تضارب في بيانات المدرسة)', 403);
+        }
+    }
+
     return [
         'id' => $_SESSION['user_id'],
         'role' => $_SESSION['user_role'],
