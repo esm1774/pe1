@@ -7,14 +7,21 @@
 function getUsers() {
     requireRole(['admin']);
     $sid = schoolId();
-    // Fix #10: Use prepared statement instead of direct interpolation
-    $sql = "SELECT id, username, name, email, role, active, last_login, created_at FROM users WHERE active = 1";
-    $params = [];
+    // SaaS: Use school-specific role if available
+    $sql = "SELECT u.id, u.username, u.name, u.email, 
+                   COALESCE(usa.role, u.role) as role, 
+                   u.active, u.last_login, u.created_at 
+            FROM users u
+            LEFT JOIN user_school_access usa ON u.id = usa.user_id AND usa.school_id = ?
+            WHERE u.active = 1";
+    $params = [$sid];
+    
     if ($sid) { 
-        $sql .= " AND (school_id = ? OR id IN (SELECT user_id FROM user_school_access WHERE school_id = ?))"; 
-        $params = [$sid, $sid]; 
+        $sql .= " AND (u.school_id = ? OR usa.school_id = ?)"; 
+        $params[] = $sid;
+        $params[] = $sid;
     }
-    $sql .= " ORDER BY id";
+    $sql .= " ORDER BY u.id";
     $stmt = getDB()->prepare($sql);
     $stmt->execute($params);
     jsonSuccess($stmt->fetchAll());
@@ -154,15 +161,20 @@ function getTeacherAssignments() {
     $db = getDB();
     $sid = schoolId();
 
-    // Fix: Scope teachers to current school to prevent cross-school data leakage
-    $sql = "SELECT id, name, username, role FROM users WHERE role = 'teacher' AND active = 1";
-    $params = [];
-    if ($sid) { $sql .= " AND school_id = ?"; $params[] = $sid; }
+    // SaaS: Accurate role detection for multi-school teachers (UNION ensures we catch both primary and linked)
+    $sql = "
+        SELECT id, name, username, 'teacher' as role FROM users 
+        WHERE active = 1 AND role = 'teacher' AND school_id = ?
+        UNION
+        SELECT u.id, u.name, u.username, 'teacher' as role FROM users u
+        JOIN user_school_access usa ON u.id = usa.user_id
+        WHERE u.active = 1 AND usa.school_id = ? AND usa.role = 'teacher'
+    ";
+    $params = [$sid, $sid];
     $sql .= " ORDER BY name";
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
     $teachers = $stmt->fetchAll();
-
     foreach ($teachers as &$teacher) {
         $stmt = $db->prepare("
             SELECT c.id, CONCAT(g.name, ' - ', c.name) as full_name,
@@ -180,6 +192,10 @@ function getTeacherAssignments() {
         if ($sid) $stmtParams[] = $sid;
         $stmt->execute($stmtParams);
         $teacher['classes'] = $stmt->fetchAll();
+        // Ensure bool types are cast for JS truthiness
+        foreach ($teacher['classes'] as &$c) {
+            $c['is_temporary'] = (int)$c['is_temporary'];
+        }
     }
 
     // Return only classes belonging to current school
@@ -210,17 +226,23 @@ function assignTeacherClass() {
 
     if (!$teacherId || !$classId) jsonError('يجب تحديد المعلم والفصل');
 
-    // Validate teacher exists and is a teacher
-    $db   = getDB();
-    $user = $db->prepare("SELECT id, role FROM users WHERE id = ? AND active = 1");
-    $user->execute([$teacherId]);
-    $u = $user->fetch();
-    if (!$u || $u['role'] !== 'teacher') jsonError('المستخدم المحدد ليس معلماً');
+    // Validate teacher exists and has teacher role (either primary or in this school)
+    $db  = getDB();
+    $sid = (int)schoolId();
+    $stmt = $db->prepare("
+        SELECT id FROM users WHERE id = ? AND active = 1 AND (
+            (role = 'teacher' AND school_id = ?) OR 
+            id IN (SELECT user_id FROM user_school_access WHERE school_id = ? AND role = 'teacher')
+        )
+    ");
+    $stmt->execute([$teacherId, $sid, $sid]);
+    $exists = $stmt->fetch();
+    if (!$exists) jsonError('المعلم المختار غير موجود في هذه المدرسة');
 
-    // Validate class exists
-    $cls = $db->prepare("SELECT id FROM classes WHERE id = ? AND active = 1");
-    $cls->execute([$classId]);
-    if (!$cls->fetch()) jsonError('الفصل غير موجود');
+    // Validate class exists in this school
+    $cls = $db->prepare("SELECT id FROM classes WHERE id = ? AND school_id = ? AND active = 1");
+    $cls->execute([$classId, $sid]);
+    if (!$cls->fetch()) jsonError('الفصل غير موجود في هذه المدرسة');
 
     assignClassToTeacher($teacherId, $classId, (bool)$isTemporary, $expiresAt);
 
@@ -396,10 +418,16 @@ function saveTeacherAssignments() {
 
     $db = getDB();
 
-    // Validate teacher
-    $user = $db->prepare("SELECT id FROM users WHERE id = ? AND role = 'teacher' AND active = 1");
-    $user->execute([$teacherId]);
-    if (!$user->fetch()) jsonError('المعلم غير موجود');
+    // Validate teacher exists and has teacher role (either primary or in this school)
+    $sid = (int)schoolId();
+    $stmt = $db->prepare("
+        SELECT id FROM users WHERE id = ? AND active = 1 AND (
+            (role = 'teacher' AND school_id = ?) OR 
+            id IN (SELECT user_id FROM user_school_access WHERE school_id = ? AND role = 'teacher')
+        )
+    ");
+    $stmt->execute([$teacherId, $sid, $sid]);
+    if (!$stmt->fetch()) jsonError('المعلم المختار غير موجود في هذه المدرسة');
 
     $db->beginTransaction();
     try {

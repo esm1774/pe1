@@ -150,6 +150,11 @@ const API = {
 
             const options = { method, headers: {} };
 
+            // Add school context if available
+            if (window.SCHOOL_SLUG) {
+                options.headers['X-School-Slug'] = window.SCHOOL_SLUG;
+            }
+
             // Add CSRF Token for state-changing requests
             if (method !== 'GET') {
                 const csrfToken = document.cookie

@@ -145,10 +145,24 @@ class Tenant {
             }
         }
 
-        // Priority 3: Header (for API clients / mobile apps)
-        $header = $_SERVER['HTTP_X_SCHOOL_ID'] ?? null;
-        if ($header) {
-            self::$schoolId = (int)$header;
+        // Priority 3: Header (for API clients / mobile apps / SPA context)
+        $headerSlug = $_SERVER['HTTP_X_SCHOOL_SLUG'] ?? null;
+        if ($headerSlug) {
+            $school = self::findBySlug($headerSlug);
+            if ($school) {
+                self::$schoolId = (int)$school['id'];
+                self::$school = $school;
+                // Update session if it's different and user has access
+                if (!isset($_SESSION['school_id']) || $_SESSION['school_id'] != self::$schoolId) {
+                    $_SESSION['school_id'] = self::$schoolId;
+                }
+                return;
+            }
+        }
+
+        $headerId = $_SERVER['HTTP_X_SCHOOL_ID'] ?? null;
+        if ($headerId) {
+            self::$schoolId = (int)$headerId;
             return;
         }
 
