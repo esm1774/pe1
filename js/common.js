@@ -1160,8 +1160,7 @@ window.selectSchoolAndLogin = async (slug, username, password) => {
             const rSwitch = await API.post('switch_school', { school_id: school.id });
             if (rSwitch && rSwitch.success) {
                 const root = window.APP_ROOT || '/';
-                const hash = window.location.hash || '';
-                window.location.href = root + slug + '/' + hash;
+                window.location.href = root + slug + '/#dashboard';
                 return;
             }
         }
@@ -1175,8 +1174,7 @@ window.selectSchoolAndLogin = async (slug, username, password) => {
         currentUser = r.data;
         if (r.data.school_slug) {
             const root = window.APP_ROOT || '/';
-            const hash = window.location.hash || '';
-            window.location.href = root + r.data.school_slug + '/' + hash;
+            window.location.href = root + r.data.school_slug + '/#dashboard';
         } else {
             showApp();
         }

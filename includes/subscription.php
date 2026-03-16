@@ -193,7 +193,7 @@ class Subscription {
                 'timetable'     => 'جدول الحصص الأسبوعي',
                 'weighted_grading' => 'محرك التقييم الموزون',
                 'monitoring_report' => 'كشف المتابعة اليومي',
-                'assessments_bank' => 'بنك المشاريع والأبحاث',
+                'assessments_bank' => 'الاختباارت والمشاريع',
                 'behavior_analytics' => 'تحليلات السلوك والمشاركة',
                 'white_label'   => 'تخصيص هوية التقارير'
             ];
@@ -378,6 +378,32 @@ class Subscription {
             $db->prepare($sql)->execute($params);
         } catch (Exception $e) {
             // Silent
+        }
+    }
+
+    /**
+     * Seed default fitness tests for a school if they don't exist
+     */
+    public static function seedDefaultFitnessTests($schoolId) {
+        if (!$schoolId) return;
+        $db = getDB();
+        
+        // Check if school already has tests
+        $stmt = $db->prepare("SELECT COUNT(*) FROM fitness_tests WHERE school_id = ? AND active = 1");
+        $stmt->execute([$schoolId]);
+        if ($stmt->fetchColumn() > 0) return;
+
+        $defaults = [
+            ['جري 50 متر', 'ثانية', 'lower_better', 10],
+            ['الضغط', 'عدة', 'higher_better', 10],
+            ['الجلوس من الرقود', 'عدة', 'higher_better', 10],
+            ['المرونة', 'سم', 'higher_better', 10],
+            ['جري المكوك', 'ثانية', 'lower_better', 10]
+        ];
+
+        $stmt = $db->prepare("INSERT INTO fitness_tests (school_id, name, unit, type, max_score) VALUES (?, ?, ?, ?, ?)");
+        foreach ($defaults as $d) {
+            $stmt->execute([$schoolId, $d[0], $d[1], $d[2], $d[3]]);
         }
     }
 }

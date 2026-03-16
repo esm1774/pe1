@@ -202,7 +202,7 @@ const ALL_FEATURES_MAP = {
     timetable: { icon: '🗓️', label: 'جدول الحصص' },
     weighted_grading: { icon: '⚖️', label: 'محرك التقييم الموزون' },
     monitoring_report: { icon: '📋', label: 'كشف المتابعة اليومي' },
-    assessments_bank: { icon: '📚', label: 'بنك المشاريع والأبحاث' },
+    assessments_bank: { icon: '📚', label: 'الاختبارات والمشاريع' },
     behavior_analytics: { icon: '🧠', label: 'تحليلات السلوك والمشاركة' },
     white_label: { icon: '🏷️', label: 'تخصيص هوية التقارير' }
 };

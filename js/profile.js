@@ -144,9 +144,11 @@ async function renderStudentProfilePage() {
         <div class="bg-white/95 backdrop-blur-md border-x border-gray-100 flex overflow-x-auto no-print scrollbar-hide sticky top-[56px] z-20 mx-1 rounded-t-2xl shadow-sm">
             <button onclick="switchProfileTab('info')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'info' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📋 البيانات</button>
             <button onclick="switchProfileTab('measurements')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'measurements' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📏 القياسات</button>
-            <button onclick="switchProfileTab('pfitness')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pfitness' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">💪 اللياقة</button>
-            <button onclick="switchProfileTab('passessments')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'passessments' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📝 الاختبارات</button>
-            <button onclick="switchProfileTab('pprojects')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pprojects' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📂 المشاريع</button>
+            ${hasFeature('fitness_tests') ? `<button onclick="switchProfileTab('pfitness')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pfitness' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">💪 اللياقة</button>` : ''}
+            ${hasFeature('assessments_bank') ? `
+                <button onclick="switchProfileTab('passessments')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'passessments' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📝 الاختبارات</button>
+                <button onclick="switchProfileTab('pprojects')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pprojects' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📂 المشاريع</button>
+            ` : ''}
             ${hasFeature('badges') ? `<button onclick="switchProfileTab('badges')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'badges' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏅 الأوسمة</button>` : ''}
             <button onclick="switchProfileTab('health')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'health' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏥 الصحة</button>
             <button onclick="switchProfileTab('pattendance')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pattendance' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📅 الحضور</button>
@@ -386,7 +388,7 @@ async function renderProfileTab(sid) {
                 <p class="text-green-600 text-sm mt-1">الطالب مؤهل بدنياً لجميع الأنشطة</p>
             </div>`}
         </div>`;
-    } else if (profileTab === 'pfitness') {
+    } else if (profileTab === 'pfitness' && hasFeature('fitness_tests')) {
         const fit = d.fitness || [];
         tc.innerHTML = `
         <div class="fade-in">
@@ -596,7 +598,7 @@ async function renderProfileTab(sid) {
                 <p class="text-gray-400 font-black">لم يتم تسجيل أي سجلات حضور لهذا الطالب</p>
             </div>`}
         </div>`;
-    } else if (profileTab === 'passessments') {
+    } else if (profileTab === 'passessments' && hasFeature('assessments_bank')) {
         const ass = d.assessments || [];
         const weights = d.grading_summary?.weights || {};
         const quiz = ass.find(a => a.type === 'quiz') || { score: 0 };
@@ -628,7 +630,7 @@ async function renderProfileTab(sid) {
                 </div>
             </div>
         `;
-    } else if (profileTab === 'pprojects') {
+    } else if (profileTab === 'pprojects' && hasFeature('assessments_bank')) {
         const ass = d.assessments || [];
         const weights = d.grading_summary?.weights || {};
         const proj = ass.find(a => a.type === 'project') || { score: 0 };

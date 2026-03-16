@@ -12,6 +12,12 @@ function getFitnessTests() {
     Subscription::requireFeature('fitness_tests');
     $db = getDB();
     $sid = schoolId();
+
+    // Seed defaults if empty for this school
+    if ($sid) {
+        Subscription::seedDefaultFitnessTests($sid);
+    }
+
     $sql = "SELECT * FROM fitness_tests WHERE active = 1";
     if ($sid) $sql .= " AND school_id = $sid";
     $sql .= " ORDER BY id";

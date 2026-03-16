@@ -645,7 +645,7 @@ const ALL_FEATURES = {
     timetable: { icon: '🗓️', label: 'جدول الحصص', desc: 'إعداد وعرض جداول الحصص الأسبوعية' },
     weighted_grading: { icon: '⚖️', label: 'محرك التقييم الموزون', desc: 'تخصيص أوزان الدرجات بدقة عالية' },
     monitoring_report: { icon: '📋', label: 'كشف المتابعة اليومي', desc: 'تقرير يومي شامل يجمع كافة المعايير' },
-    assessments_bank: { icon: '📚', label: 'بنك المشاريع والأبحاث', desc: 'إدارة وتقييم الأبحاث والاختبارات القصيرة' },
+    assessments_bank: { icon: '📚', label: 'الاختبارات والمشاريع', desc: 'إدارة وتقييم الأبحاث والاختبارات القصيرة' },
     behavior_analytics: { icon: '🧠', label: 'تحليلات السلوك', desc: 'تحليل نمو تفاعل الطالب وانضباطه' },
     white_label: { icon: '🏷️', label: 'تخصيص الهوية', desc: 'إخفاء هوية النظام ووضع شعار المدرسة' }
 };
