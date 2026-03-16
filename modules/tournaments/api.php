@@ -518,12 +518,58 @@ function updateTournament() {
 }
 
 function deleteTournament() {
-    requireRole(['admin']);
+    requireRole(['admin', 'teacher']);
     $id = getParam('id');
     if (!$id) jsonError('معرّف البطولة مطلوب');
     
     $db = getDB();
-    $db->prepare("DELETE FROM tournaments WHERE id = ?")->execute([$id]);
+    
+    // Check permissions if not admin
+    if ($_SESSION['role'] !== 'admin') {
+        $stmt = $db->prepare("SELECT status FROM tournaments WHERE id = ? AND school_id = ?");
+        $stmt->execute([$id, schoolId()]);
+        $status = $stmt->fetchColumn();
+        
+        if (!$status) jsonError('البطولة غير موجودة أو لا تملك صلاحية الوصول');
+        if ($status !== 'draft') jsonError('يمكنك حذف البطولات التي في وضع المسودة فقط');
+    }
+    
+    try {
+        $db->beginTransaction();
+        
+        // 1. Delete events (if linked via match, this is extra safety)
+        $db->prepare("DELETE FROM match_events WHERE match_id IN (SELECT id FROM matches WHERE tournament_id = ?)")->execute([$id]);
+        
+        // 2. Delete media
+        $db->prepare("DELETE FROM match_media WHERE match_id IN (SELECT id FROM matches WHERE tournament_id = ?)")->execute([$id]);
+        
+        // 3. Delete matches
+        $db->prepare("DELETE FROM matches WHERE tournament_id = ?")->execute([$id]);
+        
+        // 4. Delete standings
+        $db->prepare("DELETE FROM standings WHERE tournament_id = ?")->execute([$id]);
+        
+        // 5. Delete player stats
+        $db->prepare("DELETE FROM tournament_player_stats WHERE tournament_id = ?")->execute([$id]);
+        
+        // 6. Delete team members
+        $db->prepare("DELETE FROM student_team_members WHERE student_team_id IN (SELECT id FROM student_teams WHERE tournament_team_id IN (SELECT id FROM tournament_teams WHERE tournament_id = ?))")->execute([$id]);
+        
+        // 7. Delete student teams
+        $db->prepare("DELETE FROM student_teams WHERE tournament_team_id IN (SELECT id FROM tournament_teams WHERE tournament_id = ?)")->execute([$id]);
+        
+        // 8. Delete tournament teams
+        $db->prepare("DELETE FROM tournament_teams WHERE tournament_id = ?")->execute([$id]);
+        
+        // 9. Delete the tournament itself
+        $db->prepare("DELETE FROM tournaments WHERE id = ?")->execute([$id]);
+        
+        $db->commit();
+    } catch (Exception $e) {
+        $db->rollBack();
+        jsonError('فشل الحذف بسبب تعارض في البيانات: ' . $e->getMessage());
+    }
+    
     logActivity('delete', 'tournament', $id);
     jsonSuccess(null, 'تم حذف البطولة');
 }
