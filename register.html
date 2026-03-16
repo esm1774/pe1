@@ -87,6 +87,7 @@
             padding: 60px 40px;
         }
     </style>
+    <script src="js/common.js"></script>
 </head>
 
 <body>
@@ -284,7 +285,7 @@
 
         async function submitRegistration() {
             if (!passValidator.validate()) {
-                toast('الرجاء استيفاء معايير كلمة المرور القوية أولاً', 'error');
+                showToast('الرجاء استيفاء معايير كلمة المرور القوية أولاً', 'error');
                 return;
             }
             const errorEl = document.getElementById('errorMsg');
