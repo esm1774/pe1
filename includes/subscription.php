@@ -340,20 +340,42 @@ class Subscription {
     }
 
     /**
-     * Start a trial for a new school
+     * Start/Update a trial for a school
      */
-    public static function startTrial(int $schoolId, int $days = 14): void {
+    public static function startTrial(int $schoolId, int $days = 14, ?int $planId = null, ?array $features = null, ?array $limits = null, ?string $specificEndDate = null): void {
         try {
             $db = getDB();
-            $trialEnd = date('Y-m-d', strtotime("+{$days} days"));
-            $db->prepare("
-                UPDATE schools 
-                SET subscription_status = 'trial', 
+            
+            // If specific end date provided, use it; otherwise calculate from days
+            $trialEnd = ($specificEndDate !== null && $specificEndDate !== '') 
+                        ? $specificEndDate 
+                        : date('Y-m-d', strtotime("+{$days} days"));
+            
+            $sql = "UPDATE schools SET 
+                    subscription_status = 'trial', 
                     active = 1,
                     trial_ends_at = ?,
-                    updated_at = NOW() 
-                WHERE id = ?
-            ")->execute([$trialEnd, $schoolId]);
+                    updated_at = NOW()";
+            $params = [$trialEnd];
+
+            if ($planId !== null) {
+                $sql .= ", plan_id = ?";
+                $params[] = $planId;
+            }
+            if ($features !== null) {
+                $sql .= ", features = ?";
+                $params[] = json_encode($features, JSON_UNESCAPED_UNICODE);
+            }
+            if ($limits !== null) {
+                if (isset($limits['max_students'])) { $sql .= ", max_students = ?"; $params[] = $limits['max_students']; }
+                if (isset($limits['max_teachers'])) { $sql .= ", max_teachers = ?"; $params[] = $limits['max_teachers']; }
+                if (isset($limits['max_classes']))  { $sql .= ", max_classes = ?";  $params[] = $limits['max_classes']; }
+            }
+
+            $sql .= " WHERE id = ?";
+            $params[] = $schoolId;
+
+            $db->prepare($sql)->execute($params);
         } catch (Exception $e) {
             // Silent
         }

@@ -174,7 +174,7 @@ function updateSchoolSubscription() {
         Subscription::suspend($id);
     } elseif ($status === 'trial') {
         $days = !empty($data['trial_days']) ? (int)$data['trial_days'] : 14;
-        Subscription::startTrial($id, $days);
+        Subscription::startTrial($id, $days, $planId, $features, $limits, $endsAt);
     }
 
     jsonSuccess(null, 'تم تحديث حالة الاشتراك');
