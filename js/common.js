@@ -267,15 +267,9 @@ async function handleLogin() {
 
         // Redirect to slug-based URL if school context exists
         if (r.data.school_slug) {
-            const expectedSlugPath = `/${r.data.school_slug}/`;
-            if (window.APP_BASE.endsWith(expectedSlugPath)) {
-                showApp();
-                checkPostLoginRequirements(r.data);
-            } else {
-                const root = window.APP_ROOT || '/';
-                const hash = window.location.hash || '';
-                window.location.href = root + r.data.school_slug + '/' + hash;
-            }
+            const root = window.APP_ROOT || '/';
+            const hash = window.location.hash || '#dashboard';
+            window.location.href = root + r.data.school_slug + '/' + hash;
         } else {
             showApp();
             checkPostLoginRequirements(r.data);
@@ -315,7 +309,7 @@ function showSchoolPicker(schools, username, password) {
                 
                 <div class="space-y-3 max-h-60 overflow-y-auto mb-6 pr-2">
                     ${schools.map(s => `
-                        <button onclick="selectSchoolAndLogin('${s.slug}', '${username}', '${password}')" 
+                        <button onclick="selectSchoolAndLogin('${s.slug}', '${username}', '${password}', ${s.id})" 
                                 class="w-full flex items-center p-3 border-2 border-gray-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-right group">
                             <span class="flex-1 font-semibold text-gray-700 group-hover:text-blue-700">${s.name}</span>
                             <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg group-hover:bg-blue-100 group-hover:text-blue-600">${s.role === 'admin' ? 'مدير' : 'معلم'}</span>
@@ -330,27 +324,7 @@ function showSchoolPicker(schools, username, password) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
-window.selectSchoolAndLogin = async (slug, username, password) => {
-    document.getElementById('schoolPickerModal').remove();
-    document.getElementById('loginUsername').value = username;
-    document.getElementById('loginPassword').value = password;
 
-    // Inject the slug into a hidden field or handle it in handleLogin
-    // We'll just trigger handleLogin but with a trick
-    const r = await API.post('login', { username, password, school: slug });
-    if (r && r.success) {
-        currentUser = r.data;
-        if (r.data.school_slug) {
-            const root = window.APP_ROOT || '/';
-            const hash = window.location.hash || '';
-            window.location.href = root + r.data.school_slug + '/' + hash;
-        } else {
-            showApp();
-        }
-    } else {
-        showToast(r?.error || 'فشل تسجيل الدخول', 'error');
-    }
-};
 
 /**
  * Show modal to force staff members to provide an email
@@ -949,7 +923,7 @@ async function handleResetPassword() {
 }
 
 // ============================================================
-// NOTE: checkAuth() is called from index.html AFTER all JS files load
+// NOTE: checkAuth() is called from app.html AFTER all JS files load
 // ============================================================
 console.log('✅ common.js loaded');
 
@@ -1147,17 +1121,21 @@ window.triggerSchoolSwitch = async () => {
 /**
  * Select a specific school and update context
  */
-window.selectSchoolAndLogin = async (slug, username, password) => {
+window.selectSchoolAndLogin = async (slug, username, password, schoolId = null) => {
     const modal = document.getElementById('schoolPickerModal');
     if (modal) modal.remove();
 
     // If password is not provided (from switcher), we use a session-based switch endpoint
     if (!password) {
-        // Find school ID from slug
-        const rCheck = await API.get('check_auth', { include_schools: 1 });
-        const school = rCheck.data.schools.find(s => s.slug === slug);
-        if (school) {
-            const rSwitch = await API.post('switch_school', { school_id: school.id });
+        // Find school ID from slug if not provided
+        if (!schoolId) {
+            const rCheck = await API.get('check_auth', { include_schools: 1 });
+            const school = rCheck.data.schools.find(s => s.slug === slug);
+            if (school) schoolId = school.id;
+        }
+
+        if (schoolId) {
+            const rSwitch = await API.post('switch_school', { school_id: schoolId });
             if (rSwitch && rSwitch.success) {
                 const root = window.APP_ROOT || '/';
                 window.location.href = root + slug + '/#dashboard';

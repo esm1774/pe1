@@ -530,7 +530,7 @@ if ($success) {
 
             <!-- الأزرار -->
             <div class="actions">
-                <a href="index.html" class="btn btn-success">🚀 الدخول للنظام</a>
+                <a href="app.html" class="btn btn-success">🚀 الدخول للنظام</a>
                 <?php if (!isset($_GET['with_sample_data']) && !$sampleDataCreated): ?>
                     <a href="?with_sample_data=1" class="btn btn-secondary">📦 إضافة بيانات تجريبية</a>
                 <?php endif; ?>

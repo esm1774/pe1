@@ -186,7 +186,7 @@ function esc($str) {
                 <a href="#features" class="hover:text-emerald-600 transition-colors">المقومات الشاملة</a>
                 <a href="#analytics" class="hover:text-emerald-600 transition-colors">التحليلات والصحة</a>
                 <a href="#tournaments" class="hover:text-emerald-600 transition-colors">محرك البطولات</a>
-                <a href="pe1-blog/" class="hover:text-emerald-600 transition-colors">المدونة والدروس</a>
+                <a href="#blog" class="hover:text-emerald-600 transition-colors">المدونة والدروس</a>
                 <a href="#faq" class="hover:text-emerald-600 transition-colors">أسئلة شائعة</a>
                 <a href="#pricing" class="hover:text-emerald-600 transition-colors">رسوم الاستئجار</a>
             </div>
@@ -221,11 +221,11 @@ function esc($str) {
                 <a href="#features" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المقومات الشاملة</a>
                 <a href="#analytics" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">التحليلات والصحة</a>
                 <a href="#tournaments" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">محرك البطولات</a>
-                <a href="pe1-blog/" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المدونة والدروس</a>
+                <a href="#blog" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المدونة والدروس</a>
                 <a href="#faq" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">أسئلة شائعة</a>
                 <a href="#pricing" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">رسوم الاستئجار</a>
                 <hr class="border-slate-100 my-4">
-                <a href="index.html" class="flex items-center justify-end gap-3 text-emerald-600">
+                <a href="app.html" class="flex items-center justify-end gap-3 text-emerald-600">
                     تسجيل الدخول <i data-lucide="log-in" class="w-5 h-5"></i>
                 </a>
                 <a href="register.html" class="emerald-gradient text-white py-3 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4">
@@ -750,12 +750,12 @@ function esc($str) {
                             </div>
                             <div class="p-8">
                                 <h3 class="text-xl font-black text-slate-800 mb-3 hover:text-emerald-600 transition-colors cursor-pointer">
-                                    <a href="pe1-blog/<?= esc($post['slug']) ?>/"><?= esc($post['title']) ?></a>
+                                    <a href="blog/<?= esc($post['slug']) ?>/"><?= esc($post['title']) ?></a>
                                 </h3>
                                 <p class="text-sm text-slate-500 font-bold mb-6 line-clamp-3">
                                     <?= esc($post['excerpt']) ?>
                                 </p>
-                                <a href="pe1-blog/<?= esc($post['slug']) ?>/" class="text-emerald-600 font-black text-sm flex items-center gap-2 group/link">
+                                <a href="blog/<?= esc($post['slug']) ?>/" class="text-emerald-600 font-black text-sm flex items-center gap-2 group/link">
                                     اقرأ المزيد
                                     <i data-lucide="arrow-left" class="w-4 h-4 transform group-hover/link:-translate-x-1 transition-transform"></i>
                                 </a>
@@ -766,7 +766,7 @@ function esc($str) {
             </div>
 
             <div class="mt-12 text-center">
-                <a href="pe1-blog/" class="inline-block px-8 py-3 border-2 border-emerald-500 text-emerald-600 font-black rounded-full hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105">
+                <a href="blog/" class="inline-block px-8 py-3 border-2 border-emerald-500 text-emerald-600 font-black rounded-full hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105">
                     تصفح جميع المقالات والدروس
                 </a>
             </div>

@@ -108,7 +108,7 @@ try {
             ⚠️ <strong>مهم:</strong> احذف هذا الملف (<code>migrate_multi_teacher.php</code>) الآن لأسباب أمنية!
         </div>
         <div style="text-align:center">
-            <a href="index.html" class="btn">🚀 الدخول للنظام</a>
+            <a href="app.html" class="btn">🚀 الدخول للنظام</a>
         </div>
     <?php endif; ?>
 </div>

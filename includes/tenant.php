@@ -29,7 +29,7 @@ class Tenant {
         $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
         if ($uri) {
             $uriParts = array_filter(explode('/', $uri));
-            $ignoreList = ['api', 'admin', 'assets', 'css', 'js', 'modules', 'api.php', 'index.html', 'install.php', 'register.html', 'welcome.html', 'favicon.ico'];
+            $ignoreList = ['api', 'admin', 'assets', 'css', 'js', 'modules', 'api.php', 'app.html', 'index.php', 'install.php', 'register.html', 'welcome.html', 'favicon.ico'];
             
             // Search backwards so we pick the most specific folder
             foreach (array_reverse($uriParts) as $part) {

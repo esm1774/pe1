@@ -641,7 +641,7 @@ class TournamentPublic {
                 <div style="font-size:4rem; margin-bottom:1rem">⚠️</div>
                 <h2 style="color:var(--danger)">عذراً، حدث خطأ</h2>
                 <p style="color:var(--text-muted); margin-top:1rem">${msg}</p>
-                <a href="index.html" style="display:inline-block; margin-top:2rem; padding:0.75rem 2.5rem; background:var(--primary); color:white; border-radius:1rem; text-decoration:none; font-weight:bold; shadow: var(--shadow)">العودة للرئيسية</a>
+                <a href="index.php" style="display:inline-block; margin-top:2rem; padding:0.75rem 2.5rem; background:var(--primary); color:white; border-radius:1rem; text-decoration:none; font-weight:bold; shadow: var(--shadow)">العودة للرئيسية</a>
             </div>
         `;
     }

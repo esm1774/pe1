@@ -386,7 +386,7 @@ if ($success) {
         </div>
 
         <div class="actions">
-            <a href="index.html" class="btn btn-primary">🚀 الدخول للنظام</a>
+            <a href="app.html" class="btn btn-primary">🚀 الدخول للنظام</a>
         </div>
 
         <div class="warning">

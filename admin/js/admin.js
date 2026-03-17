@@ -527,7 +527,7 @@ async function impersonateSchool(id) {
     if (r && r.success) {
         toast('جاري الدخول كمدرسة...');
         setTimeout(() => {
-            window.location.href = '../index.html';
+            window.location.href = '../app.html';
         }, 500);
     } else {
         toast(r?.error || 'خطأ في الدخول', 'error');
@@ -2273,7 +2273,7 @@ function closeMediaPicker() {
 function selectMediaImage(filePath, inputId, previewId) {
     // Build the correct absolute URL based on current location
     const base = window.location.origin;
-    const adminPath = window.location.pathname; // e.g. /pe1/admin/index.html
+    const adminPath = window.location.pathname; // e.g. /pe1/admin/index.php
     const rootPath = adminPath.substring(0, adminPath.lastIndexOf('/admin/')); // /pe1
     const fullUrl = base + rootPath + '/' + filePath;
 

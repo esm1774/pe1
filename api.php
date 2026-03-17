@@ -61,7 +61,7 @@ require_once 'api/assessments.php';
 // ============================================================
 try {
     // SaaS Middleware: Check subscription for protected actions
-    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'exit_impersonation', 'schools_list', 'get_public_plans', 'register_school', 'forgot_password', 'reset_password', 'get_active_announcements'];
+    $publicActions = ['login', 'student_login', 'check_auth', 'logout', 'exit_impersonation', 'schools_list', 'get_public_plans', 'register_school', 'forgot_password', 'reset_password', 'get_active_announcements', 'switch_school', 'get_my_profile', 'update_my_profile'];
     if (!in_array($action, $publicActions)) {
         Subscription::requireActive();
     }

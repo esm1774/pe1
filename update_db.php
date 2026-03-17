@@ -46,7 +46,7 @@ try {
     echo '</div>';
 
     echo '<p>يمكنك الآن العودة للنظام والاستمتاع بالميزات الجديدة.</p>';
-    echo '<a href="index.html" class="btn">العودة للوحة التحكم</a>';
+    echo '<a href="app.html" class="btn">العودة للوحة التحكم</a>';
     
     // تأكيد الحذف
     echo '<p style="font-size: 11px; color: #999; margin-top: 30px;">⚠️ من أجل الأمان، يفضل حذف هذا الملف (update_db.php) بعد الانتهاء.</p>';

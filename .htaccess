@@ -26,7 +26,6 @@ Options -Indexes -MultiViews
 # Enable URL Rewriting
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /
 
     # 1. Skip rewriting for actual files and directories
     RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -37,11 +36,11 @@ Options -Indexes -MultiViews
     # This ensures that requests like /slug/api.php or /slug/css/style.css 
     # are correctly routed to the root files.
     RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^(?:[^/]+/)?(api\.php|blog\.php|post\.php|welcome\.php|assets|css|js|icons|vendor|modules|uploads|admin)(.*)$ $1$2 [L,NC,QSA]
+    RewriteRule ^(?:[^/]+/)?(api\.php|blog\.php|post\.php|index\.php|app\.html|sw\.js|manifest\.json|assets|css|js|icons|vendor|modules|uploads|admin)(.*)$ $1$2 [L,NC,QSA]
 
-    # 3. Rewrite all other requests to index.html (SPA routing)
+    # 3. Rewrite all other requests to app.html (SPA routing)
     # We exclude common actual entry points to avoid loops
-    RewriteCond %{REQUEST_URI} !(api\.php|app\.html|sw\.js|manifest\.json|admin|index\.php) [NC]
+    RewriteCond %{REQUEST_URI} !(api\.php|app\.html|sw\.js|manifest\.json|admin|index\.php|register\.html|welcome\.html) [NC]
     RewriteRule ^ app.html [L]
 </IfModule>
 

@@ -486,7 +486,7 @@ if ($success) {
                 ✅ سجلات حضور لـ 5 أيام
             </p>
         </div>
-        <div style="text-align:center"><a href="index.html" class="btn">🚀 الدخول إلى النظام</a></div>
+        <div style="text-align:center"><a href="app.html" class="btn">🚀 الدخول إلى النظام</a></div>
         <div class="warning">⚠️ <strong>تنبيه أمني:</strong> احذف هذا الملف (install.php) بعد التثبيت!</div>
     <?php endif; ?>
 </div></div>
