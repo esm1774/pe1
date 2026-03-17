@@ -1,6 +1,6 @@
 const CACHE_NAME = 'pe-smart-v3.1.1';
 const ASSETS_TO_CACHE = [
-    'index.html',
+    'app.html',
     'manifest.json',
     'css/style.css',
     'js/common.js',

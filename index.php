@@ -2,14 +2,40 @@
 require_once 'config.php';
 $db = getDB();
 
-// Fetch latest 3 published blog posts (respecting schedule and sort_order)
-$stmt = $db->query("
-    SELECT * FROM blog_posts 
-    WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW()) 
-    ORDER BY sort_order DESC, COALESCE(publish_at, created_at) DESC 
-    LIMIT 3
-");
-$recentPosts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Fetch latest 3 published blog posts FROM WORDPRESS
+try {
+    $blog_db = DB_BLOG_NAME;
+    $stmt = $db->query("
+        SELECT 
+            p.ID, 
+            p.post_title as title, 
+            p.post_name as slug, 
+            p.post_content as content, 
+            p.post_date as publish_at,
+            (SELECT guid FROM {$blog_db}.wp_posts WHERE id = (SELECT meta_value FROM {$blog_db}.wp_postmeta WHERE post_id = p.ID AND meta_key = '_thumbnail_id' LIMIT 1) LIMIT 1) as image_url,
+            (SELECT name FROM {$blog_db}.wp_terms t 
+             INNER JOIN {$blog_db}.wp_term_taxonomy tt ON t.term_id = tt.term_id 
+             INNER JOIN {$blog_db}.wp_term_relationships tr ON tt.term_taxonomy_id = tr.term_taxonomy_id 
+             WHERE tr.object_id = p.ID AND tt.taxonomy = 'category' LIMIT 1) as category
+        FROM {$blog_db}.wp_posts p
+        WHERE p.post_type = 'post' AND p.post_status = 'publish'
+        ORDER BY p.post_date DESC
+        LIMIT 3
+    ");
+    $recentPosts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Process excerpts
+    foreach ($recentPosts as &$post) {
+        $clean_content = strip_tags($post['content']);
+        $post['excerpt'] = mb_substr($clean_content, 0, 150) . '...';
+        // Adjust image path if it's local
+        if ($post['image_url']) {
+            $post['image_path'] = $post['image_url'];
+        }
+    }
+} catch (Exception $e) {
+    $recentPosts = []; // Fallback if DB doesn't exist yet
+}
 
 // Fetch active subscription plans
 $stmt = $db->query("SELECT * FROM plans WHERE active = 1 ORDER BY sort_order ASC");
@@ -160,13 +186,13 @@ function esc($str) {
                 <a href="#features" class="hover:text-emerald-600 transition-colors">المقومات الشاملة</a>
                 <a href="#analytics" class="hover:text-emerald-600 transition-colors">التحليلات والصحة</a>
                 <a href="#tournaments" class="hover:text-emerald-600 transition-colors">محرك البطولات</a>
-                <a href="#blog" class="hover:text-emerald-600 transition-colors">المدونة</a>
+                <a href="pe1-blog/" class="hover:text-emerald-600 transition-colors">المدونة والدروس</a>
                 <a href="#faq" class="hover:text-emerald-600 transition-colors">أسئلة شائعة</a>
-                <a href="#pricing" class="hover:text-emerald-600 transition-colors">الأسعار</a>
+                <a href="#pricing" class="hover:text-emerald-600 transition-colors">رسوم الاستئجار</a>
             </div>
 
             <div class="flex items-center gap-3">
-                <a href="index.html"
+                <a href="app.html"
                     class="hidden sm:block text-sm font-black text-slate-600 px-5 py-2 hover:bg-slate-100 rounded-full transition-all">تسجيل
                     الدخول</a>
                 <a href="register.html"
@@ -195,9 +221,9 @@ function esc($str) {
                 <a href="#features" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المقومات الشاملة</a>
                 <a href="#analytics" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">التحليلات والصحة</a>
                 <a href="#tournaments" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">محرك البطولات</a>
-                <a href="#blog" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المدونة</a>
+                <a href="pe1-blog/" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المدونة والدروس</a>
                 <a href="#faq" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">أسئلة شائعة</a>
-                <a href="#pricing" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">الأسعار</a>
+                <a href="#pricing" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">رسوم الاستئجار</a>
                 <hr class="border-slate-100 my-4">
                 <a href="index.html" class="flex items-center justify-end gap-3 text-emerald-600">
                     تسجيل الدخول <i data-lucide="log-in" class="w-5 h-5"></i>
@@ -724,12 +750,12 @@ function esc($str) {
                             </div>
                             <div class="p-8">
                                 <h3 class="text-xl font-black text-slate-800 mb-3 hover:text-emerald-600 transition-colors cursor-pointer">
-                                    <a href="post.php?slug=<?= esc($post['slug']) ?>"><?= esc($post['title']) ?></a>
+                                    <a href="pe1-blog/<?= esc($post['slug']) ?>/"><?= esc($post['title']) ?></a>
                                 </h3>
                                 <p class="text-sm text-slate-500 font-bold mb-6 line-clamp-3">
                                     <?= esc($post['excerpt']) ?>
                                 </p>
-                                <a href="post.php?slug=<?= esc($post['slug']) ?>" class="text-emerald-600 font-black text-sm flex items-center gap-2 group/link">
+                                <a href="pe1-blog/<?= esc($post['slug']) ?>/" class="text-emerald-600 font-black text-sm flex items-center gap-2 group/link">
                                     اقرأ المزيد
                                     <i data-lucide="arrow-left" class="w-4 h-4 transform group-hover/link:-translate-x-1 transition-transform"></i>
                                 </a>
@@ -740,7 +766,7 @@ function esc($str) {
             </div>
 
             <div class="mt-12 text-center">
-                <a href="blog.php" class="inline-block px-8 py-3 border-2 border-emerald-500 text-emerald-600 font-black rounded-full hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105">
+                <a href="pe1-blog/" class="inline-block px-8 py-3 border-2 border-emerald-500 text-emerald-600 font-black rounded-full hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105">
                     تصفح جميع المقالات والدروس
                 </a>
             </div>
@@ -956,20 +982,6 @@ function esc($str) {
         </div>
     </section>
 
-    <!-- Blog Reading Modal -->
-    <div id="blogModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onclick="closeBlog()"></div>
-        <div
-            class="glass-panel w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-[3rem] relative shadow-2xl animate-float border border-white/40">
-            <button onclick="closeBlog()"
-                class="absolute top-6 left-6 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-slate-50 transition-colors z-10">
-                <i data-lucide="x" class="w-6 h-6 text-slate-800"></i>
-            </button>
-            <div id="blogContent" class="p-8 md:p-12">
-                <!-- Content injected via JS -->
-            </div>
-        </div>
-    </div>
 
     <!-- Footer -->
     <footer class="bg-slate-950 pt-20 pb-10 px-4 relative origin-bottom overflow-hidden">
@@ -1053,94 +1065,6 @@ function esc($str) {
             }
         });
 
-        // Blog Logic
-        const BLOG_DATA = {
-            1: {
-                title: "كيف تنظم بطولتك الأولى في 5 دقائق",
-                tag: "دليل تعليمي",
-                color: "emerald",
-                content: `
-                    <div class="prose prose-slate max-w-none text-right" dir="rtl">
-                        <h2 class="text-4xl font-black text-slate-900 mb-6">تنظيم البطولات لم يعد عبئاً</h2>
-                        <p class="text-lg text-slate-600 mb-8 leading-relaxed font-bold">في هذا الدرس، سنشرح لك كيفية استخدام محرك البطولات المبتكر في PE Smart لتحويل فوضى الجداول الورقية إلى نظام رقمي دقيق.</p>
-                        
-                        <div class="aspect-video bg-emerald-100 rounded-3xl mb-8 flex items-center justify-center text-6xl shadow-inner border border-emerald-200">📺</div>
-                        
-                        <h3 class="text-2xl font-black text-slate-800 mb-4">الخطوات الأساسية:</h3>
-                        <ul class="space-y-4 text-slate-600 mb-8">
-                            <li class="flex items-center gap-3">✅ اختيار نوع البطولة (خروج مغلوب، دوري، أو مجموعات).</li>
-                            <li class="flex items-center gap-3">✅ إضافة الفرق وتوزيع الطلاب باستخدام "ساحر القرعة".</li>
-                            <li class="flex items-center gap-3">✅ تحديد الملاعب وتوقيت المباريات بضغطة زر.</li>
-                        </ul>
-                        
-                        <div class="p-6 bg-emerald-50 rounded-2xl border border-emerald-100">
-                            <p class="text-emerald-800 font-black">نصيحة محترف: استخدم خاصية "مباراة المركز الثالث" لزيادة التنافس في بطولات المدرسة.</p>
-                        </div>
-                    </div>
-                `
-            },
-            2: {
-                title: "فهم مؤشرات اللياقة والصحة للطلاب",
-                tag: "تحليلات",
-                color: "blue",
-                content: `
-                    <div class="prose prose-slate max-w-none text-right" dir="rtl">
-                        <h2 class="text-4xl font-black text-slate-900 mb-6">البيانات كأداة للتحفيز</h2>
-                        <p class="text-lg text-slate-600 mb-8 leading-relaxed font-bold">اكتشف كيف تحول منصة PE Smart أرقام الوزن والطول إلى قصص نجاح وتحليلات صحية دقيقة.</p>
-                        
-                        <div class="aspect-video bg-blue-100 rounded-3xl mb-8 flex items-center justify-center text-6xl shadow-inner border border-blue-200">📈</div>
-                        
-                        <h3 class="text-2xl font-black text-slate-800 mb-4">ماذا ستتعلم؟</h3>
-                        <ul class="space-y-4 text-slate-600 mb-8">
-                            <li class="flex items-center gap-3">📉 كيفية رصد القياسات الدورية (الطول، الوزن، اختبارات اللياقة).</li>
-                            <li class="flex items-center gap-3">📉 فهم مؤشر كتلة الجسم (BMI) وتلقي التنبيهات الصحية التلقائية.</li>
-                            <li class="flex items-center gap-3">📉 استخراج تقارير فصلية ملونة توضح مستوى المدرسة العام.</li>
-                        </ul>
-                    </div>
-                `
-            },
-            3: {
-                title: "الوضع الداكن وتحسينات واجهة المستخدم",
-                tag: "تحديثات",
-                color: "slate",
-                content: `
-                    <div class="prose prose-slate max-w-none text-right" dir="rtl">
-                        <h2 class="text-4xl font-black text-slate-900 mb-6">تجربة مستخدم مريحة وعصرية</h2>
-                        <p class="text-lg text-slate-600 mb-8 leading-relaxed font-bold">يسرنا الإعلان عن إطلاق تحديث 3.1 الذي يركز كلياً على راحة المعلم أثناء العمل الميداني.</p>
-                        
-                        <div class="aspect-video bg-slate-900 rounded-3xl mb-8 flex items-center justify-center text-6xl shadow-inner border border-slate-700">🌙</div>
-                        
-                        <h3 class="text-2xl font-black text-slate-800 mb-4">أهم ما جاء في التحديث:</h3>
-                        <ul class="space-y-4 text-slate-600 mb-8">
-                            <li class="flex items-center gap-3">🌑 تفعيل "الوضع الداكن" لتقليل إجهاد العين في البيئات الساطعة.</li>
-                            <li class="flex items-center gap-3">🌑 تحسين استجابة الجداول على الهواتف الذكية.</li>
-                            <li class="flex items-center gap-3">🌑 معالجة مشكلة تباين الألوان عند التظليل في الجداول.</li>
-                        </ul>
-                    </div>
-                `
-            }
-        };
-
-        function openBlog(id) {
-            const data = BLOG_DATA[id];
-            if (!data) return;
-            const content = document.getElementById('blogContent');
-            content.innerHTML = data.content;
-            document.getElementById('blogModal').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-            lucide.createIcons();
-        }
-
-        function closeBlog() {
-            document.getElementById('blogModal').classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-
-        // Connect cards to openBlog
-        document.querySelectorAll('#blog .hover-lift').forEach((card, idx) => {
-            card.style.cursor = 'pointer';
-            card.onclick = () => openBlog(idx + 1);
-        });
     </script>
 </body>
 

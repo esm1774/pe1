@@ -543,7 +543,7 @@
 
         <!-- Controls -->
         <div class="controls">
-            <a href="index.html" class="btn btn-back">⬅️ عودة للوحة التحكم</a>
+            <a href="app.html" class="btn btn-back">⬅️ عودة للوحة التحكم</a>
             <button onclick="window.print()" class="btn btn-print">🖨️ طباعة / حفظ PDF</button>
         </div>
 

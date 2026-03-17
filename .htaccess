@@ -41,8 +41,8 @@ Options -Indexes -MultiViews
 
     # 3. Rewrite all other requests to index.html (SPA routing)
     # We exclude common actual entry points to avoid loops
-    RewriteCond %{REQUEST_URI} !(api\.php|index\.html|sw\.js|manifest\.json|admin|welcome\.php) [NC]
-    RewriteRule ^ index.html [L]
+    RewriteCond %{REQUEST_URI} !(api\.php|app\.html|sw\.js|manifest\.json|admin|index\.php) [NC]
+    RewriteRule ^ app.html [L]
 </IfModule>
 
 # Enable Gzip compression

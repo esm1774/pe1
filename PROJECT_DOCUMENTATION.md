@@ -42,7 +42,8 @@
 
 ```
 📁 pe-smart-school/
-├── 📄 index.html              ← الواجهة الأمامية الرئيسية (SPA)
+├── 📄 index.php               ← الصفحة التعريفية للموقع (Dynamic Landing Page)
+├── 📄 app.html                 ← الواجهة الأمامية الرئيسية (SPA)
 ├── 📄 api.php                 ← الراوتر الرئيسي للـ API
 ├── 📁 api/                    ← وحدات الـ API المعيارية
 │   ├── 📄 auth.php, dashboard.php, students.php, attendance.php, etc.

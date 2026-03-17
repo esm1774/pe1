@@ -57,18 +57,18 @@ $posts = $db->query($postsQuery)->fetchAll();
     <!-- Header / Navbar -->
     <header class="sticky top-0 z-50 px-4 py-4">
         <nav class="max-w-7xl mx-auto glass-panel rounded-full px-6 py-3 flex items-center justify-between shadow-lg">
-            <a href="welcome.php" class="flex items-center gap-3">
+            <a href="index.php" class="flex items-center gap-3">
                 <div class="w-10 h-10 emerald-gradient rounded-full flex items-center justify-center text-white shadow-md">
                     <i data-lucide="activity" class="w-5 h-5"></i>
                 </div>
                 <span class="text-xl font-black text-slate-800">PE Smart</span>
             </a>
             <div class="hidden md:flex items-center gap-6 text-sm font-bold">
-                <a href="welcome.php#features" class="hover:text-emerald-600 transition">المقومات</a>
-                <a href="welcome.php#blog" class="text-emerald-600">المدونة</a>
-                <a href="welcome.php#pricing" class="hover:text-emerald-600 transition">الأسعار</a>
+                <a href="index.php#features" class="hover:text-emerald-600 transition">المقومات</a>
+                <a href="index.php#blog" class="text-emerald-600">المدونة</a>
+                <a href="index.php#pricing" class="hover:text-emerald-600 transition">الأسعار</a>
             </div>
-            <a href="index.html" class="px-6 py-2 text-sm font-black text-white emerald-gradient rounded-full shadow-lg">دخول النظام</a>
+            <a href="app.html" class="px-6 py-2 text-sm font-black text-white emerald-gradient rounded-full shadow-lg">دخول النظام</a>
         </nav>
     </header>
 

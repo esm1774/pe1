@@ -101,7 +101,7 @@ $relatedPosts = $relatedStmt->fetchAll();
     <!-- Header / Navbar -->
     <header class="px-4 py-4">
         <nav class="max-w-7xl mx-auto glass-panel rounded-full px-6 py-3 flex items-center justify-between shadow-lg">
-            <a href="welcome.php" class="flex items-center gap-3">
+            <a href="index.php" class="flex items-center gap-3">
                 <div class="w-10 h-10 emerald-gradient rounded-full flex items-center justify-center text-white shadow-md">
                     <i data-lucide="activity" class="w-5 h-5"></i>
                 </div>
@@ -113,7 +113,7 @@ $relatedPosts = $relatedStmt->fetchAll();
                     العودة للمدونة
                 </a>
             </div>
-            <a href="welcome.php" class="px-6 py-2 text-sm font-black text-slate-800 bg-slate-100 rounded-full">الرئيسية</a>
+            <a href="index.php" class="px-6 py-2 text-sm font-black text-slate-800 bg-slate-100 rounded-full">الرئيسية</a>
         </nav>
     </header>
 
