@@ -1,0 +1,1158 @@
+/*
+Theme Name: PE Smart Theme
+Theme URI: https://pesmartschool.com
+Author: PE Smart School
+Author URI: https://pesmartschool.com
+Description: ثيم مدونة PE Smart School المخصص — يطابق هوية صفحة الهبوط بالكامل (ألوان Emerald، خط Cairo، تأثيرات زجاجية)
+Version: 1.0.0
+License: Private
+Text Domain: pe-smart
+Tags: rtl, arabic, education, sports
+*/
+
+/* =====================================================
+   FONTS
+===================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap');
+
+/* =====================================================
+   CSS VARIABLES — نفس نظام الألوان من welcome.php
+===================================================== */
+:root {
+    --emerald-400: #34d399;
+    --emerald-500: #10b981;
+    --emerald-600: #059669;
+    --emerald-700: #047857;
+    --emerald-950: #022c22;
+
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+
+    --white: #ffffff;
+    --radius-sm: 0.75rem;
+    /* rounded-xl */
+    --radius-md: 1rem;
+    /* rounded-2xl */
+    --radius-lg: 1.5rem;
+    /* rounded-[2rem] */
+    --radius-xl: 2rem;
+    /* rounded-[2.5rem] */
+    --radius-full: 9999px;
+}
+
+/* =====================================================
+   RESET & BASE
+===================================================== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+    direction: rtl;
+}
+
+body {
+    font-family: 'Cairo', sans-serif;
+    background-color: var(--slate-50);
+    color: var(--slate-800);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.7;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* =====================================================
+   SCROLLBAR
+===================================================== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--slate-100);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--slate-200);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--emerald-500);
+}
+
+::selection {
+    background: #a7f3d0;
+    color: #064e3b;
+}
+
+/* =====================================================
+   UTILITIES — نفس classes من welcome.php
+===================================================== */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.glass-dark {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.emerald-gradient {
+    background: linear-gradient(135deg, var(--emerald-600) 0%, var(--emerald-500) 100%);
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, var(--emerald-700) 0%, var(--emerald-400) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hover-lift {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.15);
+}
+
+.reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s ease-out;
+}
+
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* =====================================================
+   ANIMATIONS
+===================================================== */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes blob {
+    0% {
+        transform: translate(0px, 0px) scale(1);
+    }
+
+    33% {
+        transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+        transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    100% {
+        transform: translate(0px, 0px) scale(1);
+    }
+}
+
+@keyframes ping {
+
+    75%,
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-blob {
+    animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+    animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+    animation-delay: 4s;
+}
+
+.animate-ping {
+    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* =====================================================
+   CONTAINER
+===================================================== */
+.pe-container {
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* =====================================================
+   NAVBAR — زجاجي عائم (مطابق لـ welcome.php)
+===================================================== */
+#pe-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 1rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+#pe-navbar nav {
+    max-width: 1280px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-full);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 24px rgba(16, 185, 129, 0.05);
+}
+
+.pe-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+}
+
+.pe-logo-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    background: linear-gradient(135deg, var(--emerald-600) 0%, var(--emerald-500) 100%);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.pe-logo-text span:first-child {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--slate-800);
+    line-height: 1;
+}
+
+.pe-logo-text span:last-child {
+    display: block;
+    font-size: 0.55rem;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    color: var(--emerald-600);
+    text-transform: uppercase;
+}
+
+.pe-nav-links {
+    display: none;
+    list-style: none;
+    gap: 2rem;
+    align-items: center;
+}
+
+@media (min-width: 1024px) {
+    .pe-nav-links {
+        display: flex;
+    }
+}
+
+.pe-nav-links a {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--slate-600);
+    transition: color 0.2s;
+}
+
+.pe-nav-links a:hover,
+.pe-nav-links .current-menu-item a {
+    color: var(--emerald-600);
+}
+
+.pe-nav-cta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-ghost {
+    display: none;
+    font-size: 0.875rem;
+    font-weight: 900;
+    color: var(--slate-600);
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--radius-full);
+    transition: background 0.2s;
+}
+
+@media (min-width: 640px) {
+    .btn-ghost {
+        display: inline-block;
+    }
+}
+
+.btn-ghost:hover {
+    background: var(--slate-100);
+}
+
+.btn-primary {
+    display: inline-block;
+    font-size: 0.875rem;
+    font-weight: 900;
+    color: white;
+    background: linear-gradient(135deg, var(--emerald-600), var(--emerald-500));
+    padding: 0.625rem 1.5rem;
+    border-radius: var(--radius-full);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 32px rgba(16, 185, 129, 0.4);
+    color: white;
+}
+
+/* Mobile Menu Overlay */
+#pe-mobile-menu {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    transition: opacity 0.3s ease;
+}
+
+#pe-mobile-menu .pe-mobile-sidebar {
+    background: white;
+    width: 280px;
+    min-height: 100vh;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile Nav Styles */
+.pe-mobile-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.pe-mobile-ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pe-mobile-ul li {
+    border-bottom: 1px solid var(--slate-100);
+}
+
+.pe-mobile-ul li a {
+    display: block;
+    padding: 0.75rem 0;
+    font-weight: 700;
+    color: var(--slate-600);
+    transition: color 0.2s;
+}
+
+.pe-mobile-ul li a:hover,
+.pe-mobile-ul li.current-menu-item a {
+    color: var(--emerald-600);
+}
+
+.btn-mobile-cta {
+    margin-top: 1rem;
+    background: linear-gradient(135deg, var(--emerald-600), var(--emerald-500));
+    color: white;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-weight: 900;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+/* Mobile Menu Toggle */
+.pe-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--slate-600);
+    font-size: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+    .pe-mobile-toggle {
+        display: none;
+    }
+}
+
+/* =====================================================
+   PAGE HERO — رأس الصفحة العلوي لكل صفحة
+===================================================== */
+.pe-page-hero {
+    background-color: var(--slate-50);
+    background-image:
+        radial-gradient(at 0% 0%, hsla(158, 100%, 74%, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, hsla(160, 100%, 50%, 0.1) 0px, transparent 50%);
+    padding: 9rem 1.5rem 5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.pe-page-hero .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.25;
+    mix-blend-mode: multiply;
+}
+
+.pe-page-hero h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    color: var(--slate-900);
+    margin-bottom: 1rem;
+}
+
+.pe-page-hero p {
+    font-size: 1.125rem;
+    color: var(--slate-500);
+    font-weight: 700;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* =====================================================
+   BLOG SECTION — قائمة المقالات
+===================================================== */
+.pe-blog-section {
+    padding: 5rem 1.5rem;
+    background: white;
+}
+
+.pe-blog-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+@media (min-width: 768px) {
+    .pe-blog-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .pe-blog-grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* بطاقة المقال — مطابقة لأسلوب welcome.php */
+.pe-post-card {
+    background: var(--slate-50);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: 1px solid var(--slate-100);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+}
+
+.pe-post-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.15);
+}
+
+.pe-card-thumb {
+    height: 12rem;
+    background: #d1fae5;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pe-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.pe-post-card:hover .pe-card-thumb img {
+    transform: scale(1.05);
+}
+
+.pe-card-thumb .pe-thumb-placeholder {
+    font-size: 3rem;
+    color: var(--emerald-500);
+}
+
+.pe-card-category {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--emerald-500);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 900;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pe-card-body {
+    padding: 2rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.pe-card-body h2,
+.pe-card-body h3 {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--slate-800);
+    margin-bottom: 0.75rem;
+    transition: color 0.2s;
+    line-height: 1.4;
+}
+
+.pe-post-card:hover h2,
+.pe-post-card:hover h3 {
+    color: var(--emerald-600);
+}
+
+.pe-card-excerpt {
+    font-size: 0.875rem;
+    color: var(--slate-500);
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.pe-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--slate-400);
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.pe-read-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 900;
+    color: var(--emerald-600);
+    transition: gap 0.2s;
+}
+
+.pe-read-more:hover {
+    gap: 0.75rem;
+    color: var(--emerald-700);
+}
+
+.pe-read-more-arrow {
+    font-size: 1rem;
+}
+
+/* =====================================================
+   SINGLE POST PAGE — صفحة المقال
+===================================================== */
+.pe-single-wrapper {
+    padding: 2rem 1.5rem 5rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.pe-single-header {
+    margin-bottom: 2rem;
+}
+
+.pe-single-category {
+    display: inline-block;
+    background: #d1fae5;
+    color: var(--emerald-700);
+    font-size: 0.75rem;
+    font-weight: 900;
+    padding: 0.3rem 0.9rem;
+    border-radius: var(--radius-full);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pe-single-title {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 900;
+    color: var(--slate-900);
+    line-height: 1.3;
+    margin-bottom: 1rem;
+}
+
+.pe-single-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--slate-400);
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--slate-100);
+}
+
+.pe-single-featured-img {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+}
+
+.pe-single-featured-img img {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+}
+
+/* المحتوى النصي للمقال */
+.pe-entry-content {
+    font-size: 1.0625rem;
+    line-height: 1.9;
+    color: var(--slate-700);
+    font-weight: 500;
+}
+
+.pe-entry-content h2,
+.pe-entry-content h3 {
+    font-weight: 900;
+    color: var(--slate-900);
+    margin: 2rem 0 1rem;
+}
+
+.pe-entry-content h2 {
+    font-size: 1.6rem;
+}
+
+.pe-entry-content h3 {
+    font-size: 1.3rem;
+}
+
+.pe-entry-content p {
+    margin-bottom: 1.25rem;
+}
+
+.pe-entry-content a {
+    color: var(--emerald-600);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.pe-entry-content ul,
+.pe-entry-content ol {
+    padding-right: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.pe-entry-content li {
+    margin-bottom: 0.5rem;
+}
+
+.pe-entry-content blockquote {
+    border-right: 4px solid var(--emerald-500);
+    background: #f0fdf4;
+    padding: 1rem 1.5rem;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: var(--slate-600);
+}
+
+.pe-entry-content img {
+    border-radius: var(--radius-md);
+    margin: 1.5rem auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.pe-entry-content pre,
+.pe-entry-content code {
+    background: var(--slate-900);
+    color: var(--emerald-400);
+    border-radius: var(--radius-sm);
+    font-family: monospace;
+    direction: ltr;
+    text-align: left;
+}
+
+.pe-entry-content pre {
+    padding: 1.5rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+}
+
+.pe-entry-content code {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.9em;
+}
+
+/* =====================================================
+   CTA BOX — يظهر بعد كل مقال
+===================================================== */
+.pe-cta-box {
+    margin: 3rem 0;
+    background: linear-gradient(135deg, var(--emerald-600), var(--emerald-500));
+    border-radius: var(--radius-xl);
+    padding: 3rem 2rem;
+    text-align: center;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.pe-cta-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+}
+
+.pe-cta-box h3 {
+    font-size: 1.75rem;
+    font-weight: 900;
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+
+.pe-cta-box p {
+    opacity: 0.85;
+    font-weight: 700;
+    margin-bottom: 1.75rem;
+    position: relative;
+}
+
+.pe-cta-btn {
+    display: inline-block;
+    background: white;
+    color: var(--emerald-700);
+    font-weight: 900;
+    font-size: 1rem;
+    padding: 0.875rem 2.5rem;
+    border-radius: var(--radius-full);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+
+.pe-cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    color: var(--emerald-700);
+}
+
+/* =====================================================
+   PAGINATION — ترقيم الصفحات
+===================================================== */
+.pe-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 3rem 0;
+}
+
+.pe-pagination a,
+.pe-pagination span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 900;
+    font-size: 0.875rem;
+    color: var(--slate-600);
+    border: 2px solid var(--slate-200);
+    transition: all 0.2s;
+}
+
+.pe-pagination a:hover,
+.pe-pagination .current {
+    background: var(--emerald-500);
+    border-color: var(--emerald-500);
+    color: white;
+}
+
+/* =====================================================
+   SECTION HEADER — عنوان القسم
+===================================================== */
+.pe-section-header {
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto 4rem;
+}
+
+.pe-section-tag {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: var(--emerald-500);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.75rem;
+}
+
+.pe-section-title {
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 900;
+    color: var(--slate-900);
+    line-height: 1.25;
+    margin-bottom: 1rem;
+}
+
+.pe-section-subtitle {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--slate-500);
+}
+
+
+/* =====================================================
+   SIDEBAR
+===================================================== */
+.pe-layout-with-sidebar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    padding: 4rem 1.5rem;
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+    .pe-layout-with-sidebar {
+        grid-template-columns: 1fr 320px;
+    }
+}
+
+.pe-sidebar-widget {
+    background: var(--slate-50);
+    border: 1px solid var(--slate-100);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    margin-bottom: 1.75rem;
+}
+
+.pe-sidebar-widget-title {
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--slate-800);
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--emerald-500);
+    display: inline-block;
+}
+
+.pe-sidebar-widget ul {
+    list-style: none;
+}
+
+.pe-sidebar-widget ul li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--slate-100);
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.pe-sidebar-widget ul li:last-child {
+    border-bottom: none;
+}
+
+.pe-sidebar-widget ul li a {
+    color: var(--slate-600);
+    transition: color 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pe-sidebar-widget ul li a:hover {
+    color: var(--emerald-600);
+}
+
+/* =====================================================
+   BREADCRUMB
+===================================================== */
+.pe-breadcrumb {
+    padding: 7rem 1.5rem 1.5rem;
+    max-width: 1280px;
+    margin: 0 auto;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--slate-400);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.pe-breadcrumb a {
+    color: var(--emerald-600);
+}
+
+.pe-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.pe-breadcrumb .sep {
+    color: var(--slate-300);
+}
+
+/* =====================================================
+   FOOTER — داكن مطابق لنهاية welcome.php
+===================================================== */
+.pe-footer {
+    background: var(--slate-900);
+    color: white;
+    padding: 4rem 1.5rem 2rem;
+}
+
+.pe-footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+}
+
+@media (min-width: 768px) {
+    .pe-footer-inner {
+        grid-template-columns: 2fr 1fr 1fr;
+    }
+}
+
+.pe-footer-brand .pe-logo {
+    margin-bottom: 1rem;
+}
+
+.pe-footer-brand p {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+    line-height: 1.7;
+    max-width: 300px;
+}
+
+.pe-footer-col h4 {
+    font-size: 0.875rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 1.25rem;
+}
+
+.pe-footer-col ul {
+    list-style: none;
+}
+
+.pe-footer-col ul li {
+    margin-bottom: 0.65rem;
+}
+
+.pe-footer-col ul li a {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    transition: color 0.2s;
+}
+
+.pe-footer-col ul li a:hover {
+    color: var(--emerald-400);
+}
+
+.pe-footer-bottom {
+    max-width: 1280px;
+    margin: 2.5rem auto 0;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.3);
+    text-align: center;
+}
+
+/* =====================================================
+   404 PAGE
+===================================================== */
+.pe-404 {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+}
+
+.pe-404-icon {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+}
+
+.pe-404 h1 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--slate-800);
+    margin-bottom: 0.75rem;
+}
+
+.pe-404 p {
+    color: var(--slate-500);
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+
+/* =====================================================
+   SEARCH FORM
+===================================================== */
+.pe-search-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.pe-search-form input[type="search"] {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--slate-200);
+    border-radius: var(--radius-md);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--slate-800);
+    background: white;
+    outline: none;
+    transition: border-color 0.2s;
+    direction: rtl;
+}
+
+.pe-search-form input[type="search"]:focus {
+    border-color: var(--emerald-500);
+}
+
+.pe-search-form button {
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, var(--emerald-600), var(--emerald-500));
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: 'Cairo', sans-serif;
+    font-weight: 900;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.pe-search-form button:hover {
+    opacity: 0.9;
+}
+
+/* =====================================================
+   RESPONSIVE HELPERS
+===================================================== */
+@media (max-width: 767px) {
+    .pe-single-featured-img img {
+        height: 240px;
+    }
+
+    .pe-cta-box {
+        padding: 2rem 1.25rem;
+    }
+
+    .pe-cta-box h3 {
+        font-size: 1.3rem;
+    }
+}
