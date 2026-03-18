@@ -156,6 +156,7 @@ function navigate(page) {
         analytics: renderAdvancedAnalytics,
         settings: renderPlatformSettings,
         blog: renderBlog,
+        testimonials: renderTestimonials,
         media: renderMedia,
         health: renderHealth
     };
@@ -2461,3 +2462,175 @@ async function unlockLogins() {
     }
 }
 
+
+// ============================================================
+// TESTIMONIALS
+// ============================================================
+async function renderTestimonials() {
+    const mc = document.getElementById('mainContent');
+    mc.innerHTML = '<div class="spinner"></div>';
+
+    const r = await API.get('testimonials');
+    if (!r || !r.success) {
+        mc.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>خطأ في جلب الآراء</p></div>';
+        return;
+    }
+
+    const data = r.data;
+    mc.innerHTML = `
+        <div class="page-header">
+            <h1>🌟 إدارة آراء العملاء</h1>
+            <p>التحكم في الآراء التي تظهر في الصفحة الرئيسية للمنصة.</p>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h3>📋 سجل الآراء (${data.length})</h3>
+                <button class="btn btn-emerald btn-sm" onclick="openTestimonialModal()">➕ إضافة رأي جديد</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>العميل</th>
+                            <th>التقييم</th>
+                            <th>النص</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.length === 0 ? '<tr><td colspan="6"><div class="empty-state"><div class="icon">✨</div><p>لا توجد آراء بعد</p></div></td></tr>' : ''}
+                        ${data.map(t => `
+                            <tr>
+                                <td>${t.id}</td>
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:10px">
+                                        <img src="${t.image_path ? '../' + t.image_path : '../assets/images/default-avatar.png'}" 
+                                             style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--border-glass)">
+                                        <div>
+                                            <strong>${esc(t.name)}</strong>
+                                            <div style="font-size:10px; color:var(--text-muted)">${esc(t.school || '—')}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge badge-trial">⭐ ${t.rating}</span></td>
+                                <td><div style="max-width:300px; font-size:12px; color:var(--text-muted); line-height:1.4" class="text-truncate">${esc(t.content)}</div></td>
+                                <td>${t.active == 1 ? '<span class="badge badge-active">نشط</span>' : '<span class="badge badge-inactive">معطل</span>'}</td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="action-btn edit" onclick="openTestimonialModal(${JSON.stringify(t).replace(/"/g, '&quot;')})" title="تعديل">✏️</button>
+                                        ${t.active == 1 
+                                            ? `<button class="action-btn toggle-off" onclick="toggleTestimonial(${t.id}, 0)" title="إيقاف">⏸️</button>` 
+                                            : `<button class="action-btn toggle-on" onclick="toggleTestimonial(${t.id}, 1)" title="تفعيل">▶️</button>`
+                                        }
+                                        <button class="action-btn delete" onclick="deleteTestimonial(${t.id})" title="حذف">🗑️</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function openTestimonialModal(t = null) {
+    if (typeof t === 'string') t = JSON.parse(t);
+    openModal(`
+        <div class="modal-header">
+            <h3>${t ? '✏️ تعديل الرأي' : '➕ إضافة رأي جديد'}</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="testimonialForm" onsubmit="saveTestimonial(event)">
+                <input type="hidden" name="id" value="${t ? t.id : ''}">
+                <input type="hidden" name="image_path" id="testiImagePath" value="${t ? t.image_path : ''}">
+                
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>إسم العميل *</label>
+                        <input type="text" name="name" class="form-input" value="${t ? esc(t.name) : ''}" required>
+                    </div>
+                    <div class="form-group-modal">
+                        <label>المدرسة / الوظيفة</label>
+                        <input type="text" name="school" class="form-input" value="${t ? esc(t.school) : ''}">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group-modal">
+                        <label>التقييم (0 - 5)</label>
+                        <input type="number" name="rating" class="form-input" step="0.1" min="0" max="5" value="${t ? t.rating : '5.0'}">
+                    </div>
+                    <div class="form-group-modal">
+                        <label>ترتيب العرض</label>
+                        <input type="number" name="sort_order" class="form-input" value="${t ? t.sort_order : '0'}">
+                    </div>
+                </div>
+
+                <div class="form-group-modal">
+                    <label>نص الرأي *</label>
+                    <textarea name="content" class="form-input" style="height:100px" required>${t ? t.content : ''}</textarea>
+                </div>
+
+                <div class="form-group-modal">
+                    <label>صورة العميل (اختياري)</label>
+                    <div style="display:flex; align-items:center; gap:15px; margin-top:5px">
+                        <img id="testiImgPreview" src="${t && t.image_path ? '../' + t.image_path : '../assets/images/default-avatar.png'}" 
+                             style="width:60px; height:60px; border-radius:12px; object-fit:cover; border:2px solid var(--border-glass)">
+                        <input type="file" id="testiImageFile" accept="image/*" class="form-input" style="flex:1">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" form="testimonialForm" class="btn btn-emerald btn-sm">💾 حفظ البيانات</button>
+            <button class="btn btn-outline btn-sm" onclick="closeModal()">إلغاء</button>
+        </div>
+    `);
+}
+
+async function saveTestimonial(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const fileInput = document.getElementById('testiImageFile');
+    
+    if (fileInput && fileInput.files[0]) {
+        formData.append('image', fileInput.files[0]);
+    }
+
+    const r = await fetch('api.php?action=testimonial_save', {
+        method: 'POST',
+        body: formData
+    });
+    
+    const res = await r.json();
+    if (res && res.success) {
+        toast('✅ ' + res.message);
+        closeModal();
+        renderTestimonials();
+    } else {
+        toast(res?.error || 'حدث خطأ في الحفظ', 'error');
+    }
+}
+
+async function deleteTestimonial(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا الرأي نهائياً؟')) return;
+    const r = await API.post('testimonial_delete', { id });
+    if (r && r.success) {
+        toast('✅ ' + r.message);
+        renderTestimonials();
+    }
+}
+
+async function toggleTestimonial(id, active) {
+    const r = await API.post('testimonial_toggle', { id, active });
+    if (r && r.success) {
+        toast('✅ ' + r.message);
+        renderTestimonials();
+    }
+}

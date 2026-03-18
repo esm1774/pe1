@@ -500,9 +500,12 @@ try {
         case 'blog_category_save':   saveBlogCategory(); break;
         case 'blog_category_delete': deleteBlogCategory(); break;
 
-        case 'get_media':            getMedia(); break;
-        case 'upload_media':         uploadMedia(); break;
-        case 'delete_media':         deleteMedia(); break;
+        case 'media_delete':         deleteMedia(); break;
+
+        case 'testimonials':         getTestimonials(); break;
+        case 'testimonial_save':     saveTestimonial(); break;
+        case 'testimonial_delete':   deleteTestimonial(); break;
+        case 'testimonial_toggle':   toggleTestimonial(); break;
 
         default: jsonError('إجراء غير معروف', 404);
     }
@@ -1021,4 +1024,94 @@ function deleteMedia() {
 
     $db->prepare("DELETE FROM media_library WHERE id = ?")->execute([$id]);
     jsonSuccess(null, 'تم حذف الصورة بنجاح');
+}
+
+// ============================================================
+// TESTIMONIALS MANAGEMENT
+// ============================================================
+function getTestimonials() {
+    requirePlatformAdmin();
+    $db = getDB();
+    $tests = $db->query("SELECT * FROM testimonials ORDER BY sort_order ASC, id DESC")->fetchAll();
+    jsonSuccess($tests);
+}
+
+function saveTestimonial() {
+    requirePlatformAdmin();
+    
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
+    $name = sanitize($_POST['name'] ?? '');
+    $school = sanitize($_POST['school'] ?? '');
+    $content = sanitize($_POST['content'] ?? '');
+    $rating = (float)($_POST['rating'] ?? 5.0);
+    $active = isset($_POST['active']) ? (int)$_POST['active'] : 1;
+    $sortOrder = (int)($_POST['sort_order'] ?? 0);
+    $imagePath = sanitize($_POST['image_path'] ?? '');
+
+    if (empty($name) || empty($content)) {
+        jsonError('الاسم ونص الرأي مطلوبان');
+    }
+
+    // Handle Image Upload if provided
+    if (!empty($_FILES['image'])) {
+        $file = $_FILES['image'];
+        if ($file['error'] === UPLOAD_ERR_OK) {
+            $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($file['tmp_name']);
+            
+            if (in_array($mime, $allowedMimes)) {
+                $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                $filename = 'testi_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                $uploadDir = __DIR__ . '/../uploads/testimonials/';
+                
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                
+                if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+                    $imagePath = 'uploads/testimonials/' . $filename;
+                }
+            }
+        }
+    }
+
+    $db = getDB();
+    if ($id) {
+        $stmt = $db->prepare("UPDATE testimonials SET name=?, school=?, content=?, rating=?, image_path=?, active=?, sort_order=? WHERE id=?");
+        $stmt->execute([$name, $school, $content, $rating, $imagePath, $active, $sortOrder, $id]);
+    } else {
+        $stmt = $db->prepare("INSERT INTO testimonials (name, school, content, rating, image_path, active, sort_order) VALUES (?,?,?,?,?,?,?)");
+        $stmt->execute([$name, $school, $content, $rating, $imagePath, $active, $sortOrder]);
+    }
+
+    jsonSuccess(null, 'تم حفظ الرأي بنجاح');
+}
+
+function deleteTestimonial() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) jsonError('معرف غير صالح');
+    
+    $db = getDB();
+    // Delete image if exists
+    $stmt = $db->prepare("SELECT image_path FROM testimonials WHERE id = ?");
+    $stmt->execute([$id]);
+    $testi = $stmt->fetch();
+    if ($testi && !empty($testi['image_path'])) {
+        $physicalPath = __DIR__ . '/../' . $testi['image_path'];
+        if (file_exists($physicalPath)) @unlink($physicalPath);
+    }
+    
+    $db->prepare("DELETE FROM testimonials WHERE id = ?")->execute([$id]);
+    jsonSuccess(null, 'تم حذف الرأي');
+}
+
+function toggleTestimonial() {
+    requirePlatformAdmin();
+    $data = getPostData();
+    $id = (int)($data['id'] ?? 0);
+    $active = (int)($data['active'] ?? 0);
+    if (!$id) jsonError('معرف غير صالح');
+    getDB()->prepare("UPDATE testimonials SET active = ? WHERE id = ?")->execute([$active, $id]);
+    jsonSuccess(null, $active ? 'تم تفعيل الرأي' : 'تم تعطيل الرأي');
 }

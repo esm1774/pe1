@@ -204,3 +204,30 @@ function pe_reading_time() {
     $minutes = ceil($word_count / 200);
     return $minutes . ' دقائق قراءة';
 }
+
+
+// ============================================================
+// عزل الآراء (Reviews) عن المدونة الرئيسية
+// ============================================================
+function pe_smart_exclude_reviews($query) {
+    if ($query->is_home() && $query->is_main_query() && !is_admin()) {
+        $category = get_category_by_slug('reviews');
+        if ($category) {
+            $query->set('category__not_in', array($category->term_id));
+        }
+    }
+}
+add_action('pre_get_posts', 'pe_smart_exclude_reviews');
+
+
+// ============================================================
+// تفعيل التحكم في التقييم (Stars) من لوحة التحكم
+// ============================================================
+function pe_smart_register_testimonial_meta() {
+    register_meta('post', 'rating', array(
+        'show_in_rest' => true,
+        'single' => true,
+        'type' => 'string',
+    ));
+}
+add_action('init', 'pe_smart_register_testimonial_meta');

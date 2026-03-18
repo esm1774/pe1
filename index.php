@@ -2,39 +2,48 @@
 require_once 'config.php';
 $db = getDB();
 
-// Fetch latest 3 published blog posts FROM WORDPRESS
+// Fetch latest 3 published blog posts FROM WORDPRESS REST API
+$recentPosts = [];
+$testimonials = [];
 try {
-    $blog_db = DB_BLOG_NAME;
-    $stmt = $db->query("
-        SELECT 
-            p.ID, 
-            p.post_title as title, 
-            p.post_name as slug, 
-            p.post_content as content, 
-            p.post_date as publish_at,
-            (SELECT guid FROM {$blog_db}.wp_posts WHERE id = (SELECT meta_value FROM {$blog_db}.wp_postmeta WHERE post_id = p.ID AND meta_key = '_thumbnail_id' LIMIT 1) LIMIT 1) as image_url,
-            (SELECT name FROM {$blog_db}.wp_terms t 
-             INNER JOIN {$blog_db}.wp_term_taxonomy tt ON t.term_id = tt.term_id 
-             INNER JOIN {$blog_db}.wp_term_relationships tr ON tt.term_taxonomy_id = tr.term_taxonomy_id 
-             WHERE tr.object_id = p.ID AND tt.taxonomy = 'category' LIMIT 1) as category
-        FROM {$blog_db}.wp_posts p
-        WHERE p.post_type = 'post' AND p.post_status = 'publish'
-        ORDER BY p.post_date DESC
-        LIMIT 3
-    ");
-    $recentPosts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $blog_api_base = BASE_URL . '/blog/wp-json/wp/v2';
+    $opts = ['http' => ['method' => 'GET', 'timeout' => 3, 'header' => "Content-Type: application/json\r\n"]];
+    $context = stream_context_create($opts);
 
-    // Process excerpts
-    foreach ($recentPosts as &$post) {
-        $clean_content = strip_tags($post['content']);
-        $post['excerpt'] = mb_substr($clean_content, 0, 150) . '...';
-        // Adjust image path if it's local
-        if ($post['image_url']) {
-            $post['image_path'] = $post['image_url'];
+    // 2. Fetch Category ID for 'reviews' to isolate them
+    $responseCats = @file_get_contents($blog_api_base . '/categories?slug=reviews,testimonials', false, $context);
+    $catId = null;
+    if ($responseCats) {
+        $cats = json_decode($responseCats, true);
+        if (!empty($cats[0]['id'])) $catId = $cats[0]['id'];
+    }
+
+    // 1. Fetch Blog Posts (Latest 3, excluding the Reviews category)
+    $exclude_param = ($catId) ? '&categories_exclude=' . $catId : '';
+    $responsePosts = @file_get_contents($blog_api_base . '/posts?_embed&per_page=3' . $exclude_param, false, $context);
+    if ($responsePosts) {
+        $posts_data = json_decode($responsePosts, true);
+        if (is_array($posts_data)) {
+            foreach ($posts_data as $p) {
+                $image = (!empty($p['_embedded']['wp:featuredmedia'][0]['source_url'])) ? $p['_embedded']['wp:featuredmedia'][0]['source_url'] : "";
+                $category = (!empty($p['_embedded']['wp:term'][0][0]['name'])) ? $p['_embedded']['wp:term'][0][0]['name'] : "مقالات";
+                $recentPosts[] = [
+                    'ID' => $p['id'],
+                    'title' => $p['title']['rendered'] ?? '',
+                    'slug' => $p['slug'] ?? '',
+                    'excerpt' => mb_substr(strip_tags($p['excerpt']['rendered'] ?? ''), 0, 150) . '...',
+                    'image_path' => $image,
+                    'category' => $category
+                ];
+            }
         }
     }
+
+    // 3. Fetch Testimonials from local database
+    $stmtTest = $db->query("SELECT * FROM testimonials WHERE active = 1 ORDER BY sort_order ASC, id DESC LIMIT 6");
+    $testimonials = $stmtTest->fetchAll();
 } catch (Exception $e) {
-    $recentPosts = []; // Fallback if DB doesn't exist yet
+    // Silent fail
 }
 
 // Fetch active subscription plans
@@ -770,6 +779,88 @@ function esc($str) {
                     تصفح جميع المقالات والدروس
                 </a>
             </div>
+        </div>
+    </section>
+
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="py-24 px-4 bg-slate-50 relative overflow-hidden">
+        <style>
+            .star-filled { fill: #f59e0b; stroke: #d97706; stroke-width: 1.5; }
+            .star-empty { fill: transparent; stroke: #c3d5eaff; stroke-width: 1.5; }
+            [dir="rtl"] [data-lucide="star-half"] { transform: scaleX(-1); }
+        </style>
+        <div class="absolute inset-0 opacity-5 pointer-events-none">
+            <div class="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-cyan-500 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-20 reveal">
+                <span class="px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-600 font-bold text-sm mb-4 inline-block">صوت الميدان</span>
+                <h2 class="text-4xl md:text-5xl font-black text-slate-900 mb-6">ماذا يقول <span class="text-emerald-600">خبراء الرياضة</span> عنا؟</h2>
+                <p class="text-slate-500 text-lg font-bold">نفخر بدعم نخبة من المعلمين والمدارس في رحلتهم نحو التحول الرقمي الرياضي.</p>
+            </div>
+
+            <?php if (empty($testimonials)): ?>
+                <!-- Placeholder items for initial setup / if no posts in category -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <?php for($i=1; $i<=6; $i++): ?>
+                        <div class="glass-panel p-8 rounded-[2.5rem] border border-white/40 shadow-xl reveal" style="transition-delay: <?= $i*100 ?>ms;">
+                            <div class="flex gap-1 mb-6 text-amber-400">
+                                <?php for($j=0; $j<5; $j++) echo '<i data-lucide="star" class="w-4 h-4"></i>'; ?>
+                            </div>
+                            <p class="text-slate-700 font-medium mb-8 leading-relaxed italic">"هذا القسم سيظهر فيه آراء العملاء التي ستضيفها في ووردبريس ضمن تصنيف Reviews."</p>
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl emerald-gradient flex items-center justify-center text-white font-bold text-xl">
+                                    <?= chr(64+$i) ?>
+                                </div>
+                                <div class="text-right">
+                                    <h4 class="font-black text-slate-800">اسم العميل قريباً</h4>
+                                    <span class="text-xs text-emerald-600 font-bold">اسم المدرسة</span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endfor; ?>
+                </div>
+            <?php else: ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <?php foreach ($testimonials as $idx => $t): ?>
+                        <div class="glass-panel p-8 rounded-[2.5rem] border border-white/40 shadow-xl hover:-translate-y-2 transition-all duration-500 reveal" style="transition-delay: <?= ($idx+1)*100 ?>ms;">
+                            <div class="flex gap-1 mb-6">
+                                <?php 
+                                $rating = floatval($t['rating']);
+                                for($j=1; $j<=5; $j++) {
+                                    if ($j <= floor($rating)) {
+                                        echo '<i data-lucide="star" class="w-5 h-5 star-filled"></i>';
+                                    } elseif ($j == ceil($rating) && floor($rating) != $rating) {
+                                        echo '<i data-lucide="star-half" class="w-5 h-5 star-filled"></i>';
+                                    } else {
+                                        echo '<i data-lucide="star" class="w-5 h-5 star-empty"></i>';
+                                    }
+                                }
+                                ?>
+                            </div>
+                            <p class="text-slate-700 font-medium mb-8 leading-relaxed italic">
+                                "<?= esc($t['content']) ?>"
+                            </p>
+                            <div class="flex items-center gap-4 mt-auto">
+                                <?php if (!empty($t['image_path'])): ?>
+                                    <img src="<?= esc($t['image_path']) ?>" class="w-12 h-12 rounded-2xl object-cover shadow-lg border-2 border-white/50" alt="<?= esc($t['name']) ?>">
+                                <?php else: ?>
+                                    <div class="w-12 h-12 rounded-2xl emerald-gradient flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                                        <?= mb_substr($t['name'], 0, 1) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="text-right">
+                                    <h4 class="font-black text-slate-800"><?= esc($t['name']) ?></h4>
+                                    <span class="text-xs text-emerald-600 font-bold"><?= esc($t['school']) ?></span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </section>
 

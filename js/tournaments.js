@@ -580,13 +580,16 @@ async function renderMatchesTab(id) {
         </div>
 
         ${roundNumbers.length > 0 ? roundNumbers.map(round => {
-        const roundMatches = rounds[round].filter(m => !m.is_bye || m.team1_name || m.team2_name);
+        // No longer filtering fully Ghost matches, as the user wants to see "الفريق باي 1" etc.
+        const roundMatches = rounds[round].filter(m => m.is_bye != 2);
+        
         if (roundMatches.length === 0) return '';
 
         const isGroupRound = isMixed && rounds[round].some(m => m.group_name);
+        // Do not deduct byes from the match count since they are visibly played now
         const roundName = isGroupRound
             ? `🟢 الجولة ${round} (دور المجموعات)`
-            : getRoundName(parseInt(round), knockoutRounds.length > 0 ? knockoutRounds : roundNumbers, tournament?.type, roundMatches.filter(m => !m.is_bye).length);
+            : getRoundName(parseInt(round), knockoutRounds.length > 0 ? knockoutRounds : roundNumbers, tournament?.type, roundMatches.length);
 
         return `
             <div class="mb-6">
@@ -607,12 +610,17 @@ async function renderMatchesTab(id) {
 
 function renderMatchCard(m, isInProgress) {
     const isCompleted = m.status === 'completed';
-    const isBye = m.is_bye == 1;
-    const team1Name = m.team1_name || 'يُحدد لاحقاً';
-    const team2Name = m.team2_name || 'يُحدد لاحقاً';
-    const canEnterResult = isInProgress && m.team1_id && m.team2_id && !isCompleted && !isBye;
+    // If it's a bye match but it has physical team records like "الفريق باي 1", we treat it standardly visually
+    const isBye = false; // m.is_bye == 1; -> We want it to just look like a resolved match
+    
+    let team1Name = m.team1_name || 'يُحدد لاحقاً';
+    let team2Name = m.team2_name || 'يُحدد لاحقاً';
+    
+    // We let "الفريق باي N" show as is.
+    
+    const canEnterResult = isInProgress && m.team1_id && m.team2_id && !isCompleted;
 
-    if (isBye && !m.team1_name && !m.team2_name) return '';
+    if (m.is_bye == 1 && !m.team1_id && !m.team2_id) return '';
 
     return `
     <div class="border-2 ${isCompleted ? 'border-green-300 bg-green-50/30' : 'border-gray-200'} rounded-xl p-4 transition">
@@ -621,6 +629,9 @@ function renderMatchCard(m, isInProgress) {
                 <span class="text-xs ${MATCH_STATUS[m.status]?.color || 'text-gray-400'} font-semibold">
                     ${isBye ? '🎫 تأهل مباشر' : MATCH_STATUS[m.status]?.text || m.status}
                 </span>
+                ${m.bracket_type === 'losers' ? `<span class="badge bg-orange-50 text-orange-700 text-[10px] ml-2">جدول الخاسرين (LB)</span>` : ''}
+                ${m.bracket_type === 'main' ? `<span class="badge bg-blue-50 text-blue-700 text-[10px] ml-2">جدول الفائزين (WB)</span>` : ''}
+                ${m.bracket_type === 'final' ? `<span class="badge bg-purple-50 text-purple-700 text-[10px] ml-2">النهائي الكبيـر</span>` : ''}
                 ${m.group_name ? `<span class="badge bg-emerald-50 text-emerald-700 text-[10px] ml-2">المجموعة ${m.group_name}</span>` : ''}
                 ${m.match_date ? `<span class="text-[10px] text-emerald-600 font-bold ml-2">📅 ${m.match_date} ${m.match_time || ''}</span>` : ''}
             </div>
@@ -836,12 +847,16 @@ function renderBracketSection(bracketData, roundKeys, tournamentType, isLosers =
 
         let roundName = '';
         if (isLosers) {
-            roundName = `خاسرين ${round}`;
+            if (round == roundKeys[totalRounds - 1]) roundName = '🏁 نهائي الخاسرين';
+            else roundName = `خاسرين ${round}`;
         } else if (isFinal) {
-            roundName = roundKeys.length > 1 && round == roundKeys[0] ? '🏆 النهائي الكبير' : '🔄 مباراة الإعادة';
+            roundName = round == roundKeys[0] ? '🏆 النهائي الكبير' : '🔄 مباراة الإعادة';
         } else {
             const mCount = matches.filter(m => !m.is_bye).length;
             roundName = getRoundName(parseInt(round), roundKeys, tournamentType, mCount);
+            if (tournamentType === 'double_elimination' && round == roundKeys[totalRounds - 1]) {
+                roundName = '👑 نهائي الفائزين';
+            }
         }
 
         return `
@@ -888,22 +903,26 @@ function getRoundName(round, knockoutRounds, type, matchCount) {
         return `الجولة ${round}`;
     }
 
-    // knockoutRounds is array of round numbers in the knockout stage
     const krArray = Array.isArray(knockoutRounds) ? knockoutRounds.map(Number) : [];
     const roundNum = Number(round);
-    const kIdx = krArray.indexOf(roundNum); // 0-based index in knockout stage
+    const kIdx = krArray.indexOf(roundNum);
     const totalKnockout = krArray.length;
 
     if (totalKnockout === 0) return `الجولة ${round}`;
 
-    const stepsFromEnd = totalKnockout - 1 - kIdx; // 0 = final, 1 = semi, 2 = QF etc.
+    if (type === 'double_elimination') {
+        const stepsFromEnd = totalKnockout - 1 - kIdx;
+        if (stepsFromEnd === 0) return '🏆 النهائي الحاسم';
+        if (stepsFromEnd === 1) return '🏆 النهائي الأول';
+        return `الجولة ${round}`;
+    }
+
+    const stepsFromEnd = totalKnockout - 1 - kIdx;
 
     if (stepsFromEnd === 0) return '🏆 النهائي';
     if (stepsFromEnd === 1) return '🥇 نصف النهائي';
     if (stepsFromEnd === 2) return '🎯 ربع النهائي';
 
-    // For earlier rounds, compute how many teams play in that round
-    // Each match has 2 teams, so teams = matches * 2
     const teamsInRound = matchCount ? matchCount * 2 : Math.pow(2, stepsFromEnd + 1);
     if (teamsInRound >= 32) return `⚡ دور الـ 32`;
     if (teamsInRound >= 16) return `⚡ دور الـ 16`;

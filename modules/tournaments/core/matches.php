@@ -324,195 +324,266 @@ function generateSingleElimination($tournamentId, $teams, $startRound = 1) {
 // ============================================================
 // DOUBLE ELIMINATION - خروج المغلوب من مرتين
 // ============================================================
+
+// ============================================================
+// DOUBLE ELIMINATION - خروج المغلوب من مرتين (Ghost Protocol)
+// ============================================================
+
 function generateDoubleElimination($tournamentId, $teams) {
     $db = getDB();
     $n = count($teams);
-    
     if ($n < 2) throw new Exception('يجب إضافة فريقين على الأقل');
     
-    // ======== حساب أبعاد القوس ========
     $wRounds = (int)ceil(log($n, 2));
     $bracketSize = (int)pow(2, $wRounds);
-    $lRounds = ($wRounds - 1) * 2; // عدد جولات الخاسرين
+    
+    // 1. Sort teams by seed
+    usort($teams, fn($a, $b) => ($a['seed_number'] ?: 999) - ($b['seed_number'] ?: 999));
+    
+    // 2. Pad with Ghosts ('الفريق باي 1', 'الفريق باي 2', etc.)
+    $allTeams = [];
+    $ghostIds = [];
+    $byeCounter = 1;
+    for ($i = 0; $i < $bracketSize; $i++) {
+        $seed = $i + 1;
+        if ($i < $n) {
+            $allTeams[$seed] = $teams[$i];
+        } else {
+            $byeName = 'الفريق باي ' . $byeCounter++;
+            $stmt = $db->prepare("INSERT INTO tournament_teams (tournament_id, team_name, seed_number, is_eliminated) VALUES (?, ?, ?, 1)");
+            $stmt->execute([$tournamentId, $byeName, $seed]);
+            $ghostId = (int)$db->lastInsertId();
+            $ghostIds[] = $ghostId;
+            $allTeams[$seed] = ['id' => $ghostId, 'team_name' => $byeName, 'seed_number' => $seed];
+        }
+    }
+    
+    // 3. Folded Bracket Seed Order
+    function buildFoldedBracket($size) {
+        if ($size === 2) return [1, 2];
+        $half = buildFoldedBracket($size / 2);
+        $res = [];
+        foreach ($half as $h) {
+            $res[] = $h;
+            $res[] = $size + 1 - $h;
+        }
+        return $res;
+    }
+    
+    $seedOrder = buildFoldedBracket($bracketSize);
+    $slots = [];
+    foreach ($seedOrder as $s) {
+        $slots[] = $allTeams[$s];
+    }
     
     $matchNumber = 1;
     
-    // ================================================================
-    // الخطوة 1: إنشاء شعبة الفائزين (Winners Bracket)
-    // ================================================================
-    $winnersMatchIds = [];
+    // ---------------------------------------------
+    // 4. Generate WB Matches
+    // ---------------------------------------------
+    $wbMatches = []; // $wbMatches[round][pos] = match
     
-    for ($round = 1; $round <= $wRounds; $round++) {
-        $matchesInRound = (int)($bracketSize / pow(2, $round));
-        $winnersMatchIds[$round] = [];
-        
-        for ($pos = 0; $pos < $matchesInRound; $pos++) {
-            $stmt = $db->prepare("
-                INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status)
-                VALUES (?, ?, ?, 'main', 'scheduled')
-            ");
-            $stmt->execute([$tournamentId, $round, $matchNumber]);
-            $winnersMatchIds[$round][$pos] = (int)$db->lastInsertId();
-            $matchNumber++;
+    // WB R1 
+    $wbMatches[1] = [];
+    for ($i = 0; $i < $bracketSize / 2; $i++) {
+        $t1 = $slots[$i * 2];
+        $t2 = $slots[$i * 2 + 1];
+        $stmt = $db->prepare("INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, team1_id, team2_id, status) VALUES (?, 1, ?, 'main', ?, ?, 'scheduled')");
+        $stmt->execute([$tournamentId, $matchNumber++, $t1['id'], $t2['id']]);
+        $wbMatches[1][$i] = ['id' => (int)$db->lastInsertId()];
+    }
+    
+    // WB R2+
+    for ($r = 2; $r <= $wRounds; $r++) {
+        $wbMatches[$r] = [];
+        $cnt = count($wbMatches[$r - 1]) / 2;
+        for ($i = 0; $i < $cnt; $i++) {
+            $stmt = $db->prepare("INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status) VALUES (?, ?, ?, 'main', 'scheduled')");
+            $stmt->execute([$tournamentId, $r, $matchNumber++]);
+            $wbMatches[$r][$i] = ['id' => (int)$db->lastInsertId()];
         }
     }
     
-    // ربط شعبة الفائزين: الفائز → المباراة التالية
-    for ($round = 1; $round < $wRounds; $round++) {
-        foreach ($winnersMatchIds[$round] as $pos => $matchId) {
-            $nextPos = (int)floor($pos / 2);
-            $nextSlot = ($pos % 2 === 0) ? 'team1' : 'team2';
-            $nextMatchId = $winnersMatchIds[$round + 1][$nextPos] ?? null;
-            
-            if ($nextMatchId) {
-                $db->prepare("UPDATE matches SET next_match_id = ?, next_match_slot = ? WHERE id = ?")
-                   ->execute([$nextMatchId, $nextSlot, $matchId]);
+    // ---------------------------------------------
+    // 5. Generate LB Matches
+    // ---------------------------------------------
+    $lbMatches = [];
+    $lbRound = 1;
+    $prevLBCnt = count($wbMatches[1]) / 2; // LBR1 match count
+    
+    for ($wr = 1; $wr < $wRounds; $wr++) {
+        // Minor Round
+        if ($wr == 1) {
+            $lbMatches[$lbRound] = [];
+            for ($i = 0; $i < $prevLBCnt; $i++) {
+                $stmt = $db->prepare("INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status) VALUES (?, ?, ?, 'losers', 'scheduled')");
+                $stmt->execute([$tournamentId, $lbRound, $matchNumber++]);
+                $lbMatches[$lbRound][$i] = ['id' => (int)$db->lastInsertId()];
             }
-        }
-    }
-    
-    // ================================================================
-    // الخطوة 2: إنشاء شعبة الخاسرين (Losers Bracket)
-    // ================================================================
-    $losersMatchIds = [];
-    $lMatchCount = (int)($bracketSize / 4);
-    
-    for ($lr = 1; $lr <= $lRounds; $lr++) {
-        if ($lr === 1) {
-            $lMatchCount = max(1, (int)($bracketSize / 4));
-        } elseif ($lr % 2 === 0) {
-            $lMatchCount = max(1, $lMatchCount);
+            $lbRound++;
         } else {
-            $lMatchCount = max(1, (int)ceil($lMatchCount / 2));
+            $minorCnt = $prevLBCnt / 2;
+            if ($minorCnt >= 1) { // must generate round
+                $lbMatches[$lbRound] = [];
+                for ($i = 0; $i < $minorCnt; $i++) {
+                    $stmt = $db->prepare("INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status) VALUES (?, ?, ?, 'losers', 'scheduled')");
+                    $stmt->execute([$tournamentId, $lbRound, $matchNumber++]);
+                    $lbMatches[$lbRound][$i] = ['id' => (int)$db->lastInsertId()];
+                }
+                $prevLBCnt = $minorCnt;
+                $lbRound++;
+            }
         }
         
-        $losersMatchIds[$lr] = [];
-        
-        for ($pos = 0; $pos < $lMatchCount; $pos++) {
-            $stmt = $db->prepare("
-                INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status)
-                VALUES (?, ?, ?, 'losers', 'scheduled')
-            ");
-            $stmt->execute([$tournamentId, $lr, $matchNumber]);
-            $losersMatchIds[$lr][$pos] = (int)$db->lastInsertId();
-            $matchNumber++;
+        // Major Round
+        $majorCnt = $prevLBCnt; 
+        $lbMatches[$lbRound] = [];
+        for ($i = 0; $i < $majorCnt; $i++) {
+            $stmt = $db->prepare("INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status) VALUES (?, ?, ?, 'losers', 'scheduled')");
+            $stmt->execute([$tournamentId, $lbRound, $matchNumber++]);
+            $lbMatches[$lbRound][$i] = ['id' => (int)$db->lastInsertId()];
         }
+        $lbRound++;
     }
     
-    // ربط شعبة الخاسرين داخلياً
-    for ($lr = 1; $lr < $lRounds; $lr++) {
-        foreach ($losersMatchIds[$lr] as $pos => $matchId) {
-            $nextRound = $lr + 1;
-            if (!isset($losersMatchIds[$nextRound])) continue;
+    // ---------------------------------------------
+    // 6. GF Match
+    // ---------------------------------------------
+    $stmt = $db->prepare("INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status) VALUES (?, ?, ?, 'final', 'scheduled')");
+    $stmt->execute([$tournamentId, $wRounds + 1, $matchNumber++]);
+    $gfId = (int)$db->lastInsertId();
+    
+    // ---------------------------------------------
+    // 7. Topology Links
+    // ---------------------------------------------
+    
+    // WBs to WBs & LBs
+    for ($r = 1; $r < $wRounds; $r++) {
+        foreach ($wbMatches[$r] as $i => $m) {
+            // Next WB
+            $nextPos = (int)floor($i / 2);
+            $nextSlot = ($i % 2 === 0) ? 'team1' : 'team2';
+            $nextId = $wbMatches[$r + 1][$nextPos]['id'];
+            $db->prepare("UPDATE matches SET next_match_id=?, next_match_slot=? WHERE id=?")->execute([$nextId, $nextSlot, $m['id']]);
             
-            $nextMatchCount = count($losersMatchIds[$nextRound]);
-            
-            if ($lr % 2 === 1) {
-                $nextPos = min($pos, $nextMatchCount - 1);
-                $nextSlot = 'team1';
+            // Loser to LB
+            if ($r === 1) {
+                // WBR1 -> LBR1 (Minor)
+                $lbId = $lbMatches[1][(int)floor($i / 2)]['id'];
+                $lbSlot = ($i % 2 === 0) ? 'team1' : 'team2';
+                $db->prepare("UPDATE matches SET loser_next_match_id=?, loser_next_match_slot=? WHERE id=?")->execute([$lbId, $lbSlot, $m['id']]);
             } else {
-                $nextPos = min((int)floor($pos / 2), $nextMatchCount - 1);
-                $nextSlot = ($pos % 2 === 0) ? 'team1' : 'team2';
-            }
-            
-            $nextMatchId = $losersMatchIds[$nextRound][$nextPos] ?? null;
-            if ($nextMatchId) {
-                $db->prepare("UPDATE matches SET next_match_id = ?, next_match_slot = ? WHERE id = ?")
-                   ->execute([$nextMatchId, $nextSlot, $matchId]);
+                // WBR2+ -> LB Major
+                $lbR = ($r - 1) * 2;
+                $targetCount = count($lbMatches[$lbR]);
+                $lbIdx = ($targetCount - 1) - $i; // CROSS: reverses index!
+                $lbId = $lbMatches[$lbR][$lbIdx]['id'];
+                $db->prepare("UPDATE matches SET loser_next_match_id=?, loser_next_match_slot='team1' WHERE id=?")->execute([$lbId, $m['id']]);
             }
         }
     }
     
-    // ================================================================
-    // الخطوة 3: ربط الخاسرين من الفائزين → شعبة الخاسرين
-    // ================================================================
-    foreach ($winnersMatchIds[1] as $pos => $matchId) {
-        $lrPos = (int)floor($pos / 2);
-        $losersTargetId = $losersMatchIds[1][$lrPos] ?? null;
+    // WBR_last -> GF
+    $db->prepare("UPDATE matches SET next_match_id=?, next_match_slot='team1' WHERE id=?")->execute([$gfId, $wbMatches[$wRounds][0]['id']]);
+    
+    // LBs to LBs
+    for ($r = 1; $r < count($lbMatches); $r++) {
+        $curList = $lbMatches[$r];
+        $nxtList = $lbMatches[$r + 1];
+        $isMinorToMajor = (count($curList) === count($nxtList));
         
-        if ($losersTargetId) {
-            $db->prepare("UPDATE matches SET loser_next_match_id = ? WHERE id = ?")
-               ->execute([$losersTargetId, $matchId]);
+        foreach ($curList as $i => $m) {
+            if ($isMinorToMajor) {
+                $nextPos = $i;
+                $nextSlot = 'team2';
+            } else {
+                $nextPos = (int)floor($i / 2);
+                $nextSlot = ($i % 2 === 0) ? 'team1' : 'team2';
+            }
+            $nextId = $nxtList[$nextPos]['id'];
+            $db->prepare("UPDATE matches SET next_match_id=?, next_match_slot=? WHERE id=?")->execute([$nextId, $nextSlot, $m['id']]);
         }
     }
     
-    for ($wr = 2; $wr <= $wRounds; $wr++) {
-        $targetLR = ($wr - 1) * 2;
-        if (isset($losersMatchIds[$targetLR])) {
-            foreach ($winnersMatchIds[$wr] as $pos => $matchId) {
-                $lrPos = min($pos, count($losersMatchIds[$targetLR]) - 1);
-                $losersTargetId = $losersMatchIds[$targetLR][$lrPos] ?? null;
+    // LBR_last -> GF
+    $db->prepare("UPDATE matches SET next_match_id=?, next_match_slot='team2' WHERE id=?")->execute([$gfId, end($lbMatches)[0]['id']]);
+    
+    // ---------------------------------------------
+    // 8. Collapse Ghost Matches!
+    // ---------------------------------------------
+    if (!empty($ghostIds)) {
+        resolveGhostMatches($tournamentId, $ghostIds);
+    }
+}
+
+/**
+ * Automagically resolves and propagates all Ghost Team bracket placeholders
+ */
+function resolveGhostMatches($tournamentId, $ghostIds) {
+    if (empty($ghostIds)) return;
+    $db = getDB();
+    $resolvedAny = true;
+    
+    $ghostIdsStr = implode(',', $ghostIds);
+    
+    while ($resolvedAny) {
+        $resolvedAny = false;
+        
+        $stmt = $db->prepare("SELECT * FROM matches WHERE tournament_id = ? AND status = 'scheduled' AND (team1_id IN ($ghostIdsStr) OR team2_id IN ($ghostIdsStr))");
+        $stmt->execute([$tournamentId]);
+        $ghostMatches = $stmt->fetchAll();
+        
+        foreach ($ghostMatches as $m) {
+            $t1 = $m['team1_id'];
+            $t2 = $m['team2_id'];
+            
+            // Wait until both teams arrive (from prev rounds)
+            if ($t1 !== null && $t2 !== null) {
+                $t1Ghost = in_array($t1, $ghostIds);
+                $t2Ghost = in_array($t2, $ghostIds);
                 
-                if ($losersTargetId) {
-                    $db->prepare("UPDATE matches SET loser_next_match_id = ? WHERE id = ?")
-                       ->execute([$losersTargetId, $matchId]);
+                $winnerId = null;
+                $loserId = null;
+                $isBye = 0;
+                
+                if ($t1Ghost && !$t2Ghost) {
+                    $winnerId = $t2; $loserId = $t1; $isBye = 1; // Real beats Ghost
+                } elseif (!$t1Ghost && $t2Ghost) {
+                    $winnerId = $t1; $loserId = $t2; $isBye = 1; // Real beats Ghost
+                } elseif ($t1Ghost && $t2Ghost) {
+                    $winnerId = $t1; $loserId = $t2; $isBye = 2; // Ghost beats Ghost 
+                }
+                
+                if ($winnerId !== null) {
+                    // Fast-forward this match
+                    $stmt = $db->prepare("UPDATE matches SET winner_team_id=?, loser_team_id=?, status='completed', is_bye=? WHERE id=?");
+                    $stmt->execute([$winnerId, $loserId, $isBye, $m['id']]);
+                    
+                    // Push winner forward
+                    if ($m['next_match_id']) {
+                        $col = $m['next_match_slot'] === 'team1' ? 'team1_id' : 'team2_id';
+                        $db->prepare("UPDATE matches SET $col=? WHERE id=?")->execute([$winnerId, $m['next_match_id']]);
+                    }
+                    
+                    // Push loser to LB
+                    if ($m['loser_next_match_id']) {
+                        $col = $m['loser_next_match_slot'] === 'team1' ? 'team1_id' : 'team2_id';
+                        $db->prepare("UPDATE matches SET $col=? WHERE id=?")->execute([$loserId, $m['loser_next_match_id']]);
+                    }
+                    
+                    $resolvedAny = true;
                 }
             }
         }
     }
-    
-    // ================================================================
-    // الخطوة 4: إنشاء النهائي الكبير (Grand Final)
-    // ================================================================
-    $stmt = $db->prepare("
-        INSERT INTO matches (tournament_id, round_number, match_number, bracket_type, status)
-        VALUES (?, ?, ?, 'final', 'scheduled')
-    ");
-    $stmt->execute([$tournamentId, $wRounds + 1, $matchNumber]);
-    $grandFinalId = (int)$db->lastInsertId();
-    $matchNumber++;
-    
-    $wFinalId = end($winnersMatchIds[$wRounds]);
-    if ($wFinalId) {
-        $db->prepare("UPDATE matches SET next_match_id = ?, next_match_slot = 'team1' WHERE id = ?")
-           ->execute([$grandFinalId, $wFinalId]);
-    }
-    
-    if ($lRounds > 0 && isset($losersMatchIds[$lRounds])) {
-        $lFinalId = end($losersMatchIds[$lRounds]);
-        if ($lFinalId) {
-            $db->prepare("UPDATE matches SET next_match_id = ?, next_match_slot = 'team2' WHERE id = ?")
-               ->execute([$grandFinalId, $lFinalId]);
-        }
-    }
-    
-    // ================================================================
-    // الخطوة 5: توزيع الفرق في الجولة الأولى من الفائزين
-    // ================================================================
-    $paddedTeams = $teams;
-    while (count($paddedTeams) < $bracketSize) {
-        $paddedTeams[] = null;
-    }
-    
-    foreach ($winnersMatchIds[1] as $pos => $matchId) {
-        $team1 = $paddedTeams[$pos * 2] ?? null;
-        $team2 = $paddedTeams[$pos * 2 + 1] ?? null;
-        $team1Id = $team1 ? ($team1['id'] ?? null) : null;
-        $team2Id = $team2 ? ($team2['id'] ?? null) : null;
-        
-        if ($team1Id && $team2Id) {
-            $db->prepare("UPDATE matches SET team1_id = ?, team2_id = ? WHERE id = ?")
-               ->execute([$team1Id, $team2Id, $matchId]);
-        } elseif ($team1Id || $team2Id) {
-            $realTeamId = $team1Id ?: $team2Id;
-            $db->prepare("UPDATE matches SET team1_id = ?, is_bye = 1, status = 'completed', winner_team_id = ? WHERE id = ?")
-               ->execute([$realTeamId, $realTeamId, $matchId]);
-            advanceWinnerToNext($db, $matchId, $realTeamId);
-        } else {
-            $db->prepare("UPDATE matches SET is_bye = 1, status = 'completed' WHERE id = ?")
-               ->execute([$matchId]);
-        }
-    }
-    
-    // ================================================================
-    // الخطوة 6: معالجة BYE متتالية في شعبة الفائزين
-    // ================================================================
-    for ($round = 2; $round <= $wRounds; $round++) {
-        foreach ($winnersMatchIds[$round] as $pos => $matchId) {
-            checkAndAdvanceBye($db, $matchId);
-        }
-    }
 }
+
+
+
+
+
+
+
 
 /**
  * Check if a match has only one team (BYE situation) and auto-advance
@@ -523,39 +594,32 @@ function checkAndAdvanceBye($db, $matchId) {
     $match = $stmt->fetch();
     if (!$match || $match['status'] === 'completed') return;
     
-    if ($match['team1_id'] && !$match['team2_id']) {
-        // Check if team2 feeder is done
-        $feeder = $db->prepare("SELECT COUNT(*) FROM matches WHERE next_match_id = ? AND next_match_slot = 'team2' AND status != 'completed'");
-        $feeder->execute([$matchId]);
-        $pending = $feeder->fetchColumn();
-        
-        if ($pending == 0) {
-            // Check if there's actually a feeder that could send a team
-            $feederDone = $db->prepare("SELECT * FROM matches WHERE next_match_id = ? AND next_match_slot = 'team2' AND status = 'completed'");
-            $feederDone->execute([$matchId]);
-            $doneFeed = $feederDone->fetch();
-            
-            if (!$doneFeed || !$doneFeed['winner_team_id']) {
-                // No team coming, auto-advance
-                $db->prepare("UPDATE matches SET is_bye = 1, status = 'completed', winner_team_id = ? WHERE id = ?")
-                   ->execute([$match['team1_id'], $matchId]);
-                advanceWinnerToNext($db, $matchId, $match['team1_id']);
-            }
-        }
-    } elseif (!$match['team1_id'] && $match['team2_id']) {
-        $feeder = $db->prepare("SELECT COUNT(*) FROM matches WHERE next_match_id = ? AND next_match_slot = 'team1' AND status != 'completed'");
-        $feeder->execute([$matchId]);
-        $pending = $feeder->fetchColumn();
-        
-        if ($pending == 0) {
-            $feederDone = $db->prepare("SELECT * FROM matches WHERE next_match_id = ? AND next_match_slot = 'team1' AND status = 'completed'");
-            $feederDone->execute([$matchId]);
-            $doneFeed = $feederDone->fetch();
-            
-            if (!$doneFeed || !$doneFeed['winner_team_id']) {
-                $db->prepare("UPDATE matches SET is_bye = 1, status = 'completed', winner_team_id = ? WHERE id = ?")
-                   ->execute([$match['team2_id'], $matchId]);
-                advanceWinnerToNext($db, $matchId, $match['team2_id']);
+    // If a match is BYE, both teams could be NULL (empty slot in larger bracket)
+    // or one team exists and other is NULL.
+    
+    $t1Id = $match['team1_id'];
+    $t2Id = $match['team2_id'];
+    
+    // Check if this match is waiting for teams from other matches
+    $stmtRec = $db->prepare("SELECT COUNT(*) FROM matches WHERE next_match_id = ? AND status != 'completed'");
+    $stmtRec->execute([$matchId]);
+    $pendingFeeders = (int)$stmtRec->fetchColumn();
+    
+    if ($pendingFeeders === 0) {
+        if ($t1Id && !$t2Id) {
+             $db->prepare("UPDATE matches SET is_bye = 1, status = 'completed', winner_team_id = ? WHERE id = ?")
+                ->execute([$t1Id, $matchId]);
+             advanceWinnerToNext($db, $matchId, $t1Id);
+        } elseif (!$t1Id && $t2Id) {
+             $db->prepare("UPDATE matches SET is_bye = 1, status = 'completed', winner_team_id = ? WHERE id = ?")
+                ->execute([$t2Id, $matchId]);
+             advanceWinnerToNext($db, $matchId, $t2Id);
+        } elseif (!$t1Id && !$t2Id) {
+            // Check if it's truly empty (no feeders)
+            $stmtFeeds = $db->prepare("SELECT COUNT(*) FROM matches WHERE next_match_id = ?");
+            $stmtFeeds->execute([$matchId]);
+            if ((int)$stmtFeeds->fetchColumn() === 0) {
+                $db->prepare("UPDATE matches SET is_bye = 1, status = 'completed' WHERE id = ?")->execute([$matchId]);
             }
         }
     }
@@ -584,28 +648,23 @@ function advanceWinnerToNext($db, $matchId, $winnerId) {
 /**
  * Send loser to losers bracket
  */
+/**
+ * Send loser to losers bracket
+ */
 function sendLoserToLosersBracket($db, $matchId, $loserId) {
     if (!$loserId) return;
     
-    $stmt = $db->prepare("SELECT loser_next_match_id FROM matches WHERE id = ?");
+    $stmt = $db->prepare("SELECT loser_next_match_id, loser_next_match_slot FROM matches WHERE id = ?");
     $stmt->execute([$matchId]);
     $match = $stmt->fetch();
     
     if ($match && $match['loser_next_match_id']) {
-        // Find empty slot in losers match
-        $lMatch = $db->prepare("SELECT * FROM matches WHERE id = ?");
-        $lMatch->execute([$match['loser_next_match_id']]);
-        $losersMatch = $lMatch->fetch();
+        $column = $match['loser_next_match_slot'] === 'team2' ? 'team2_id' : 'team1_id';
+        $db->prepare("UPDATE matches SET $column = ? WHERE id = ?")
+           ->execute([$loserId, $match['loser_next_match_id']]);
         
-        if ($losersMatch) {
-            if (!$losersMatch['team1_id']) {
-                $db->prepare("UPDATE matches SET team1_id = ? WHERE id = ?")
-                   ->execute([$loserId, $match['loser_next_match_id']]);
-            } elseif (!$losersMatch['team2_id']) {
-                $db->prepare("UPDATE matches SET team2_id = ? WHERE id = ?")
-                   ->execute([$loserId, $match['loser_next_match_id']]);
-            }
-        }
+        // After placing a loser, check if LB match now has a BYE situation
+        checkAndAdvanceBye($db, $match['loser_next_match_id']);
     }
 }
 

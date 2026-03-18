@@ -12,29 +12,31 @@
 
 ## التغييرات المقترحة
 
-### ١. الحماية والأمن (Security Hardening)
+### Proposed Changes
 
-#### [MODIFY] [config.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/config.php)
-- تحسين وظيفة [ensureSchema](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/config.php#195-457) لتعمل فقط عند الحاجة بدلاً من كل طلب لزيادة سرعة الموقع.
-- التأكد من إيقاف `DEBUG_MODE` تلقائياً في بيئات الإنتاج.
+### Core Logic Rewrite (`matches.php`)
 
-#### [MODIFY] [api/auth.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/api/auth.php)
-- إزالة رمز الـ OTP من استجابة الـ API حتى في وضع التطوير لمنع أي تسريب مستقبلي.
-- إضافة ميزة "تحديد عدد محاولات تسجيل الدخول" (Brute Force Protection) لمنع محاولات التخمين.
+#### [MODIFY] `matches.php`](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/modules/tournaments/core/matches.php)
 
-### ٢. جودة الكود والأداء (Code Quality & Performance)
+**Problem with current logic:** The current mathematical algorithm forces custom rules for Loser Bracket rounds when the number of teams isn't a power of 2 (e.g., 6 teams). This breaks standard tournament topology visually shown in the image provided (where 8-team brackets have a very specific, symmetrical flow of losers dropping into the LB).
 
-#### [MODIFY] [api/students.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/api/students.php)
-- تبسيط منطق الاستعلامات (SQL) وجعله أكثر دقة لتجنب إهدار موارد الخادم في محاولات استعلام غير ناجحة.
-- تحسين عملية استيراد البيانات من ملفات Excel لتكون أكثر صرامة في التحقق من البيانات.
+**The Solution:** The "Ghost Bracket" approach.
+Instead of building a partial 6-team bracket, we will **always build a full power-of-2 bracket** (e.g., 8 teams). The missing 2 teams will be filled with "Ghost Teams" (`id < 0`). 
 
-#### [MODIFY] [api/analytics.php](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/api/analytics.php)
-- تحسين سرعة جلب البيانات للرسوم البيانية المتقدمة عبر استخدام الـ Caching المؤقت.
+1. **Topology:** We generate a complete 8-team Double Elimination bracket exactly as the standard rule dictates (identical to the image provided).
+2. **Seeding:** Teams are seeded 1 to 6. Ghost teams take seeds 7 and 8.
+3. **Ghost Logic (BYEs):**
+   - If a real team plays a Ghost team, the real team **automatically wins** (becomes a BYE match).
+   - The Ghost team "loses" and correctly drops down into the exact slot in the Losers Bracket required by standard topology.
+   - If two Ghost teams meet in the Losers Bracket, one Ghost team automatically "wins" to advance the empty slot.
+4. **Backend `saveMatchResult`:** The auto-advance logic for ghosts will happen perfectly during bracket generation, so the user only ever interacts with matches involving at least one real team.
 
-### ٣. الخصائص الجديدة المقترحة (Proposed Features)
+### Frontend UI Updates (`js/tournaments.js`)
 
-- **نظام التنبيهات المتقدم**: ربط النظام بإرسال إيميلات تلقائية لأولياء الأمور عند تسجيل غياب أو تفوق رياضي.
-- **لوحة حالة النظام (System Health)**: صفحة للمدير العام تظهر حالة قاعدة البيانات، مساحة التخزين، واتصال البريد.
+#### [MODIFY] `tournaments.js`](file:///Applications/XAMPP/xamppfiles/htdocs/pe1/js/tournaments.js)
+Update the match rendering logic so that:
+- Any match involving a "Ghost" team (`team ID < 0`) is handled correctly. If the match is completely Ghost vs Ghost, it is completely hidden from the UI.
+- Matches with 1 Real Team vs 1 Ghost Team are displayed as "تأهل مباشر" (BYE) for the real team, matching current expectations.مساحة التخزين، واتصال البريد.
 - **تصدير التقارير الشاملة**: ميزة استخراج تقرير أداء الطالب بصيغة PDF احترافية للإرسال عبر الواتساب أو الإيميل.
 - **سياسة كلمات المرور**: إجبار المستخدمين على تغيير كلمة المرور الافتراضية عند أول دخول.
 
