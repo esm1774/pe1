@@ -41,8 +41,8 @@ function esc($str) {
         rel="stylesheet">
 
     <!-- Framework -->
-    <!-- Tailwind CSS (Production Optimization) -->
-    <link rel="stylesheet" href="assets/css/main.css">
+    <!-- Tailwind CSS (Production Optimization - RGB Compatible) -->
+    <link rel="stylesheet" href="css/style.dist.css?v=4.0.0">
 
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>

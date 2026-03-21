@@ -1,7 +1,8 @@
 {
     "require": {
         "phpoffice/phpspreadsheet": "1.28.0",
-        "phpmailer/phpmailer": "^7.0"
+        "phpmailer/phpmailer": "^7.0",
+        "mpdf/mpdf": "^8.1"
     },
     "config": {
         "allow-plugins": {

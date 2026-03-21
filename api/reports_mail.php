@@ -59,8 +59,8 @@ function sendReportEmail() {
     $body .= $message . "\r\n\r\n";
     
     $body .= "--$boundary\r\n";
-    $body .= "Content-Type: application/pdf; name=\"report.pdf\"\r\n";
-    $body .= "Content-Disposition: attachment; filename=\"report.pdf\"\r\n";
+    $body .= "Content-Type: application/pdf; name=\"$title.pdf\"\r\n";
+    $body .= "Content-Disposition: attachment; filename=\"$title.pdf\"\r\n";
     $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
     $body .= chunk_split($pdfData) . "\r\n\r\n";
     $body .= "--$boundary--\r\n";

@@ -30,7 +30,7 @@ $posts = $db->query($postsQuery)->fetchAll();
     
     <!-- Tailwind & Fonts -->
     <!-- Tailwind CSS (Production Optimization) -->
-    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="css/style.dist.css?v=4.0.0">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 

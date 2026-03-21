@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "build:css": "postcss css/input.css -o css/style.dist.css",
+    "watch:css": "postcss css/input.css -o css/style.dist.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "postcss": "^8.5.8",
+    "postcss-cli": "^11.0.1",
+    "postcss-preset-env": "^11.2.0"
+  }
+}

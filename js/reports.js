@@ -228,7 +228,137 @@ async function generateParentStudentReport(sid) {
     }
 }
 
+function renderClassReportHTML(d, container) {
+    // Capture data for PDFBuilder
+    window._lastReportData = d;
+    window._lastReportType = 'class';
+
+    container.innerHTML = `
+    <div class="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 p-6 md:p-12 fade-in">
+        ${getReportHeaderHTML('تقرير تحليل أداء الفصل الدراسي')}
+
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-10 pb-8 border-b border-gray-50">
+            <div class="text-center md:text-right">
+                <h3 class="text-2xl md:text-3xl font-black text-gray-800">${esc(d.class.full_name)}</h3>
+                <p class="text-green-600 font-black flex items-center justify-center md:justify-start gap-2 mt-1">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    ${d.totalStudents} طالباً مسجلاً
+                </p>
+            </div>
+            <div class="bg-gray-900 text-white p-6 rounded-[2rem] text-center min-w-[160px] shadow-xl">
+                <p class="text-4xl font-black text-green-400">${d.classAverage}%</p>
+                <p class="text-[10px] font-black uppercase tracking-widest mt-2 opacity-60">متوسط أداء الفصل</p>
+            </div>
+        </div>
+
+        <!-- Desktop View -->
+        <div class="hidden md:block overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm bg-gray-50/30">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-100/50">
+                        <th class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">الترتيب</th>
+                        <th class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">اسم الطالب</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">النقاط</th>
+                        <th class="px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">النسبة/%</th>
+                        <th class="px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">التقدير</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">BMI</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الصحة</th>
+                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">حضور</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                    ${d.students.map((s, i) => `
+                    <tr class="hover:bg-green-50/50 transition-colors ${i < 3 ? 'bg-green-50/20' : ''}">
+                        <td class="px-5 py-4">
+                            <span class="w-8 h-8 rounded-lg ${i === 0 ? 'bg-yellow-400 text-white' : i === 1 ? 'bg-gray-300 text-white' : i === 2 ? 'bg-orange-400 text-white' : 'bg-gray-100 text-gray-400'} flex items-center justify-center font-black text-xs">
+                                ${i + 1}
+                            </span>
+                        </td>
+                        <td class="px-5 py-4">
+                            <div class="font-black text-gray-800 text-sm whitespace-nowrap">${esc(s.name)}</div>
+                        </td>
+                        <td class="px-5 py-4 text-center font-bold text-gray-600 text-sm">${s.total_score}/${s.total_max || 0}</td>
+                        <td class="px-4 py-4 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="w-12 bg-gray-100 rounded-full h-1.5 overflow-hidden hidden md:block">
+                                    <div class="h-full ${s.percentage >= 90 ? 'bg-green-500' : s.percentage >= 70 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${s.percentage}%"></div>
+                                </div>
+                                <span class="font-black text-gray-800">${s.percentage}%</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-center">
+                            <span class="inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black ${s.letter === 'ممتاز' ? 'bg-green-100 text-green-700' :
+            s.letter === 'جيد جداً' ? 'bg-blue-100 text-blue-700' :
+                s.letter === 'جيد' ? 'bg-yellow-100 text-yellow-700' :
+                    s.letter === 'مقبول' ? 'bg-orange-100 text-orange-700' :
+                        'bg-red-100 text-red-700'
+        }">${s.letter || '-'}</span>
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            ${s.latest_bmi ? `<span class="badge bmi-${s.bmi_category || 'normal'} !text-[10px] font-black">${s.latest_bmi}</span>` : '<span class="text-gray-300">-</span>'}
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            ${s.health_alerts > 0 ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 rounded-md text-[10px] font-black border border-red-100">⚠️ ${s.health_alerts}</span>` : '<span class="text-green-500 text-xs text-center">--</span>'}
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            <div class="flex items-center justify-center gap-1.5 font-bold text-xs ring-1 ring-gray-100 rounded-full py-1">
+                                <span class="text-green-600">P:${s.present_count}</span>
+                                <span class="text-gray-200">|</span>
+                                <span class="text-red-600">A:${s.absent_count}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile View Cards -->
+        <div class="md:hidden space-y-4">
+            ${d.students.map((s, i) => `
+            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden group ${i < 3 ? 'ring-2 ring-green-100 border-green-200' : ''}">
+                ${i < 3 ? `<div class="absolute top-2 left-2 text-2xl">${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</div>` : ''}
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-xl ${i < 3 ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400'} flex items-center justify-center font-black flex-shrink-0">
+                        ${i + 1}
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-black text-gray-800 text-base mb-1 group-hover:text-green-600 transition-colors">${esc(s.name)}</h4>
+                        <div class="flex items-center gap-3">
+                             <span class="text-[10px] font-black text-green-600 uppercase">الأداء: ${s.percentage}%</span>
+                             <span class="text-[10px] font-bold text-gray-300">|</span>
+                             <span class="text-[10px] font-black text-gray-400 uppercase">النقاط: ${s.total_score}/${s.total_max}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">BMI</p>
+                        <span class="text-[10px] font-black text-gray-700">${s.latest_bmi || '-'}</span>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">صحة</p>
+                        <span class="text-[10px] font-black ${s.health_alerts > 0 ? 'text-red-500' : 'text-green-500'}">${s.health_alerts > 0 ? '⚠️ تنبيه' : '✅'}</span>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">حضور</p>
+                        <span class="text-[10px] font-black text-gray-700">${s.present_count} / ${s.present_count + s.absent_count}</span>
+                    </div>
+                </div>
+            </div>
+            `).join('')}
+        </div>
+
+        <div class="text-center text-[10px] text-gray-400 mt-12 opacity-50 font-black uppercase tracking-widest">
+            نظام التحليل البدني والرياضي لعام ${new Date().getFullYear()}
+        </div>
+    </div>`;
+}
+
 function renderStudentReportHTML(d, container) {
+    // Capture data for PDFBuilder
+    window._lastReportData = d;
+    window._lastReportType = 'student';
     const s = d.student;
     // Fix #5: API returns 'latestMeasurement' not 'measurement'
     const m = d.latestMeasurement || d.measurement || null;
@@ -527,127 +657,7 @@ async function generateClassReport() {
     if (!r || !r.success) return;
 
     const d = r.data;
-
-    document.getElementById('reportOutput').innerHTML = `
-    <div class="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-gray-100 p-6 md:p-12 fade-in">
-        ${getReportHeaderHTML('تقرير تحليل أداء الفصل الدراسي')}
-
-        <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-10 pb-8 border-b border-gray-50">
-            <div class="text-center md:text-right">
-                <h3 class="text-2xl md:text-3xl font-black text-gray-800">${esc(d.class.full_name)}</h3>
-                <p class="text-green-600 font-black flex items-center justify-center md:justify-start gap-2 mt-1">
-                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    ${d.totalStudents} طالباً مسجلاً
-                </p>
-            </div>
-            <div class="bg-gray-900 text-white p-6 rounded-[2rem] text-center min-w-[160px] shadow-xl">
-                <p class="text-4xl font-black text-green-400">${d.classAverage}%</p>
-                <p class="text-[10px] font-black uppercase tracking-widest mt-2 opacity-60">متوسط أداء الفصل</p>
-            </div>
-        </div>
-
-        <!-- Desktop View -->
-        <div class="hidden md:block overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm bg-gray-50/30">
-            <table class="w-full">
-                <thead>
-                    <tr class="bg-gray-100/50">
-                        <th class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">الترتيب</th>
-                        <th class="px-5 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">اسم الطالب</th>
-                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">النقاط</th>
-                        <th class="px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">النسبة/%</th>
-                        <th class="px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">التقدير</th>
-                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">BMI</th>
-                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">الصحة</th>
-                        <th class="px-5 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">حضور</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 bg-white">
-                    ${d.students.map((s, i) => `
-                    <tr class="hover:bg-green-50/50 transition-colors ${i < 3 ? 'bg-green-50/20' : ''}">
-                        <td class="px-5 py-4">
-                            <span class="w-8 h-8 rounded-lg ${i === 0 ? 'bg-yellow-400 text-white' : i === 1 ? 'bg-gray-300 text-white' : i === 2 ? 'bg-orange-400 text-white' : 'bg-gray-100 text-gray-400'} flex items-center justify-center font-black text-xs">
-                                ${i + 1}
-                            </span>
-                        </td>
-                        <td class="px-5 py-4">
-                            <div class="font-black text-gray-800 text-sm whitespace-nowrap">${esc(s.name)}</div>
-                        </td>
-                        <td class="px-5 py-4 text-center font-bold text-gray-600 text-sm">${s.total_score}/${s.total_max || 0}</td>
-                        <td class="px-4 py-4 text-center">
-                            <div class="flex items-center justify-center gap-2">
-                                <div class="w-12 bg-gray-100 rounded-full h-1.5 overflow-hidden hidden md:block">
-                                    <div class="h-full ${s.percentage >= 90 ? 'bg-green-500' : s.percentage >= 70 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${s.percentage}%"></div>
-                                </div>
-                                <span class="font-black text-gray-800">${s.percentage}%</span>
-                            </div>
-                        </td>
-                        <td class="px-4 py-4 text-center">
-                            <span class="inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black ${s.letter === 'ممتاز' ? 'bg-green-100 text-green-700' :
-            s.letter === 'جيد جداً' ? 'bg-blue-100 text-blue-700' :
-                s.letter === 'جيد' ? 'bg-yellow-100 text-yellow-700' :
-                    s.letter === 'مقبول' ? 'bg-orange-100 text-orange-700' :
-                        'bg-red-100 text-red-700'
-        }">${s.letter || '-'}</span>
-                        </td>
-                        <td class="px-5 py-4 text-center">
-                            ${s.latest_bmi ? `<span class="badge bmi-${s.bmi_category || 'normal'} !text-[10px] font-black">${s.latest_bmi}</span>` : '<span class="text-gray-300">-</span>'}
-                        </td>
-                        <td class="px-5 py-4 text-center">
-                            ${s.health_alerts > 0 ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 rounded-md text-[10px] font-black border border-red-100">⚠️ ${s.health_alerts}</span>` : '<span class="text-green-500 text-xs text-center">--</span>'}
-                        </td>
-                        <td class="px-5 py-4 text-center">
-                            <div class="flex items-center justify-center gap-1.5 font-bold text-xs ring-1 ring-gray-100 rounded-full py-1">
-                                <span class="text-green-600">P:${s.present_count}</span>
-                                <span class="text-gray-200">|</span>
-                                <span class="text-red-600">A:${s.absent_count}</span>
-                            </div>
-                        </td>
-                    </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Mobile View Cards -->
-        <div class="md:hidden space-y-4">
-            ${d.students.map((s, i) => `
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden group ${i < 3 ? 'ring-2 ring-green-100 border-green-200' : ''}">
-                ${i < 3 ? `<div class="absolute top-2 left-2 text-2xl">${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</div>` : ''}
-                <div class="flex items-start gap-4">
-                    <div class="w-10 h-10 rounded-xl ${i < 3 ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400'} flex items-center justify-center font-black flex-shrink-0">
-                        ${i + 1}
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="font-black text-gray-800 text-base mb-1 group-hover:text-green-600 transition-colors">${esc(s.name)}</h4>
-                        <div class="flex items-center gap-3">
-                             <span class="text-[10px] font-black text-green-600 uppercase">الأداء: ${s.percentage}%</span>
-                             <span class="text-[10px] font-bold text-gray-300">|</span>
-                             <span class="text-[10px] font-black text-gray-400 uppercase">النقاط: ${s.total_score}/${s.total_max}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
-                    <div class="text-center">
-                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">BMI</p>
-                        <span class="text-[10px] font-black text-gray-700">${s.latest_bmi || '-'}</span>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">صحة</p>
-                        <span class="text-[10px] font-black ${s.health_alerts > 0 ? 'text-red-500' : 'text-green-500'}">${s.health_alerts > 0 ? '⚠️ تنبيه' : '✅'}</span>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-[8px] font-black text-gray-400 uppercase mb-1">حضور</p>
-                        <span class="text-[10px] font-black text-gray-700">${s.present_count} / ${s.present_count + s.absent_count}</span>
-                    </div>
-                </div>
-            </div>
-            `).join('')}
-        </div>
-
-        <div class="text-center text-[10px] text-gray-400 mt-12 opacity-50 font-black uppercase tracking-widest">
-            نظام التحليل البدني والرياضي لعام ${new Date().getFullYear()}
-        </div>
-    </div>`;
+    renderClassReportHTML(d, document.getElementById('reportOutput'));
 }
 
 async function renderCompareReport() {
@@ -730,6 +740,15 @@ async function renderCompareReport() {
 // PDF GENERATION AND EMAIL DELIVERY
 // ============================================================
 async function sendReportEmail(elementId, title) {
+    // If we have captured data, use the superior PDFBuilder
+    if (window._lastReportData && window._lastReportType) {
+        if (typeof emailReportPdf !== 'undefined') {
+            await emailReportPdf(window._lastReportType, window._lastReportData, title);
+            return;
+        }
+    }
+
+    // Fallback to legacy DOM-based method
     if (typeof html2pdf === 'undefined') {
         showToast('مكتبة تحويل PDF غير متوفرة حالياً، يرجى تحديث الصفحة.', 'error');
         return;
@@ -741,37 +760,29 @@ async function sendReportEmail(elementId, title) {
         return;
     }
 
-    // Fix #17: Replace browser prompt() with a proper in-app modal
     showModal(`
         <div class="p-8 md:p-10">
             <div class="flex items-center gap-4 mb-8">
                 <div class="w-16 h-16 rounded-[1.5rem] bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl">📧</div>
                 <div>
-                    <h3 class="text-2xl font-black text-gray-800">إرسال التقرير عبر البريد</h3>
+                    <h3 class="text-2xl font-black text-gray-800">إرسال التقرير عبر البريد (Legacy)</h3>
                     <p class="text-gray-400 font-bold text-sm">${esc(title)}</p>
                 </div>
             </div>
             <div class="space-y-2 mb-8">
                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">البريد الإلكتروني للمستلم</label>
-                <input type="email" id="reportEmailInput"
-                    class="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 focus:outline-none transition-all font-bold text-gray-700 text-sm"
-                    placeholder="example@school.edu.sa"
-                    onkeydown="if(event.key==='Enter') _doSendReport('${esc(elementId)}','${esc(title)}')"
-                >
+                <input type="email" id="reportEmailInput" 
+                    class="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 focus:outline-none transition-all font-bold text-gray-700 text-sm" 
+                    placeholder="example@school.edu.sa">
             </div>
             <div class="flex gap-4">
-                <button onclick="_doSendReport('${esc(elementId)}','${esc(title)}')" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-3">
+                <button onclick="_doSendReport('${elementId}', '${title}')" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 transition flex items-center justify-center gap-3">
                     <span class="text-xl">📧</span> إرسال PDF
                 </button>
                 <button onclick="closeModal()" class="w-32 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black hover:bg-gray-200 transition">إلغاء</button>
             </div>
         </div>
     `);
-    // Auto-focus the email input
-    setTimeout(() => {
-        const inp = document.getElementById('reportEmailInput');
-        if (inp) inp.focus();
-    }, 100);
 }
 
 /**
@@ -791,30 +802,47 @@ async function _doSendReport(elementId, title) {
         return;
     }
 
-    const element = document.getElementById(elementId);
     closeModal();
-    showToast('جاري تجهيز التقرير كملف PDF... يرجى الانتظار⏳', 'info');
+    showToast('جاري تجهيز التقرير (خادم PDF)... يرجى الانتظار ⏳', 'info');
 
     try {
-        const worker = html2pdf().set(getPDFFunctionOptions(title)).from(element);
-        const pdfBase64 = await worker.outputPdf('datauristring');
+        // Use server-side PDF generation for consistency
+        const type = window._lastReportType || 'student';
+        const data = window._lastReportData || {};
 
-        showToast('جاري الإرسال عبر البريد الإلكتروني... 📧', 'info');
-
-        const r = await API.post('send_report_email', {
-            email: email,
-            pdfData: pdfBase64,
-            title: title
+        const response = await fetch(window.APP_BASE + 'api/generate_pdf.php?_t=' + Date.now(), {
+            method: 'POST',
+            credentials: 'include',
+            body: JSON.stringify({ type, data, filename: title }),
+            headers: { 'Content-Type': 'application/json' }
         });
 
-        if (r && r.success) {
-            showToast(r.message || 'تم إرسال التقرير بنجاح! ✅', 'success');
-        } else {
-            showToast(r?.error || 'حدث خطأ أثناء إرسال البريد', 'error');
-        }
+        if (!response.ok) throw new Error('فشل توليد الملف من الخادم');
+
+        const blob = await response.blob();
+        
+        // Convert blob to base64 for the email API
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = async () => {
+            const pdfBase64 = reader.result;
+            showToast('جاري الإرسال عبر البريد الإلكتروني... 📧', 'info');
+
+            const r = await API.post('send_report_email', {
+                email: email,
+                pdfData: pdfBase64,
+                title: title
+            });
+
+            if (r && r.success) {
+                showToast(r.message || 'تم إرسال التقرير بنجاح! ✅', 'success');
+            } else {
+                showToast(r?.error || 'حدث خطأ أثناء إرسال البريد', 'error');
+            }
+        };
     } catch (e) {
-        showToast('خطأ أثناء توليد الـ PDF', 'error');
-        console.error('PDF Generation Error:', e);
+        showToast('خطأ أثناء توليد الـ PDF من الخادم', 'error');
+        console.error('Server PDF Error:', e);
     }
 }
 
@@ -842,26 +870,58 @@ function getPDFFunctionOptions(filename) {
 /**
  * Direct PDF Download function
  */
+/**
+ * Server-side PDF Download using mPDF
+ */
 async function downloadReportPDF(elementId, title) {
-    if (typeof html2pdf === 'undefined') {
-        showToast('مكتبة PDF غير متوقرة', 'error');
-        return;
-    }
-
-    const element = document.getElementById(elementId);
-    if (!element || element.innerText.includes('يرجى اختيار')) {
+    if (!window._lastReportData || !window._lastReportType) {
         showToast('يرجى عرض التقرير أولاً', 'error');
         return;
     }
 
-    showToast('جاري تحويل التقرير إلى PDF... ⏳', 'info');
+    showToast('جاري تجهيز التقرير الاحترافي (A4)... ⏳', 'info');
 
     try {
-        await html2pdf().set(getPDFFunctionOptions(title)).from(element).save();
+        const response = await fetch(window.APP_BASE + 'api/generate_pdf.php?_t=' + Date.now(), {
+            method: 'POST',
+            credentials: 'include',
+            body: JSON.stringify({
+                type: window._lastReportType,
+                data: window._lastReportData,
+                filename: title
+            }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error('Server returned ' + response.status);
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${title}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
         showToast('تم تحميل التقرير بنجاح! ✅', 'success');
     } catch (e) {
-        showToast('فشل في تحميل الـ PDF', 'error');
-        console.error('PDF Download Error:', e);
+        showToast('فشل في تحميل الـ PDF من الخادم', 'error');
+        console.error('Server PDF Download Error:', e);
+        
+        // Absolute fallback to legacy if server fails
+        await _legacyDownloadPDF(elementId, title);
+    }
+}
+
+async function _legacyDownloadPDF(elementId, title) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    showToast('جاري التحميل بالوضع الاحتياطي... ⏳', 'warning');
+    try {
+        await html2pdf().set(getPDFFunctionOptions(title)).from(element).save();
+    } catch (e) {
+        showToast('فشل التحميل النهائي', 'error');
     }
 }
 
@@ -937,6 +997,13 @@ async function generateGradingReport() {
 
     const { weights, students } = r.data;
     const className = document.getElementById('gradingReportClass').options[document.getElementById('gradingReportClass').selectedIndex].text;
+
+    // Capture data for PDFBuilder
+    window._lastReportData = r.data;
+    window._lastReportData.className = className;
+    window._lastReportData.start = start;
+    window._lastReportData.end = end;
+    window._lastReportType = 'grading';
 
     reportOutput.innerHTML = `
     <div class="bg-white rounded-[2rem] shadow-2xl border border-gray-100 p-6 md:p-10 fade-in">
@@ -1098,6 +1165,9 @@ async function generateMonitoringReport() {
 }
 
 function renderMonitoringReportHTML(d, container) {
+    // Capture data for PDFBuilder
+    window._lastReportData = d;
+    window._lastReportType = 'monitoring';
     const students = d.students || [];
     const dates = d.dates || [];
     const matrix = d.matrix || {};

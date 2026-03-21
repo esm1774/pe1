@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pe-smart-v3.1.1';
+const CACHE_NAME = 'pe-smart-v3.1.3';
 const ASSETS_TO_CACHE = [
     'app.html',
     'manifest.json',
