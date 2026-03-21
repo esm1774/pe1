@@ -2,44 +2,11 @@
 require_once 'config.php';
 $db = getDB();
 
-// Fetch latest 3 published blog posts FROM WORDPRESS REST API
-$recentPosts = [];
-$testimonials = [];
+// 1. Fetch Blog Posts directly from WordPress DB (Refactored for Reliability)
+$recentPosts = fetchRecentBlogPosts(3);
+
 try {
-    $blog_api_base = BASE_URL . '/blog/wp-json/wp/v2';
-    $opts = ['http' => ['method' => 'GET', 'timeout' => 3, 'header' => "Content-Type: application/json\r\n"]];
-    $context = stream_context_create($opts);
-
-    // 2. Fetch Category ID for 'reviews' to isolate them
-    $responseCats = @file_get_contents($blog_api_base . '/categories?slug=reviews,testimonials', false, $context);
-    $catId = null;
-    if ($responseCats) {
-        $cats = json_decode($responseCats, true);
-        if (!empty($cats[0]['id'])) $catId = $cats[0]['id'];
-    }
-
-    // 1. Fetch Blog Posts (Latest 3, excluding the Reviews category)
-    $exclude_param = ($catId) ? '&categories_exclude=' . $catId : '';
-    $responsePosts = @file_get_contents($blog_api_base . '/posts?_embed&per_page=3' . $exclude_param, false, $context);
-    if ($responsePosts) {
-        $posts_data = json_decode($responsePosts, true);
-        if (is_array($posts_data)) {
-            foreach ($posts_data as $p) {
-                $image = (!empty($p['_embedded']['wp:featuredmedia'][0]['source_url'])) ? $p['_embedded']['wp:featuredmedia'][0]['source_url'] : "";
-                $category = (!empty($p['_embedded']['wp:term'][0][0]['name'])) ? $p['_embedded']['wp:term'][0][0]['name'] : "مقالات";
-                $recentPosts[] = [
-                    'ID' => $p['id'],
-                    'title' => $p['title']['rendered'] ?? '',
-                    'slug' => $p['slug'] ?? '',
-                    'excerpt' => mb_substr(strip_tags($p['excerpt']['rendered'] ?? ''), 0, 150) . '...',
-                    'image_path' => $image,
-                    'category' => $category
-                ];
-            }
-        }
-    }
-
-    // 3. Fetch Testimonials from local database
+    // 2. Fetch Testimonials from local database
     $stmtTest = $db->query("SELECT * FROM testimonials WHERE active = 1 ORDER BY sort_order ASC, id DESC LIMIT 6");
     $testimonials = $stmtTest->fetchAll();
 } catch (Exception $e) {

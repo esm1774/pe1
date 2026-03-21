@@ -231,3 +231,42 @@ function pe_smart_register_testimonial_meta() {
     ));
 }
 add_action('init', 'pe_smart_register_testimonial_meta');
+
+/**
+ * Custom callback for list_comments to match PE Smart aesthetic.
+ */
+function pe_smart_comment($comment, $args, $depth) {
+    ?>
+    <li <?php comment_class('pe-comment-item'); ?> id="li-comment-<?php comment_ID(); ?>">
+        <div id="comment-<?php comment_ID(); ?>" class="pe-comment-card">
+            <div class="pe-comment-avatar">
+                <?php echo get_avatar($comment, $args['avatar_size']); ?>
+            </div>
+            
+            <div class="pe-comment-content">
+                <div class="pe-comment-header">
+                    <div>
+                        <span class="pe-comment-author"><?php echo get_comment_author_link(); ?></span>
+                        <div class="pe-comment-date"><?php printf( _x('%1$s at %2$s', '1: date, 2: time', 'pe-smart'), get_comment_date(), get_comment_time() ); ?></div>
+                    </div>
+                </div>
+
+                <div class="pe-comment-text">
+                    <?php if ($comment->comment_approved == '0') : ?>
+                        <p class="comment-awaiting-moderation" style="color:var(--emerald-600);font-style:italic;font-size:0.8rem;"><?php _e('تعليقك في انتظار المراجعة حالياً.', 'pe-smart'); ?></p>
+                    <?php endif; ?>
+                    <?php comment_text(); ?>
+                </div>
+
+                <div class="pe-comment-reply">
+                    <?php comment_reply_link(array_merge($args, array(
+                        'reply_text' => '↩️ رَد',
+                        'depth'      => $depth,
+                        'max_depth'  => $args['max_depth'],
+                        'class'      => 'pe-comment-reply-link'
+                    ))); ?>
+                </div>
+            </div>
+        </div>
+    <?php
+}

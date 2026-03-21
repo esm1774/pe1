@@ -1,6 +1,9 @@
 <?php
 /**
- * PE Smart School System - Schools & Settings API
+ * PE Smart School System — Schools & Settings API
+ * =================================================
+ * يشمل: إعدادات المدرسة، رفع الشعار، معلومات الاشتراك،
+ *       الإعلانات، تسجيل المدارس الجديدة (Onboarding).
  */
 
 // ============================================================
@@ -225,3 +228,102 @@ function getActiveAnnouncements() {
     jsonSuccess($stmt->fetchAll(PDO::FETCH_ASSOC));
 }
 
+
+// ============================================================
+// PUBLIC ONBOARDING — لا تحتاج تسجيل دخول
+// ============================================================
+
+/**
+ * Return available subscription plans (for the registration page).
+ */
+function getPublicPlans(): void {
+    $plans = getDB()->prepare(
+        "SELECT id, name, slug, price_monthly, max_students, max_teachers, max_classes
+         FROM   plans WHERE active = 1 ORDER BY sort_order"
+    );
+    $plans->execute();
+    jsonSuccess($plans->fetchAll());
+}
+
+/**
+ * Register a new school (SaaS onboarding).
+ * Creates the school, default admin user, and default grades in one transaction.
+ */
+function registerSchool(): void {
+    $data = getPostData();
+    validateRequired($data, ['name', 'slug', 'admin_username', 'admin_password']);
+
+    $pwCheck = validatePasswordStrength($data['admin_password']);
+    if ($pwCheck !== true) jsonError($pwCheck);
+
+    $db        = getDB();
+    $name      = sanitize($data['name']);
+    $slug      = strtolower(sanitize($data['slug']));
+    $adminName = sanitize($data['admin_name'] ?? ('مدير ' . $name));
+    $adminEmail= sanitize($data['admin_email'] ?? '');
+    $adminUser = sanitize($data['admin_username']);
+    $adminPass = $data['admin_password'];
+    $planId    = !empty($data['plan_id']) ? (int)$data['plan_id'] : null;
+
+    if (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
+        jsonError('المعرّف الفريد يجب أن يحتوي على أحرف إنجليزية صغيرة وأرقام وشرطة (-) فقط');
+    }
+    $stmt = $db->prepare("SELECT id FROM schools WHERE slug = ?");
+    $stmt->execute([$slug]);
+    if ($stmt->fetch()) jsonError('المعرّف الفريد (slug) مستخدم بالفعل، اختر اسماً آخر');
+
+    $db->beginTransaction();
+    try {
+        $maxStudents = 100; $maxTeachers = 5; $isPaid = false;
+        if ($planId) {
+            $p = $db->prepare("SELECT max_students, max_teachers, price_monthly FROM plans WHERE id = ?");
+            $p->execute([$planId]);
+            $plan = $p->fetch();
+            if ($plan) {
+                $maxStudents = (int)$plan['max_students'];
+                $maxTeachers = (int)$plan['max_teachers'];
+                $isPaid      = ((float)$plan['price_monthly'] > 0);
+            }
+        }
+
+        $subscriptionStatus = $isPaid ? 'pending_payment' : 'trial';
+        $active             = $isPaid ? 0 : 1;
+        $trialEnds          = $isPaid ? null : date('Y-m-d', strtotime('+14 days'));
+
+        $db->prepare(
+            "INSERT INTO schools
+                (name, slug, email, plan_id, max_students, max_teachers, subscription_status, active, trial_ends_at)
+             VALUES (?,?,?,?,?,?,?,?,?)"
+        )->execute([$name, $slug, $adminEmail, $planId, $maxStudents, $maxTeachers, $subscriptionStatus, $active, $trialEnds]);
+        $newSchoolId = $db->lastInsertId();
+
+        $hash = password_hash($adminPass, PASSWORD_BCRYPT, ['cost' => HASH_COST]);
+        $db->prepare(
+            "INSERT INTO users (school_id, username, password, name, role) VALUES (?,?,?,?,?)"
+        )->execute([$newSchoolId, $adminUser, $hash, $adminName, 'admin']);
+
+        foreach ([['الصف الأول', '1', 1], ['الصف الثاني', '2', 2]] as [$gName, $gCode, $gSort]) {
+            $db->prepare(
+                "INSERT INTO grades (school_id, name, code, sort_order) VALUES (?,?,?,?)"
+            )->execute([$newSchoolId, $gName, $gCode, $gSort]);
+        }
+
+        $db->commit();
+
+        if ($isPaid) {
+            $paymentInfo = [
+                'bank'     => getPlatformSetting('payment_bank',     defined('PAYMENT_BANK_NAME') ? PAYMENT_BANK_NAME : ''),
+                'iban'     => getPlatformSetting('payment_iban',     defined('PAYMENT_IBAN')      ? PAYMENT_IBAN     : ''),
+                'holder'   => getPlatformSetting('payment_holder',   defined('PAYMENT_HOLDER')    ? PAYMENT_HOLDER   : ''),
+                'stc_pay'  => getPlatformSetting('payment_stc_pay',  defined('PAYMENT_STC_PAY')   ? PAYMENT_STC_PAY  : ''),
+                'whatsapp' => getPlatformSetting('payment_whatsapp', defined('PAYMENT_WHATSAPP')  ? PAYMENT_WHATSAPP : ''),
+            ];
+            jsonSuccess(['slug' => $slug, 'isPaid' => true, 'paymentInfo' => $paymentInfo], 'تم تسجيل طلبك بنجاح! يرجى إكمال عملية الدفع للتفعيل.');
+        } else {
+            jsonSuccess(['slug' => $slug, 'isPaid' => false], 'تم تسجيل مدرستك بنجاح!');
+        }
+    } catch (Exception $e) {
+        $db->rollBack();
+        jsonError('خطأ أثناء الإنشاء: ' . $e->getMessage());
+    }
+}
