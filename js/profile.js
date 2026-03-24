@@ -250,16 +250,16 @@ async function renderProfileTab(sid) {
                 <div class="mt-6">
                     <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2">📜 شهادات التفوق والتقدير</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <button onclick="showSportsCertificate('excellence', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
+                        <button onclick="showSportsCertificate('excellence', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')}, ${s.id})" class="bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
                             <span>🏆</span> شهادة تفوق رياضي
                         </button>
-                        <button onclick="showSportsCertificate('appreciation', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
+                        <button onclick="showSportsCertificate('appreciation', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')}, ${s.id})" class="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
                             <span>🎖️</span> شهادة تقدير
                         </button>
-                        <button onclick="showSportsCertificate('sports_star', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
+                        <button onclick="showSportsCertificate('sports_star', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')}, ${s.id})" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
                             <span>⭐</span> نجم الرياضة
                         </button>
-                        <button onclick="showSportsCertificate('attendance', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
+                        <button onclick="showSportsCertificate('attendance', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')}, ${s.id})" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-2xl font-black text-xs hover:shadow-lg transition flex items-center gap-2 cursor-pointer justify-center active:scale-95">
                             <span>📅</span> شهادة انتظام
                         </button>
                     </div>
@@ -459,7 +459,7 @@ async function renderProfileTab(sid) {
                 ${canEdit() ? `
                 <div class="flex flex-wrap gap-2">
                     ${hasFeature('badges') ? `<button onclick="showAwardBadgeForm(${sid})" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-100 flex items-center justify-center gap-2 text-sm"><span>✨</span> منح وسام جديد</button>` : ''}
-                    ${hasFeature('certificates') ? `<button onclick="showSportsCertificate('excellence', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')})" class="bg-amber-500 text-white px-6 py-3 rounded-2xl font-black hover:bg-amber-600 transition shadow-xl shadow-amber-100 flex items-center justify-center gap-2 text-sm cursor-pointer"><span>📜</span> شهادة تفوق</button>` : ''}
+                    ${hasFeature('certificates') ? `<button onclick="showSportsCertificate('excellence', '${esc(s.name)}', ${JSON.stringify({ percentage: d.percentage, totalScore: d.totalScore, totalMax: d.totalMax, badges: d.badges?.length || 0, attendance: d.attendance }).replace(/"/g, '&quot;')}, ${s.id})" class="bg-amber-500 text-white px-6 py-3 rounded-2xl font-black hover:bg-amber-600 transition shadow-xl shadow-amber-100 flex items-center justify-center gap-2 text-sm cursor-pointer"><span>📜</span> شهادة تفوق</button>` : ''}
                 </div>` : ''}
             </div>
 
@@ -480,7 +480,7 @@ async function renderProfileTab(sid) {
                         <p class="text-sm text-gray-500 leading-relaxed mb-8 font-medium">${esc(b.description || 'تم منح هذا الوسام نظير التميز والأداء الاستثنائي في حصص التربية البدنية.')}</p>
                     </div>
                     
-                    <button onclick='showBadgeCertificate(${JSON.stringify(b).replace(/'/g, "&apos;")}, "${esc(s.name)}")' class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-xs font-black hover:bg-emerald-600 hover:text-white transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer relative z-10 shadow-sm border border-emerald-100">
+                    <button onclick='showBadgeCertificate(${JSON.stringify(b).replace(/'/g, "&apos;")}, "${esc(s.name)}", ${s.id})' class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-xs font-black hover:bg-emerald-600 hover:text-white transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer relative z-10 shadow-sm border border-emerald-100">
                         <span>📜</span> استعراض شهادة التكريم
                     </button>
 
@@ -894,7 +894,7 @@ async function revokeBadge(id, sid) {
 /**
  * Show a beautiful digital certificate for a badge
  */
-async function showBadgeCertificate(studentName, badge) {
+async function showBadgeCertificate(badge, studentName, studentId) {
     const schoolRes = await API.get('get_school_info');
     const s = (schoolRes && schoolRes.success) ? schoolRes.data : {};
     const settings = s.settings || {};
@@ -935,15 +935,18 @@ async function showBadgeCertificate(studentName, badge) {
             <div class="absolute -bottom-20 -left-20 w-80 h-80 bg-emerald-50 rounded-full opacity-50 pointer-events-none"></div>
             
             <!-- Draggable Sections -->
-            <div id="certSectionHeader" class="draggable-element relative z-10 flex flex-col items-center mb-10 p-2 border-2 border-transparent rounded-xl transition cursor-default">
-                <div id="certLogoArea" class="w-24 h-24 mb-6 flex items-center justify-center pointer-events-none">
+            <div id="certSectionHeader" class="draggable-element relative z-10 flex items-start justify-between mb-10 p-2 border-2 border-transparent rounded-xl transition cursor-default w-full">
+                <div class="text-right flex flex-col items-start gap-1">
+                    <p class="text-sm font-black text-gray-900">وزارة التعليم</p>
+                    <p class="text-sm font-black text-gray-900">${esc(settings.education_dept || 'إدارة التعليم')}</p>
+                    <p class="text-sm font-black text-gray-900">${esc(s.name || 'المدرسة')}</p>
+                </div>
+                <div id="certLogoArea" class="w-24 h-24 flex items-center justify-center pointer-events-none">
                     ${s.logo_url ?
-            `<img id="certLogoImage" src="${s.logo_url}" class="w-24 h-24 object-contain shadow-lg rounded-xl">` :
+            `<img id="certLogoImage" src="${s.logo_url}" class="w-24 h-24 object-contain">` :
             `<div id="certLogoEmoji" class="w-20 h-20 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-4xl shadow-xl">🏃</div>`
         }
                 </div>
-                <h2 contenteditable="true" id="certSchoolName" class="text-2xl font-black text-emerald-900 tracking-tight uppercase outline-none px-4 rounded-lg">${esc(s.name || 'نظام التربية البدنية الذكي')}</h2>
-                <div class="w-32 h-1 bg-emerald-600 mt-2 rounded-full pointer-events-none"></div>
             </div>
 
             <div id="certSectionTitle" class="draggable-element relative z-10 mb-12 p-2 border-2 border-transparent rounded-xl transition cursor-default">
@@ -965,11 +968,17 @@ async function showBadgeCertificate(studentName, badge) {
                 </div>
             </div>
 
-            <div id="certSectionFooter" class="draggable-element relative z-10 mt-auto pt-10 p-2 border-2 border-transparent rounded-xl transition cursor-default">
+            <div id="certSectionFooter" class="draggable-element relative z-10 mt-auto pt-10 p-2 border-2 border-transparent rounded-xl transition cursor-default w-full">
                 <div class="flex justify-between w-full items-end gap-2 px-4">
-                    <div class="flex-1 text-right">
-                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">المعلم المسؤول</p>
-                        <p contenteditable="true" class="text-base font-black text-gray-700 outline-none">${esc(settings.teacher_name || 'المعلم المسؤول')}</p>
+                    <div class="flex-1 text-right space-y-4">
+                        <div>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">معلم التربية البدنية</p>
+                            <p contenteditable="true" class="text-base font-black text-gray-700 outline-none">${esc(settings.teacher_name || 'معلم التربية البدنية')}</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">مدير المدرسة</p>
+                            <p contenteditable="true" class="text-base font-black text-emerald-700 italic outline-none">${esc(settings.principal_name || 'مدير المدرسة')}</p>
+                        </div>
                     </div>
                     
                     <div class="flex flex-col items-center gap-1">
@@ -980,21 +989,41 @@ async function showBadgeCertificate(studentName, badge) {
                         </div>
                         <p contenteditable="true" class="text-[10px] font-black text-gray-400 font-mono outline-none">${dateStr}</p>
                     </div>
-
-                    <div class="flex-1 text-left">
-                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">مدير المدرسة</p>
-                        <p contenteditable="true" class="text-base font-black text-emerald-700 italic outline-none">${esc(settings.principal_name || 'مدير المدرسة')}</p>
-                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Action Buttons (No Print) -->
-        <div class="mt-8 flex gap-4 no-print max-w-[650px] mx-auto">
-            <button onclick="printCertificate()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition flex items-center justify-center gap-2 cursor-pointer">
-                <span>🖨️</span> طباعة النسخة النهائية
-            </button>
-            <button onclick="closeModal()" class="bg-gray-100 text-gray-500 px-8 py-4 rounded-2xl font-black hover:bg-gray-200 transition cursor-pointer">إغلاق</button>
+        <div class="mt-8 p-6 bg-white rounded-3xl border-2 border-emerald-100 flex flex-wrap items-center justify-between gap-6 no-print max-w-[750px] mx-auto shadow-xl">
+            <div class="flex flex-wrap items-center gap-6">
+                <div class="flex flex-col gap-2">
+                    <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> اتجاه الشهادة
+                    </span>
+                    <div class="flex bg-emerald-50 p-1 rounded-xl border border-emerald-100">
+                        <button onclick="setCertOrientation('landscape')" id="btnOrientL" class="px-5 py-2.5 rounded-lg text-xs font-black transition-all bg-emerald-600 text-white shadow-md">أفقي</button>
+                        <button onclick="setCertOrientation('portrait')" id="btnOrientP" class="px-5 py-2.5 rounded-lg text-xs font-black transition-all text-emerald-400 hover:text-emerald-600">رأسي</button>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col gap-2">
+                    <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span> تصدير احترافي
+                    </span>
+                    <div class="flex gap-2">
+                        <button onclick="exportCertPDF('download', ${studentId}, 'appreciation')" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100">
+                            📥 تحميل PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="printCertWithCurrentOrientation()" class="bg-emerald-600 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-emerald-700 shadow-xl transition-all active:scale-95 flex items-center gap-2">
+                    🖨️ طباعة فورية
+                </button>
+                <button onclick="closeModal()" class="text-emerald-400 font-bold hover:text-emerald-600 px-4 transition-colors">إغلاق</button>
+            </div>
         </div>
     </div>
 
@@ -1103,11 +1132,11 @@ function initCertificateDraggable() {
     });
 }
 
-function printCertificate() {
+function printCertificate(orientation = 'landscape') {
     const container = document.getElementById('certificateContainer');
     container.classList.remove('move-mode');
 
-    // Clone to avoid modifying the original during the process
+    const isL = orientation === 'landscape';
     const certContent = container.outerHTML;
     const printWindow = window.open('', '_blank');
 
@@ -1121,33 +1150,61 @@ function printCertificate() {
             <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
             <style>
                 body { margin: 0; padding: 0; background: #fff; font-family: 'Cairo', sans-serif; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                @page { size: A4 portrait; margin: 0; }
+                @page { size: A4 ${orientation}; margin: 0; }
                 #print-surface {
-                    width: 210mm;
-                    height: 297mm;
+                    width: ${isL ? '297mm' : '210mm'};
+                    height: ${isL ? '210mm' : '297mm'};
                     display: flex;
                     flex-direction: column;
                     box-sizing: border-box;
                     background: #fff;
                     overflow: hidden;
+                    align-items: center;
+                    justify-content: center;
                 }
                 #certificateContainer {
-                    width: 210mm !important;
-                    height: 297mm !important;
+                    width: ${isL ? '297mm' : '210mm'} !important;
+                    height: ${isL ? '210mm' : '297mm'} !important;
                     max-width: none !important;
                     margin: 0 !important;
-                    padding: 40px !important;
+                    padding: 15mm 20mm !important;
                     display: flex !important;
                     flex-direction: column !important;
                     justify-content: space-between !important;
                     box-sizing: border-box !important;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
-                    border-width: 16px !important;
+                    border-width: 10mm !important;
                 }
+                
+                /* --- SCALE DOWN CONTENT TO FIT A4 HEIGHT (210mm) --- */
+                .mb-8 { margin-bottom: 1rem !important; }
+                .p-6, .p-12, .sm\\:p-12 { padding: 8px !important; }
+                
+                /* Scale emojis and large titles */
+                .text-7xl { font-size: 3.5rem !important; }
+                .text-5xl { font-size: 2.5rem !important; }
+                .text-4xl { font-size: 1.8rem !important; }
+                .text-2xl { font-size: 1.25rem !important; }
+                
+                /* Reduce logo size */
+                #certLogoArea { width: 4.5rem !important; height: 4.5rem !important; margin-bottom: 0.5rem !important; }
+                #certLogoArea img, #certLogoEmoji { width: 100% !important; height: 100% !important; font-size: 2rem !important; }
+                
+                /* Reduce footer and text gaps */
+                #certSectionHeader { margin-bottom: 0px !important; }
+                #certSectionTitle { margin-bottom: 0.5rem !important; }
+                #certSectionContent { margin-bottom: 0.5rem !important; }
+                #certSectionStats { margin-bottom: 0px !important; }
+                #certSectionContent p { margin-bottom: 0.25rem !important; }
+                #certSectionFooter { padding-top: 5px !important; }
+                /* ---------------------------------------------------- */
+                
                 /* Ensure all sections are visible and have contrast */
                 .draggable-element { visibility: visible !important; opacity: 1 !important; display: block !important; }
-                #certSectionFooter { margin-top: auto !important; padding-top: 20px !important; }
+                #certSectionStats { display: flex !important; visibility: visible !important; opacity: 1 !important; }
+                #certSectionFooter { margin-top: auto !important; }
+
                 
                 /* Darken light gray text for better print visibility */
                 .text-gray-400, .text-gray-500 { color: #666 !important; }
@@ -1239,7 +1296,7 @@ const CERT_TYPES = {
     }
 };
 
-async function showSportsCertificate(type, studentName, stats) {
+async function showSportsCertificate(type, studentName, stats, studentId) {
     const schoolRes = await API.get('get_school_info');
     const s = (schoolRes && schoolRes.success) ? schoolRes.data : {};
     const settings = s.settings || {};
@@ -1284,15 +1341,18 @@ async function showSportsCertificate(type, studentName, stats) {
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[200px] opacity-[0.03] pointer-events-none select-none">${c.emoji}</div>
             
             <!-- Draggable Sections -->
-            <div id="certSectionHeader" class="draggable-element relative z-10 flex flex-col items-center mb-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
-                <div id="certLogoArea" class="w-24 h-24 mb-4 flex items-center justify-center pointer-events-none">
+            <div id="certSectionHeader" class="draggable-element relative z-10 flex items-start justify-between mb-8 p-2 border-2 border-transparent rounded-xl transition cursor-default w-full">
+                <div class="text-right flex flex-col items-start gap-1">
+                    <p class="text-sm font-black text-gray-800">وزارة التعليم</p>
+                    <p class="text-sm font-black text-gray-800">${esc(settings.education_dept || 'إدارة التعليم')}</p>
+                    <p class="text-sm font-black text-gray-800">${esc(s.name || 'المدرسة')}</p>
+                </div>
+                <div id="certLogoArea" class="w-24 h-24 flex items-center justify-center pointer-events-none">
                     ${s.logo_url ?
-            `<img id="certLogoImage" src="${s.logo_url}" class="w-24 h-24 object-contain shadow-lg rounded-xl">` :
+            `<img id="certLogoImage" src="${s.logo_url}" class="w-24 h-24 object-contain">` :
             `<div id="certLogoEmoji" class="w-20 h-20 ${c.accentBg} text-white rounded-2xl flex items-center justify-center text-4xl shadow-xl">🏃</div>`
         }
                 </div>
-                <h2 contenteditable="true" id="certSchoolName" class="text-2xl font-black ${c.accentColor} tracking-tight uppercase outline-none px-4 rounded-lg">${esc(s.name || 'نظام التربية البدنية الذكي')}</h2>
-                <div class="w-32 h-1 ${c.accentBg} mt-2 rounded-full pointer-events-none opacity-60"></div>
             </div>
 
             <div id="certSectionTitle" class="draggable-element relative z-10 mb-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
@@ -1326,11 +1386,17 @@ async function showSportsCertificate(type, studentName, stats) {
                 </div>
             </div>
 
-            <div id="certSectionFooter" class="draggable-element relative z-10 mt-auto pt-8 p-2 border-2 border-transparent rounded-xl transition cursor-default">
+            <div id="certSectionFooter" class="draggable-element relative z-10 mt-auto pt-8 p-2 border-2 border-transparent rounded-xl transition cursor-default w-full">
                 <div class="flex justify-between w-full items-end gap-2 px-4">
-                    <div class="flex-1 text-right">
-                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">المعلم المسؤول</p>
-                        <p contenteditable="true" class="text-base font-black text-gray-700 outline-none">${esc(settings.teacher_name || 'المعلم المسؤول')}</p>
+                    <div class="flex-1 text-right space-y-4">
+                        <div>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">معلم التربية البدنية</p>
+                            <p contenteditable="true" class="text-base font-black text-gray-700 outline-none">${esc(settings.teacher_name || 'معلم التربية البدنية')}</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">مدير المدرسة</p>
+                            <p contenteditable="true" class="text-base font-black ${c.accentColor} italic outline-none">${esc(settings.principal_name || 'مدير المدرسة')}</p>
+                        </div>
                     </div>
                     
                     <div class="flex flex-col items-center gap-1">
@@ -1341,21 +1407,44 @@ async function showSportsCertificate(type, studentName, stats) {
                         </div>
                         <p contenteditable="true" class="text-[10px] font-black text-gray-400 font-mono outline-none">${dateStr}</p>
                     </div>
-
-                    <div class="flex-1 text-left">
-                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">مدير المدرسة</p>
-                        <p contenteditable="true" class="text-base font-black ${c.accentColor} italic outline-none">${esc(settings.principal_name || 'مدير المدرسة')}</p>
-                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Action Buttons (No Print) -->
-        <div class="mt-8 flex gap-4 no-print max-w-[650px] mx-auto">
-            <button onclick="printCertificate()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition flex items-center justify-center gap-2 cursor-pointer">
-                <span>🖨️</span> طباعة النسخة النهائية
-            </button>
-            <button onclick="closeModal()" class="bg-gray-100 text-gray-500 px-8 py-4 rounded-2xl font-black hover:bg-gray-200 transition cursor-pointer">إغلاق</button>
+        <div class="mt-8 p-6 bg-white rounded-3xl border-2 border-gray-100 flex flex-wrap items-center justify-between gap-6 no-print max-w-[750px] mx-auto shadow-xl">
+            <div class="flex flex-wrap items-center gap-6">
+                <div class="flex flex-col gap-2">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> اتجاه الشهادة
+                    </span>
+                    <div class="flex bg-gray-50 p-1 rounded-xl border border-gray-100 shadow-inner">
+                        <button onclick="setCertOrientation('landscape')" id="btnOrientL" class="px-5 py-2.5 rounded-lg text-xs font-black transition-all bg-emerald-600 text-white shadow-md">أفقي (Landscape)</button>
+                        <button onclick="setCertOrientation('portrait')" id="btnOrientP" class="px-5 py-2.5 rounded-lg text-xs font-black transition-all text-gray-400 hover:text-gray-600">رأسي (Portrait)</button>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col gap-2">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span> تصدير احترافي mPDF
+                    </span>
+                    <div class="flex gap-2">
+                        <button onclick="exportCertPDF('download', ${studentId}, '${type}')" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100 active:scale-95 group">
+                            <span class="group-hover:bounce">📥</span> تحميل PDF
+                        </button>
+                        <button onclick="exportCertPDF('email', ${studentId}, '${type}')" class="bg-blue-500 text-white px-6 py-2.5 rounded-xl text-xs font-black hover:bg-blue-600 transition-all flex items-center gap-2 shadow-lg shadow-blue-100 active:scale-95">
+                            📩 إرسال بالإيميل
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="printCertWithCurrentOrientation()" class="bg-gray-900 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-black shadow-2xl transition-all active:scale-95 flex items-center gap-2">
+                    🖨️ طباعة فورية
+                </button>
+                <button onclick="closeModal()" class="text-gray-400 font-bold hover:text-gray-600 px-4 transition-colors">إغلاق</button>
+            </div>
         </div>
     </div>
 
@@ -1364,9 +1453,71 @@ async function showSportsCertificate(type, studentName, stats) {
         .move-mode .draggable-element { cursor: move !important; border: 2px dashed #e2e8f0; }
         .move-mode .draggable-element:hover { border-color: #818cf8; }
         [contenteditable="true"]:hover { background: rgba(255,255,255,0.5); border-radius: 8px; }
+        .bounce { animation: bounce 0.5s infinite alternate; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-3px); } }
     </style>
     `;
 
-    showModal(certHtml);
-    initCertificateDraggable();
+    showModal(certHtml, 'large');
+    initCertDraggable();
+}
+
+let currentCertOrientation = 'landscape';
+
+function setCertOrientation(o) {
+    currentCertOrientation = o;
+    const cont = document.getElementById('certificateContainer');
+    const btnL = document.getElementById('btnOrientL');
+    const btnP = document.getElementById('btnOrientP');
+    
+    if (o === 'landscape') {
+        cont.style.width = '100%';
+        cont.style.maxWidth = '850px';
+        cont.style.minHeight = '600px';
+        btnL.className = 'px-5 py-2.5 rounded-lg text-xs font-black transition-all bg-emerald-600 text-white shadow-md';
+        btnP.className = 'px-5 py-2.5 rounded-lg text-xs font-black transition-all text-gray-400 hover:text-gray-600';
+    } else {
+        cont.style.width = '100%';
+        cont.style.maxWidth = '600px';
+        cont.style.minHeight = '840px';
+        btnP.className = 'px-5 py-2.5 rounded-lg text-xs font-black transition-all bg-emerald-600 text-white shadow-md';
+        btnL.className = 'px-5 py-2.5 rounded-lg text-xs font-black transition-all text-gray-400 hover:text-gray-600';
+    }
+}
+
+function printCertWithCurrentOrientation() {
+    printCertificate(currentCertOrientation);
+}
+
+async function exportCertPDF(action, studentId, type) {
+    const o = currentCertOrientation === 'landscape' ? 'L' : 'P';
+    const url = `${API.base}?action=export_certificate&student_id=${studentId}&type=${type}&orientation=${o}&export_action=${action}`;
+    
+    if (action === 'download') {
+        window.open(url, '_blank');
+    } else {
+        const btn = event.currentTarget;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '... جاري الإرسال';
+        btn.disabled = true;
+        
+        try {
+            const res = await API.get('export_certificate', {
+                student_id: studentId,
+                type: type,
+                orientation: o,
+                export_action: 'email'
+            });
+            if (res && res.success) {
+                showToast(res.message, 'success');
+            } else {
+                showToast(res?.error || 'فشل إرسال الإيميل', 'error');
+            }
+        } catch (e) {
+            showToast('حدث خطأ في الاتصال', 'error');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
 }

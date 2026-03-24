@@ -511,6 +511,13 @@ function getCompareReport() {
         
         $c['percentage'] = round($classTotal / count($stIds), 1);
         $c['bar_width'] = $c['percentage']; // Bar width is 1:1 with percentage now (max 100)
+        
+        $final = (float)$c['percentage'];
+        if ($final >= 90) $c['rating'] = 'ممتاز';
+        else if ($final >= 80) $c['rating'] = 'جيد جداً';
+        else if ($final >= 70) $c['rating'] = 'جيد';
+        else if ($final >= 60) $c['rating'] = 'مقبول';
+        else $c['rating'] = 'ضعيف';
     }
 
     // Sort by percentage descending

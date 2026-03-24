@@ -665,6 +665,11 @@ async function renderCompareReport() {
     if (!r || !r.success) return;
 
     const classes = r.data;
+    
+    // Capture data for PDFBuilder
+    window._lastReportData = { classes: classes };
+    window._lastReportType = 'compare';
+
 
     document.getElementById('reportContent').innerHTML = `
     <div class="fade-in px-4 md:px-0">
@@ -740,17 +745,8 @@ async function renderCompareReport() {
 // PDF GENERATION AND EMAIL DELIVERY
 // ============================================================
 async function sendReportEmail(elementId, title) {
-    // If we have captured data, use the superior PDFBuilder
-    if (window._lastReportData && window._lastReportType) {
-        if (typeof emailReportPdf !== 'undefined') {
-            await emailReportPdf(window._lastReportType, window._lastReportData, title);
-            return;
-        }
-    }
-
-    // Fallback to legacy DOM-based method
-    if (typeof html2pdf === 'undefined') {
-        showToast('مكتبة تحويل PDF غير متوفرة حالياً، يرجى تحديث الصفحة.', 'error');
+    if (!window._lastReportData || !window._lastReportType) {
+        showToast('يرجى توليد التقرير وعرضه أولاً لاختيار البيانات المطلوبة.', 'error');
         return;
     }
 
@@ -765,7 +761,7 @@ async function sendReportEmail(elementId, title) {
             <div class="flex items-center gap-4 mb-8">
                 <div class="w-16 h-16 rounded-[1.5rem] bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl">📧</div>
                 <div>
-                    <h3 class="text-2xl font-black text-gray-800">إرسال التقرير عبر البريد (Legacy)</h3>
+                    <h3 class="text-2xl font-black text-gray-800">إرسال التقرير عبر البريد</h3>
                     <p class="text-gray-400 font-bold text-sm">${esc(title)}</p>
                 </div>
             </div>
@@ -803,46 +799,33 @@ async function _doSendReport(elementId, title) {
     }
 
     closeModal();
-    showToast('جاري تجهيز التقرير (خادم PDF)... يرجى الانتظار ⏳', 'info');
+    showToast('جاري تحويل التقرير وإرساله... ⏳', 'info');
 
     try {
-        // Use server-side PDF generation for consistency
         const type = window._lastReportType || 'student';
         const data = window._lastReportData || {};
 
         const response = await fetch(window.APP_BASE + 'api/generate_pdf.php?_t=' + Date.now(), {
             method: 'POST',
             credentials: 'include',
-            body: JSON.stringify({ type, data, filename: title }),
+            body: JSON.stringify({ 
+                type: type, 
+                data: data, 
+                filename: title,
+                recipient_email: email 
+            }),
             headers: { 'Content-Type': 'application/json' }
         });
 
-        if (!response.ok) throw new Error('فشل توليد الملف من الخادم');
-
-        const blob = await response.blob();
-        
-        // Convert blob to base64 for the email API
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = async () => {
-            const pdfBase64 = reader.result;
-            showToast('جاري الإرسال عبر البريد الإلكتروني... 📧', 'info');
-
-            const r = await API.post('send_report_email', {
-                email: email,
-                pdfData: pdfBase64,
-                title: title
-            });
-
-            if (r && r.success) {
-                showToast(r.message || 'تم إرسال التقرير بنجاح! ✅', 'success');
-            } else {
-                showToast(r?.error || 'حدث خطأ أثناء إرسال البريد', 'error');
-            }
-        };
+        const result = await response.json();
+        if (result.success) {
+            showToast(result.message || 'تم إرسال التقرير بنجاح! ✅', 'success');
+        } else {
+            throw new Error(result.error || 'فشل الإرسال من الخادم');
+        }
     } catch (e) {
-        showToast('خطأ أثناء توليد الـ PDF من الخادم', 'error');
-        console.error('Server PDF Error:', e);
+        showToast('خطأ أثناء الإرسال: ' + e.message, 'error');
+        console.error('Email Error:', e);
     }
 }
 

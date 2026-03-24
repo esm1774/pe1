@@ -80,6 +80,7 @@ function saveSchoolInfo() {
     
     $settings['principal_name'] = $principalName;
     $settings['teacher_name'] = $teacherName;
+    $settings['education_dept'] = sanitize($data['education_dept'] ?? '');
     $settingsJson = json_encode($settings);
 
     try {

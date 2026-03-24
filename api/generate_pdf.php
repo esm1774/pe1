@@ -75,6 +75,33 @@ try {
 
     if (ob_get_length()) ob_clean();
 
+    // 5. Handle Email or Browser Download
+    $recipient = $data['recipient_email'] ?? null;
+    if ($recipient) {
+        pdf_log("Sending PDF via email to: " . $recipient);
+        $pdfContent = $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+        
+        $subject = "تقرير مدرسي: " . str_replace('.pdf', '', $filename);
+        $body = "<h3>تحية طيبة،</h3><p>مرفق لكم التقرير المطلوب من نظام PE Smart School.</p><p>خالص التحيات، <br>إدارة المدرسة</p>";
+        
+        $sent = sendEmail($recipient, $subject, $body, '', [
+            'data' => $pdfContent,
+            'filename' => $filename
+        ]);
+        
+        if ($sent) {
+            pdf_log("Email Sent Successfully.");
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'message' => 'تم إرسال التقرير بنجاح إلى ' . $recipient]);
+        } else {
+            pdf_log("Email Failed to send.");
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'فشل إرسال البريد الإلكتروني. تأكد من إعدادات SMTP في config.php']);
+        }
+        exit;
+    }
+
     $mpdf->Output($filename, 'I');
     pdf_log("PDF Output Success.");
 
@@ -237,15 +264,16 @@ function _buildClassReport($data, $schoolName, $logoUrl) {
     $html .= '<div class="report-title">مسرد نتائج الصف (' . htmlspecialchars($data['class']['full_name'] ?? '') . ')</div>';
     
     $html .= '<table class="data-table">';
-    $html .= '<thead><tr><th>م</th><th>اسم الطالب</th><th>الرقم الأكاديمي</th><th>المعدل</th><th>التقدير</th></tr></thead>';
+    $html .= '<thead><tr><th>م</th><th>اسم الطالب</th><th>المعدل</th><th>التقدير</th><th>BMI</th><th>الحضور</th></tr></thead>';
     $html .= '<tbody>';
     foreach (($data['students'] ?? []) as $index => $s) {
         $html .= '<tr>';
         $html .= '<td>' . ($index + 1) . '</td>';
         $html .= '<td style="text-align:right;">' . htmlspecialchars($s['name']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($s['student_number'] ?? '-') . '</td>';
         $html .= '<td>' . htmlspecialchars($s['percentage']) . '%</td>';
-        $html .= '<td>' . htmlspecialchars($s['rating'] ?? '-') . '</td>';
+        $html .= '<td>' . htmlspecialchars($s['letter'] ?? '-') . '</td>';
+        $html .= '<td>' . htmlspecialchars($s['latest_bmi'] ?? '-') . '</td>';
+        $html .= '<td>' . htmlspecialchars($s['present_count'] ?? '0') . '</td>';
         $html .= '</tr>';
     }
     $html .= '</tbody></table>';

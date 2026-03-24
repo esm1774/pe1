@@ -342,7 +342,7 @@ function checkCSRF(): void {
  * Send an HTML email using PHPMailer (if available) or PHP mail().
  * Returns true on success, false on failure.
  */
-function sendEmail(string $to, string $subject, string $htmlBody, string $toName = ''): bool {
+function sendEmail(string $to, string $subject, string $htmlBody, string $toName = '', array $attachment = null): bool {
     // Try PHPMailer first (composer install phpmailer/phpmailer)
     if (class_exists('PHPMailer\PHPMailer\PHPMailer') && defined('MAIL_USE_SMTP') && MAIL_USE_SMTP) {
         try {
@@ -365,6 +365,11 @@ function sendEmail(string $to, string $subject, string $htmlBody, string $toName
             $mail->Body    = $htmlBody;
             $mail->AltBody = strip_tags(str_replace(['<br>', '<br/>'], "\n", $htmlBody));
 
+            // Attachments
+            if ($attachment && isset($attachment['data'])) {
+                $mail->addStringAttachment($attachment['data'], $attachment['filename'] ?? 'document.pdf');
+            }
+
             return $mail->send();
         } catch (\Exception $e) {
             error_log('PHPMailer Error: ' . $e->getMessage());
@@ -373,6 +378,7 @@ function sendEmail(string $to, string $subject, string $htmlBody, string $toName
     }
 
     // Fallback: native PHP mail()
+    // Note: native mail() is very complex for attachments, usually we stick to SMTP for reports
     $fromEmail = defined('MAIL_FROM_EMAIL') ? MAIL_FROM_EMAIL : 'noreply@pe-smart.com';
     $fromName  = defined('MAIL_FROM_NAME')  ? MAIL_FROM_NAME  : 'PE Smart School';
 
