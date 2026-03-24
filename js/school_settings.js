@@ -154,11 +154,7 @@ async function renderSchoolSettings() {
                 <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8">
                     <h3 class="font-black text-gray-800 mb-6 flex items-center gap-2">✍️ التوقيعات والشهادات</h3>
                     <p class="text-[12px] text-gray-500 mb-6 font-bold">هذه الأسماء ستظهر تلقائياً في أسفل جميع الشهادات الممنوحة للطلاب.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                            <label class="block text-sm font-black text-gray-700 mb-2">إدارة التعليم</label>
-                            <input type="text" id="educationDept" value="${esc(s.settings?.education_dept || '')}" placeholder="مثال: إدارة تعليم الرياض" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-gray-800">
-                        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-black text-gray-700 mb-2">اسم مدير المدرسة</label>
                             <input type="text" id="principalName" value="${esc(s.settings?.principal_name || '')}" placeholder="مثال: أ.د. محمد العبدالله" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition font-bold text-gray-800">
@@ -205,8 +201,7 @@ async function saveSchoolSettings() {
         project_max: document.getElementById('projectMax') ? parseInt(document.getElementById('projectMax').value) || 10 : 10,
         final_exam_max: document.getElementById('finalMax') ? parseInt(document.getElementById('finalMax').value) || 10 : 10,
         principal_name: document.getElementById('principalName').value.trim(),
-        teacher_name: document.getElementById('teacherName').value.trim(),
-        education_dept: document.getElementById('educationDept').value.trim()
+        teacher_name: document.getElementById('teacherName').value.trim()
     };
 
     if (!data.name) return showToast('اسم المدرسة مطلوب', 'error');

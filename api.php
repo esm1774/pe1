@@ -55,7 +55,6 @@ require_once 'api/timetable.php';
 require_once 'api/schools.php';
 require_once 'api/reports_grading.php';
 require_once 'api/assessments.php';
-require_once 'api/certificates.php';
 
 // ============================================================
 // ROUTE REQUESTS
@@ -182,7 +181,6 @@ try {
         case 'report_grading':  getGradingReport(); break;
         case 'report_monitoring': getClassMonitoringReport(); break;
         case 'send_report_email': sendReportEmail(); break;
-        case 'export_certificate': exportCertificate(); break;
 
         // ASSESSMENTS
         case 'get_assessments':     getAssessments(); break;
