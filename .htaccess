@@ -38,9 +38,12 @@ Options -Indexes -MultiViews
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^(?:[^/]+/)?(api/|api\.php|blog|blog\.php|post\.php|index\.php|app\.html|sw\.js|manifest\.json|assets|css|js|icons|vendor|modules|uploads|admin)(.*)$ $1$2 [L,NC,QSA]
 
+    # 301 Redirect welcome.html to root
+    RewriteRule ^welcome\.html$ / [R=301,L]
+
     # 3. Rewrite all other requests to app.html (SPA routing)
     # We exclude common actual entry points to avoid loops
-    RewriteCond %{REQUEST_URI} !(api/|api\.php|app\.html|sw\.js|manifest\.json|admin|index\.php|register\.html|welcome\.html|blog) [NC]
+    RewriteCond %{REQUEST_URI} !(api/|api\.php|app\.html|sw\.js|manifest\.json|admin|index\.php|register\.html|blog) [NC]
     RewriteRule ^ app.html [L]
 </IfModule>
 
@@ -59,4 +62,19 @@ Options -Indexes -MultiViews
     ExpiresByType text/css "access plus 1 week"
     ExpiresByType image/x-icon "access plus 1 month"
     ExpiresByType image/png "access plus 1 month"
+</IfModule>
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "no-referrer-when-downgrade"
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
+</IfModule>
+
+# Handle Vary header for Gzip
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css|xml|gz|html)$">
+        Header append Vary Accept-Encoding
+    </FilesMatch>
 </IfModule>

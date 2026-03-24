@@ -25,6 +25,15 @@ function esc($str) {
 <html lang="ar" dir="rtl" class="scroll-smooth">
 
 <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2TER3M09VF"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-2TER3M09VF');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PE Smart School | منصة التحول الرقمي الشاملة للتربية البدنية</title>
@@ -32,7 +41,107 @@ function esc($str) {
     <!-- SEO & Identity -->
     <meta name="description"
         content="المنصة السحابية الأولى (SaaS) لإدارة التربية البدنية، البطولات المعقدة، التحليلات المتقدمة للصحة واللياقة، وإصدار الشهادات للمدارس والمجمعات التعليمية.">
+    <meta name="keywords" content="تربية بدنية, إدارة مدرسة رياضية, بطولات مدرسية, لياقة بدنية طلاب, نظام SaaS رياضي, صحة المدارس">
+    <link rel="canonical" href="https://pesmartschool.com/" />
     <meta name="theme-color" content="#10b981">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pesmartschool.com/">
+    <meta property="og:title" content="PE Smart School | منصة التحول الرقمي للتربية البدنية">
+    <meta property="og:description" content="المنصة السحابية المتكاملة لإدارة الرياضة المدرسية، تحليل اللياقة، وإدارة البطولات.">
+    <meta property="og:image" content="https://pesmartschool.com/assets/img/pe_smart_landing_hero_boys_1772252970163.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://pesmartschool.com/">
+    <meta property="twitter:title" content="PE Smart School | إدارة رياضية مدرسية ذكية">
+    <meta property="twitter:description" content="حول مدرستك رقمياً وجدول بطولاتك بضغطة زر مع منصة PE Smart.">
+    <meta property="twitter:image" content="https://pesmartschool.com/assets/img/pe_smart_landing_hero_boys_1772252970163.png">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "PE Smart School",
+      "operatingSystem": "Web-Based",
+      "applicationCategory": "EducationalApplication",
+      "description": "منصة سحابية متكاملة لرقمنة العمل الرياضي المدرسي بالكامل.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "SAR"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "ما هي منصة PE Smart School؟",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "هي منصة رقمية سحابية متكاملة صُممت خصيصاً لمعلمي التربية البدنية. تهدف إلى تحويل العمل الورقي التقليدي إلى نظام رقمي ذكي يساعد في إدارة الحصص، تقييم الطلاب، تنظيم البطولات المدرسية، وتتبع سجلات اللياقة البدنية بكل سهولة."
+        }
+      }, {
+        "@type": "Question",
+        "name": "هل المنصة تعمل على الهواتف الذكية أم أجهزة الكمبيوتر فقط؟",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "النظام سحابي ويعمل بكفاءة عالية على جميع الأجهزة. يمكنك استخدامه من خلال متصفح الكمبيوتر، أو من خلال الهاتف الآيفون والأندرويد أو الجهاز اللوحي (الآيباد) بكل سلاسة أثناء تواجدك في الصالة أو الملعب الرياضي."
+        }
+      }, {
+        "@type": "Question",
+        "name": "كيف تعمل ميزة 'محرك البطولات' داخل النظام؟",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "يوفر النظام أداة احترافية لإنشاء البطولات المدرسية (مثل نظام الدوري المستمر أو خروج المغلوب). يمكنك تقسيم الطلاب إلى فرق، وسيقوم النظام تلقائياً بإنشاء جدول المباريات، تتبع النتائج، وتحديث الترتيب وإصدار إحصائيات أفضل اللاعبين والهدافين بناءً على خوارزميات رياضية دقيقة."
+        }
+      }, {
+        "@type": "Question",
+        "name": "هل يمكنني تخصيص معايير التقييم لتناسب خطتي الدراسية؟",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "بالتأكيد. المنصة مرنة وتسمح لك بضبط وتوزيع درجات التقييم (مثل الحضور، الزي الرياضي، المشاركة، واختبارات اللياقة البدنية) وتحديد الوزن الأكاديمي لكل معيار بما يتوافق بدقة مع القواعد واللوائح المعتمدة في مدرستك أو إدارتك التعليمية."
+        }
+      }, {
+        "@type": "Question",
+        "name": "هل بيانات مدرستي وطلابي آمنة؟",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "الأمان هو أولويتنا القصوى. جميع بيانات المدارس، المعلمين، والطلاب يتم تشفيرها وحفظها في خوادم سحابية آمنة ومدرعة، ولا يمكن لأي شخص الاطلاع عليها سوى المصرّح لهم من إدارة مدرستك."
+        }
+      }, {
+        "@type": "Question",
+        "name": "هل أحتاج إلى خبرة تقنية سابقة لاستخدام النظام؟",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "لا على الإطلاق! تم تصميم واجهة المستخدم لتكون بسيطة، واضحة، وباللغة العربية، بحيث يمكن لأي معلم أو مشرف رياضي البدء في استخدامها باحترافية منذ اليوم الأول دون الحاجة لتدريب معقد."
+        }
+      }]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "PE Smart School",
+      "url": "https://pesmartschool.com/",
+      "logo": "https://pesmartschool.com/icons/icon-512.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "support@pesmartschool.com",
+        "contactType": "customer service"
+      },
+      "sameAs": [
+        "https://twitter.com/pesmartschool",
+        "https://linkedin.com/company/pesmartschool"
+      ]
+    }
+    </script>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,8 +157,8 @@ function esc($str) {
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        body {
-            font-family: 'Cairo', sans-serif;
+        * {
+            font-family: 'Cairo', sans-serif !important;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -168,12 +277,19 @@ function esc($str) {
             </div>
 
             <div class="flex items-center gap-3">
-                <a href="app.html"
-                    class="hidden sm:block text-sm font-black text-slate-600 px-5 py-2 hover:bg-slate-100 rounded-full transition-all">تسجيل
-                    الدخول</a>
-                <a href="register.html"
-                    class="px-6 py-2.5 text-sm font-black text-white emerald-gradient rounded-full shadow-lg shadow-emerald-500/30 transform transition-transform hover:scale-105">تأسيس
-                    مدرستك</a>
+                <?php if (isLoggedIn()): ?>
+                    <a href="app.html"
+                        class="px-8 py-2.5 text-sm font-black text-white emerald-gradient rounded-full shadow-lg shadow-emerald-500/30 transform transition-transform hover:scale-105 flex items-center gap-2">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> لوحة التحكم
+                    </a>
+                <?php else: ?>
+                    <a href="app.html"
+                        class="hidden sm:block text-sm font-black text-slate-600 px-5 py-2 hover:bg-slate-100 rounded-full transition-all">تسجيل
+                        الدخول</a>
+                    <a href="register.html"
+                        class="px-6 py-2.5 text-sm font-black text-white emerald-gradient rounded-full shadow-lg shadow-emerald-500/30 transform transition-transform hover:scale-105">تأسيس
+                        مدرستك</a>
+                <?php endif; ?>
                 
                 <!-- Mobile Toggle -->
                 <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-full transition-all">
@@ -201,12 +317,18 @@ function esc($str) {
                 <a href="#faq" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">أسئلة شائعة</a>
                 <a href="#pricing" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">رسوم الاستئجار</a>
                 <hr class="border-slate-100 my-4">
-                <a href="app.html" class="flex items-center justify-end gap-3 text-emerald-600">
-                    تسجيل الدخول <i data-lucide="log-in" class="w-5 h-5"></i>
-                </a>
-                <a href="register.html" class="emerald-gradient text-white py-3 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4">
-                    تأسيس مدرستك
-                </a>
+                <?php if (isLoggedIn()): ?>
+                    <a href="app.html" class="emerald-gradient text-white py-4 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4 flex items-center justify-center gap-3">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i> لوحة التحكم
+                    </a>
+                <?php else: ?>
+                    <a href="app.html" class="flex items-center justify-end gap-3 text-emerald-600">
+                        تسجيل الدخول <i data-lucide="log-in" class="w-5 h-5"></i>
+                    </a>
+                    <a href="register.html" class="emerald-gradient text-white py-3 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4">
+                        تأسيس مدرستك
+                    </a>
+                <?php endif; ?>
             </nav>
         </div>
     </div>
@@ -246,10 +368,17 @@ function esc($str) {
                 </p>
 
                 <div class="flex flex-col sm:flex-row items-center justify-center xl:justify-start gap-4">
-                    <a href="register.html"
-                        class="w-full sm:w-auto px-8 py-4 emerald-gradient text-white rounded-full font-black text-lg shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
-                        <i data-lucide="rocket" class="w-5 h-5"></i> ابدأ الاشتراك لمدرستك
-                    </a>
+                    <?php if (isLoggedIn()): ?>
+                        <a href="app.html"
+                            class="w-full sm:w-auto px-10 py-5 emerald-gradient text-white rounded-full font-black text-xl shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
+                            <i data-lucide="layout-dashboard" class="w-6 h-6"></i> انتقل إلى لوحة التحكم
+                        </a>
+                    <?php else: ?>
+                        <a href="register.html"
+                            class="w-full sm:w-auto px-8 py-4 emerald-gradient text-white rounded-full font-black text-lg shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
+                            <i data-lucide="rocket" class="w-5 h-5"></i> ابدأ الاشتراك لمدرستك
+                        </a>
+                    <?php endif; ?>
                     <a href="#features"
                         class="w-full sm:w-auto px-8 py-4 glass-panel text-slate-700 rounded-full font-black text-lg hover:bg-white transition-all flex items-center justify-center gap-3 border border-slate-200 shadow-sm">
                         <i data-lucide="play-circle" class="w-5 h-5"></i> جولة في الميزات

@@ -3,7 +3,7 @@
    Premium Dark Theme with Glassmorphism
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
 
 :root {
     --bg-primary: #f0fdf4;
@@ -58,13 +58,20 @@ html {
     scroll-behavior: smooth;
 }
 
+* {
+    font-family: 'Tajawal', 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif !important;
+}
+
 body {
-    font-family: 'Cairo', sans-serif;
     background: var(--bg-primary);
     color: var(--text-primary);
     min-height: 100vh;
     direction: rtl;
     overflow-x: hidden;
+}
+
+.font-cairo, .font-cairo * {
+    font-family: 'Cairo', sans-serif !important;
 }
 
 body::before {

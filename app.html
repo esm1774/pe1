@@ -96,8 +96,24 @@
             document.documentElement.setAttribute('data-theme', saved);
         })();
     </script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="css/style.dist.css?v=4.0.1">
-</head>
+
+    <style>
+        /* Force font priority and system fallbacks */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+        
+        * { 
+            font-family: 'Tajawal', 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif !important; 
+        }
+        .font-cairo, .font-cairo * { 
+            font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; 
+        }
+    </style>
 </head>
 
 <body class="min-h-screen">

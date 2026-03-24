@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /vendor/
+Disallow: /includes/
+Disallow: /modules/
+Disallow: /services/
+Disallow: /backups/
+Disallow: /tmp/
+
+Sitemap: https://pesmartschool.com/sitemap.xml
