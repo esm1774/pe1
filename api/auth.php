@@ -96,14 +96,19 @@ function login() {
         
         if ($userCandidate && password_verify($password, $userCandidate['password'])) {
             // Found a staff member with this email
-            // Get all schools they have access to
+            // Get all schools they have access to (Primary + Links)
             $stmt = $db->prepare("
                 SELECT s.id, s.name, s.slug, usa.role
                 FROM user_school_access usa
                 JOIN schools s ON s.id = usa.school_id
                 WHERE usa.user_id = ? AND s.active = 1
+                UNION
+                SELECT s.id, s.name, s.slug, u.role
+                FROM users u
+                JOIN schools s ON s.id = u.school_id
+                WHERE u.id = ? AND s.active = 1
             ");
-            $stmt->execute([$userCandidate['id']]);
+            $stmt->execute([$userCandidate['id'], $userCandidate['id']]);
             $schools = $stmt->fetchAll();
 
             // Handle Multi-School Picker if needed
@@ -210,9 +215,22 @@ function login() {
     }
 
     // 1. Try Staff (users table)
-    // Find the primary user record first (usernames are unique per school, but now we have global accounts)
-    $stmt = $db->prepare("SELECT id, username, password, name, role, school_id, email, must_change_password FROM users WHERE username = ? AND active = 1 LIMIT 1");
-    $stmt->execute([$username]);
+    // Find the user record, honoring the specific school context if provided.
+    // This prevents username collisions across different schools.
+    if ($schoolIdResolved) {
+        $stmt = $db->prepare("
+            SELECT id, username, password, name, role, school_id, email, must_change_password 
+            FROM users 
+            WHERE username = ? AND active = 1 
+            AND (school_id = ? OR id IN (SELECT user_id FROM user_school_access WHERE school_id = ?))
+            LIMIT 1
+        ");
+        $stmt->execute([$username, $schoolIdResolved, $schoolIdResolved]);
+    } else {
+        $stmt = $db->prepare("SELECT id, username, password, name, role, school_id, email, must_change_password FROM users WHERE username = ? AND active = 1 LIMIT 1");
+        $stmt->execute([$username]);
+    }
+    
     $userCandidate = $stmt->fetch();
 
     if ($userCandidate && password_verify($password, $userCandidate['password'])) {
@@ -222,8 +240,13 @@ function login() {
             FROM user_school_access usa
             JOIN schools s ON s.id = usa.school_id
             WHERE usa.user_id = ? AND s.active = 1
+            UNION
+            SELECT s.id, s.name, s.slug, u.role
+            FROM users u
+            JOIN schools s ON s.id = u.school_id
+            WHERE u.id = ? AND s.active = 1
         ");
-        $stmt->execute([$userCandidate['id']]);
+        $stmt->execute([$userCandidate['id'], $userCandidate['id']]);
         $schools = $stmt->fetchAll();
 
         // If contextually constrained to a school (via subdomain or slug)
