@@ -263,7 +263,7 @@ function esc($str) {
                 </div>
                 <div class="flex flex-col">
                     <span class="text-xl font-black text-slate-800 leading-none">PE Smart</span>
-                    <span class="text-[9px] font-black tracking-widest text-emerald-600 uppercase">SaaS Platform</span>
+                    <span class="text-[7px] font-black tracking-[0.2em] text-emerald-600 uppercase">Smart Solution</span>
                 </div>
             </div>
 

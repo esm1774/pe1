@@ -24,7 +24,7 @@
             </div>
             <div class="pe-logo-text">
                 <span>PE Smart</span>
-                <span>SaaS Platform</span>
+                <span>Smart Solution</span>
             </div>
         </a>
 

@@ -61,7 +61,10 @@ $posts = $db->query($postsQuery)->fetchAll();
                 <div class="w-10 h-10 emerald-gradient rounded-full flex items-center justify-center text-white shadow-md">
                     <i data-lucide="activity" class="w-5 h-5"></i>
                 </div>
-                <span class="text-xl font-black text-slate-800">PE Smart</span>
+                <div class="flex flex-col">
+                    <span class="text-xl font-black text-slate-800 leading-none">PE Smart</span>
+                    <span class="text-[7px] font-black tracking-[0.2em] text-emerald-600 uppercase">Smart Solution</span>
+                </div>
             </a>
             <div class="hidden md:flex items-center gap-6 text-sm font-bold">
                 <a href="index.php#features" class="hover:text-emerald-600 transition">المقومات</a>
@@ -132,11 +135,14 @@ $posts = $db->query($postsQuery)->fetchAll();
     <!-- Footer -->
     <footer class="bg-slate-900 py-12 px-4 text-white">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 emerald-gradient rounded-full flex items-center justify-center text-white">
-                    <i data-lucide="activity" class="w-4 h-4"></i>
+            <div class="flex items-center gap-3 text-white">
+                <div class="w-8 h-8 emerald-gradient rounded-full flex items-center justify-center">
+                    <i data-lucide="activity" class="w-4 h-4 text-white"></i>
                 </div>
-                <span class="text-xl font-black">PE Smart</span>
+                <div class="flex flex-col">
+                    <span class="text-lg font-black leading-none">PE Smart</span>
+                    <span class="text-[6px] font-black tracking-[0.2em] text-emerald-400 uppercase">Smart Solution</span>
+                </div>
             </div>
             <p class="text-slate-400 text-sm font-bold">&copy; 2026 PE Smart School. جميع الحقوق محفوظة.</p>
         </div>

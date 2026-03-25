@@ -291,9 +291,9 @@ img {
 
 .pe-logo-text span:last-child {
     display: block;
-    font-size: 0.55rem;
+    font-size: 0.45rem; /* Slightly smaller to accommodate more letters */
     font-weight: 900;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.16em; /* Adjusted tracking for perfect alignment */
     color: var(--emerald-600);
     text-transform: uppercase;
 }

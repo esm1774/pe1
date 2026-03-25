@@ -19,6 +19,10 @@
             backdrop-filter: blur(10px);
         }
 
+        .emerald-gradient {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+
         .feature-card:hover {
             transform: translateY(-5px);
             transition: all 0.3s;
@@ -34,17 +38,20 @@
 
     <nav class="fixed top-0 w-full z-50 glass border-b border-slate-200 py-4 px-6">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <a href="welcome.html" class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
-                    <i data-lucide="award" class="w-5 h-5"></i>
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 emerald-gradient rounded-full flex items-center justify-center text-white shadow-md">
+                    <i data-lucide="activity" class="w-5 h-5"></i>
                 </div>
-                <span class="text-xl font-black text-emerald-900 leading-none tracking-tight">PE Smart</span>
+                <div class="flex flex-col">
+                    <span class="text-xl font-black text-slate-800 leading-none">PE Smart</span>
+                    <span class="text-[7px] font-black tracking-[0.2em] text-emerald-600 uppercase">Smart Solution</span>
+                </div>
             </a>
             <div class="flex items-center gap-4">
                 <a href="contact.html"
                     class="px-5 py-2.5 text-xs font-black text-white bg-emerald-600 rounded-xl shadow-lg shadow-emerald-200">افتح
                     تذكرة دعم</a>
-                <a href="welcome.html" class="text-sm font-bold text-slate-600 hover:text-emerald-600">العودة
+                <a href="/" class="text-sm font-bold text-slate-600 hover:text-emerald-600">العودة
                     للرئيسية</a>
             </div>
         </div>

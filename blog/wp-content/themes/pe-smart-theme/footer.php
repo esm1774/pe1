@@ -11,7 +11,7 @@
                 </div>
                 <div class="pe-logo-text">
                     <span style="color: white;">PE Smart</span>
-                    <span>SaaS Platform</span>
+                    <span>Smart Solution</span>
                 </div>
             </a>
             <p>المنصة السحابية الأولى لرقمنة التربية البدنية في المدارس والمجمعات التعليمية.</p>
