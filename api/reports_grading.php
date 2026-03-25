@@ -104,12 +104,11 @@ function getGradingReport() {
         $fStmt = $db->prepare("
             SELECT 
                 SUM(sf.score) as total_earned,
-                SUM(ft.max_score) as total_max
+                (SELECT SUM(max_score) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = ?) as total_max
             FROM student_fitness sf
-            JOIN fitness_tests ft ON sf.test_id = ft.id
             WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?
         ");
-        $fStmt->execute([$stId, $startDate, $endDate]);
+        $fStmt->execute([$sid, $stId, $startDate, $endDate]);
         $fitData = $fStmt->fetch(PDO::FETCH_ASSOC);
         
         $totalEarned = (float)$fitData['total_earned'];

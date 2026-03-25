@@ -586,7 +586,7 @@ async function loadFitnessView(classId) {
             </td>`;
         });
 
-        const avg = count ? (total / count).toFixed(1) : '-';
+        const avg = tests.length ? (total / tests.length).toFixed(1) : '-';
         desktopHtml += `
             <td class="px-6 py-5 text-center font-black text-xl text-emerald-600 bg-emerald-50/30 border-r border-emerald-100/50">${total || '-'}</td>
             <td class="px-6 py-5 text-center font-black text-xl text-white bg-emerald-600">${avg}</td>
@@ -626,7 +626,7 @@ async function loadFitnessView(classId) {
                 </div>`;
         }).join('');
 
-        const avg = count ? (total / count).toFixed(1) : '-';
+        const avg = tests.length ? (total / tests.length).toFixed(1) : '-';
 
         return `
             <div class="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/30 border border-gray-100 overflow-hidden relative group">

@@ -500,6 +500,8 @@ try {
         case 'blog_category_save':   saveBlogCategory(); break;
         case 'blog_category_delete': deleteBlogCategory(); break;
 
+        case 'get_media':            getMedia(); break;
+        case 'upload_media':         uploadMedia(); break;
         case 'media_delete':         deleteMedia(); break;
 
         case 'testimonials':         getTestimonials(); break;

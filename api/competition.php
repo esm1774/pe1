@@ -15,23 +15,24 @@ function getCompetition() {
     $schoolFilter = $sid ? "AND c.school_id = $sid" : "";
     $studentSchoolFilter = $sid ? "AND s.school_id = $sid" : "";
 
-    // 1. School-wide Class Ranking
+    // 1. School-wide Class Ranking (Fair ranking based on total possible tests)
     $classRanking = $db->query("
         SELECT c.id as class_id, g.name as grade_name, c.name as class_name,
                CONCAT(g.name, ' - ', c.name) as full_class_name,
                COUNT(DISTINCT s.id) as students_count,
-               ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score,
-               ROUND(COALESCE(AVG(sf.score), 0) * 10) as points
+               ROUND(COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*) * (SELECT COUNT(*) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = c.school_id)) FROM students s2 WHERE s2.class_id = c.id AND s2.active = 1), 2) as avg_score,
+               ROUND((COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*) * (SELECT COUNT(*) FROM fitness_tests ft3 WHERE ft3.active = 1 AND ft3.school_id = c.school_id)) FROM students s3 WHERE s3.class_id = c.id AND s3.active = 1)) * 10) as points
         FROM classes c JOIN grades g ON c.grade_id = g.id
         LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
         LEFT JOIN student_fitness sf ON sf.student_id = s.id
         WHERE c.active = 1 $schoolFilter GROUP BY c.id ORDER BY avg_score DESC
     ")->fetchAll();
 
-    // 2. School-wide Top 10 Students
+    // 2. School-wide Top 10 Students (Fair ranking based on total tests)
     $topStudents = $db->query("
         SELECT s.id, s.name, CONCAT(g.name, ' - ', c.name) as class_name,
-               ROUND(AVG(sf.score), 2) as avg_score, SUM(sf.score) as total_score, COUNT(sf.id) as test_count
+               ROUND(SUM(sf.score) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft WHERE ft.active = 1 AND ft.school_id = s.school_id), 2) as avg_score, 
+               SUM(sf.score) as total_score, COUNT(sf.id) as test_count
         FROM students s JOIN student_fitness sf ON sf.student_id = s.id
         JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
         WHERE s.active = 1 $studentSchoolFilter GROUP BY s.id ORDER BY avg_score DESC LIMIT 10
@@ -68,14 +69,14 @@ function getCompetition() {
                 SELECT COUNT(*) + 1 as school_rank,
                        (SELECT COUNT(*) FROM students WHERE active = 1" . ($sid ? " AND school_id = ?" : "") . ") as total_in_school
                 FROM (
-                    SELECT s.id, COALESCE(AVG(sf.score), 0) as avg_score
+                    SELECT s.id, COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = s.school_id) as avg_score
                     FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
                     WHERE s.active = 1" . ($sid ? " AND s.school_id = ?" : "") . "
                     GROUP BY s.id
                 ) ranked
                 WHERE avg_score > (
-                    SELECT COALESCE(AVG(sf2.score), 0)
-                    FROM student_fitness sf2 WHERE sf2.student_id = ?
+                    SELECT COALESCE(SUM(sf2.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft3 WHERE ft3.active = 1 AND ft3.school_id = st.school_id)
+                    FROM students st LEFT JOIN student_fitness sf2 ON sf2.student_id = st.id WHERE st.id = ?
                 )
             ");
             $rankParams = $sid ? [$sid, $sid, $targetStudentId] : [$targetStudentId];
@@ -89,14 +90,14 @@ function getCompetition() {
                 SELECT COUNT(*) + 1 as class_rank,
                        (SELECT COUNT(*) FROM students WHERE class_id = ? AND active = 1) as total_in_class
                 FROM (
-                    SELECT s.id, COALESCE(AVG(sf.score), 0) as avg_score
+                    SELECT s.id, COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = s.school_id) as avg_score
                     FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
                     WHERE s.class_id = ? AND s.active = 1
                     GROUP BY s.id
                 ) ranked
                 WHERE avg_score > (
-                    SELECT COALESCE(AVG(sf2.score), 0)
-                    FROM student_fitness sf2 WHERE sf2.student_id = ?
+                    SELECT COALESCE(SUM(sf2.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft3 WHERE ft3.active = 1 AND ft3.school_id = st.school_id)
+                    FROM students st LEFT JOIN student_fitness sf2 ON sf2.student_id = st.id WHERE st.id = ?
                 )
             ");
             $classRankStmt->execute([$classId, $classId, $targetStudentId]);
@@ -104,9 +105,9 @@ function getCompetition() {
             $classRank = (int)($classRankData['class_rank'] ?? 0);
             $totalInClass = (int)($classRankData['total_in_class'] ?? 0);
 
-            // Top 3 in student's class
+            // Top 3 in student's class (Fair ranking)
             $stmt = $db->prepare("
-                SELECT s.id, s.name, ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score
+                SELECT s.id, s.name, ROUND(COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = s.school_id), 2) as avg_score
                 FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
                 WHERE s.class_id = ? AND s.active = 1 GROUP BY s.id ORDER BY avg_score DESC LIMIT 3
             ");
@@ -245,9 +246,13 @@ function getStudentReport() {
     $stmt->execute($fitnessParams);
     $fitnessResults = $stmt->fetchAll();
 
-    $rangeTotalScore = 0; $rangeTotalMax = 0;
+    $rangeTotalScore = 0; 
+    $rangesMStmt = $db->prepare("SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?");
+    $rangesMStmt->execute([$sid]);
+    $rangeTotalMax = (float)$rangesMStmt->fetchColumn();
+
     foreach ($fitnessResults as $r) {
-        if ($r['score'] !== null) { $rangeTotalScore += $r['score']; $rangeTotalMax += $r['max_score']; }
+        if ($r['score'] !== null) { $rangeTotalScore += $r['score']; }
     }
 
     // 4. Fitness Score (Weighted)
@@ -349,26 +354,24 @@ function getClassReport() {
     $queries = [
         "SELECT s.id, s.name, s.student_number,
             COALESCE(SUM(sf.score), 0) as total_score,
-            (SELECT SUM(ft.max_score) FROM fitness_tests ft WHERE ft.active = 1
-             AND EXISTS(SELECT 1 FROM student_fitness sf2 WHERE sf2.student_id = s.id AND sf2.test_id = ft.id)) as total_max,
-            ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score,
+            (SELECT SUM(ft.max_score) FROM fitness_tests ft WHERE ft.active = 1 AND ft.school_id = c.school_id) as total_max,
+            ROUND(COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft3 WHERE ft3.active = 1 AND ft3.school_id = c.school_id), 2) as avg_score,
             (SELECT COUNT(*) FROM attendance a WHERE a.student_id = s.id AND a.status = 'present') as present_count,
             (SELECT COUNT(*) FROM attendance a WHERE a.student_id = s.id AND a.status = 'absent') as absent_count,
             (SELECT bmi FROM student_measurements sm WHERE sm.student_id = s.id ORDER BY measurement_date DESC LIMIT 1) as latest_bmi,
             (SELECT bmi_category FROM student_measurements sm WHERE sm.student_id = s.id ORDER BY measurement_date DESC LIMIT 1) as bmi_category,
             (SELECT COUNT(*) FROM student_health sh WHERE sh.student_id = s.id AND sh.is_active = 1) as health_alerts
-        FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
+        FROM students s JOIN classes c ON s.class_id = c.id LEFT JOIN student_fitness sf ON sf.student_id = s.id
         WHERE s.class_id = ? AND s.active = 1 GROUP BY s.id ORDER BY avg_score DESC",
 
         "SELECT s.id, s.name, s.student_number,
             COALESCE(SUM(sf.score), 0) as total_score,
-            (SELECT SUM(ft.max_score) FROM fitness_tests ft WHERE ft.active = 1
-             AND EXISTS(SELECT 1 FROM student_fitness sf2 WHERE sf2.student_id = s.id AND sf2.test_id = ft.id)) as total_max,
-            ROUND(COALESCE(AVG(sf.score), 0), 2) as avg_score,
+            (SELECT SUM(ft.max_score) FROM fitness_tests ft WHERE ft.active = 1 AND ft.school_id = c.school_id) as total_max,
+            ROUND(COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft3 WHERE ft3.active = 1 AND ft3.school_id = c.school_id), 2) as avg_score,
             (SELECT COUNT(*) FROM attendance a WHERE a.student_id = s.id AND a.status = 'present') as present_count,
             (SELECT COUNT(*) FROM attendance a WHERE a.student_id = s.id AND a.status = 'absent') as absent_count,
             NULL as latest_bmi, NULL as bmi_category, 0 as health_alerts
-        FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id
+        FROM students s JOIN classes c ON s.class_id = c.id LEFT JOIN student_fitness sf ON sf.student_id = s.id
         WHERE s.class_id = ? AND s.active = 1 GROUP BY s.id ORDER BY avg_score DESC"
     ];
 
@@ -396,8 +399,8 @@ function getClassReport() {
         $stId = $s['id'];
 
         // Fitness Score
-        $fitStmt = $db->prepare("SELECT SUM(sf.score) as earned, SUM(ft.max_score) as max FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id = ft.id WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
-        $fitStmt->execute([$stId, $startDate, $endDate]);
+        $fitStmt = $db->prepare("SELECT SUM(sf.score) as earned, (SELECT SUM(max_score) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = ?) as max FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+        $fitStmt->execute([$sid, $stId, $startDate, $endDate]);
         $f = $fitStmt->fetch();
         $fitPct = ($f['max'] > 0) ? ($f['earned'] / $f['max']) * 100 : 100;
 
@@ -492,8 +495,8 @@ function getCompareReport() {
         $classTotal = 0;
         foreach ($stIds as $stId) {
             // Fitness
-            $fit = $db->prepare("SELECT SUM(sf.score) as earned, SUM(ft.max_score) as max FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id = ft.id WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
-            $fit->execute([$stId, $startDate, $endDate]);
+            $fit = $db->prepare("SELECT SUM(sf.score) as earned, (SELECT SUM(max_score) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = ?) as max FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+            $fit->execute([$sid, $stId, $startDate, $endDate]);
             $fr = $fit->fetch();
             $fitP = ($fr['max'] > 0) ? ($fr['earned'] / $fr['max']) * 100 : 100;
 

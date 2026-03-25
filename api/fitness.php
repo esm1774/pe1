@@ -133,6 +133,10 @@ function saveFitnessResults() {
     $testName = $tStmt->fetchColumn();
 
     $today = date('Y-m-d');
+    
+    // Performance: Include badges once before loop
+    try { include_once __DIR__ . '/badges.php'; } catch (Exception $e) {}
+    
     $db->beginTransaction();
     try {
         foreach ($records as $r) {
@@ -153,11 +157,8 @@ function saveFitnessResults() {
             $msg = "تم رصد نتيجة الطالب ({$studentName}) في اختبار ({$testName}) بقيمة ({$r['value']}) ودرجة ({$r['score']}).";
             notifyStudentParents($studentId, 'fitness', $title, $msg);
 
-            // Fix #9: Corrected path using __DIR__
-            try {
-                include_once __DIR__ . '/badges.php';
-                checkAutoBadges($studentId);
-            } catch (Exception $e) {}
+            // Auto Badges check
+            checkAutoBadges($studentId);
         }
         $db->commit();
         updateClassPoints();
@@ -250,13 +251,44 @@ function updateClassPoints() {
     $db = getDB();
     $sid = schoolId();
     $schoolFilter = $sid ? "AND c.school_id = $sid" : "";
-    $db->exec("INSERT INTO class_points (class_id, total_score, average_score, total_points, students_count)
-        SELECT c.id, COALESCE(SUM(sf.score),0), ROUND(COALESCE(AVG(sf.score),0),2),
-               ROUND(COALESCE(AVG(sf.score),0)*10), COUNT(DISTINCT s.id)
-        FROM classes c LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-        LEFT JOIN student_fitness sf ON sf.student_id = s.id WHERE c.active = 1 $schoolFilter GROUP BY c.id
+
+    // 1. Get test counts for each school
+    $testCounts = $db->query("SELECT school_id, COUNT(*) as cnt FROM fitness_tests WHERE active = 1 GROUP BY school_id")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // 2. Get class stats
+    $classes = $db->query("
+        SELECT c.id, c.school_id, COUNT(DISTINCT s.id) as students_count, COALESCE(SUM(sf.score), 0) as total_earned
+        FROM classes c 
+        LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
+        LEFT JOIN student_fitness sf ON sf.student_id = s.id
+        WHERE c.active = 1 $schoolFilter
+        GROUP BY c.id
+    ")->fetchAll();
+
+    $saveStmt = $db->prepare("INSERT INTO class_points (class_id, total_score, average_score, total_points, students_count)
+        VALUES (?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE total_score=VALUES(total_score), average_score=VALUES(average_score),
             total_points=VALUES(total_points), students_count=VALUES(students_count)");
-    $db->exec("SET @rank = 0");
-    $db->exec("UPDATE class_points SET rank_position = (@rank := @rank + 1) ORDER BY total_points DESC");
+
+    foreach ($classes as $c) {
+        $cid = (int)$c['id'];
+        $schId = (int)$c['school_id'];
+        $sCount = (int)$c['students_count'];
+        $tEarned = (float)$c['total_earned'];
+        $tCount = (int)($testCounts[$schId] ?? 0);
+        
+        $denominator = max(1, $sCount * $tCount);
+        $avg = round($tEarned / $denominator, 2);
+        $pts = round(($tEarned / $denominator) * 10);
+        
+        $saveStmt->execute([$cid, $tEarned, $avg, $pts, $sCount]);
+    }
+
+    // 3. Update Rankings (Safe multi-step process for shared hosting)
+    $allPoints = $db->query("SELECT class_id FROM class_points ORDER BY total_points DESC, total_score DESC")->fetchAll();
+    $rank = 1;
+    $updRank = $db->prepare("UPDATE class_points SET rank_position = ? WHERE class_id = ?");
+    foreach ($allPoints as $p) {
+        $updRank->execute([$rank++, $p['class_id']]);
+    }
 }

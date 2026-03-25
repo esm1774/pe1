@@ -45,8 +45,8 @@ function getAnalyticsDashboard() {
         foreach ($stIds as $id) {
             // This is heavy, but ensures consistency with the grading system rules
             // Ideally we'd have a summary table, but let's stick to the core logic
-            $fit = $db->prepare("SELECT SUM(sf.score) as e, SUM(ft.max_score) as m FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id = ft.id WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
-            $fit->execute([$id, $start, $end]);
+            $fit = $db->prepare("SELECT SUM(sf.score) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+            $fit->execute([$sid, $id, $start, $end]);
             $fr = $fit->fetch();
             $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;
 
@@ -87,8 +87,8 @@ function getAnalyticsDashboard() {
 
         $classSum = 0;
         foreach ($stIds as $id) {
-            $fit = $db->prepare("SELECT SUM(sf.score) as e, SUM(ft.max_score) as m FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id = ft.id WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
-            $fit->execute([$id, $currStart, $currEnd]);
+            $fit = $db->prepare("SELECT SUM(sf.score) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+            $fit->execute([$sid, $id, $currStart, $currEnd]);
             $fr = $fit->fetch();
             $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;
 
@@ -144,8 +144,8 @@ function getAnalyticsDashboard() {
     foreach ($allStudents as $s) {
         $id = $s['id'];
         // Re-use weighted calc
-        $fit = $db->prepare("SELECT SUM(sf.score) as e, SUM(ft.max_score) as m FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id = ft.id WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
-        $fit->execute([$id, $currStart, $currEnd]);
+        $fit = $db->prepare("SELECT SUM(sf.score) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+        $fit->execute([$sid, $id, $currStart, $currEnd]);
         $fr = $fit->fetch();
         $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;
 

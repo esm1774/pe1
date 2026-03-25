@@ -386,9 +386,57 @@ function sendEmail(string $to, string $subject, string $htmlBody, string $toName
     $headers .= "Content-type: text/html; charset=UTF-8\r\n";
     $headers .= "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <$fromEmail>\r\n";
     $headers .= "Reply-To: $fromEmail\r\n";
-    $headers .= "X-Mailer: PE-Smart/2.0\r\n";
+        $headers .= "X-Mailer: PE-Smart/2.0\r\n";
 
     return @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $htmlBody, $headers);
+}
+
+// ============================================================
+// SAAS SECURITY & ISOLATION
+// ============================================================
+
+/**
+ * Verify that a record in a given table belongs to the current school.
+ */
+function verifyOwnership(string $table, int $id): bool {
+    if (Tenant::isPlatformAdmin()) return true;
+    if (!Tenant::isSaasMode()) return true;
+
+    $schoolId = schoolId();
+    if (!$schoolId) return false;
+
+    try {
+        $db = getDB();
+        
+        if ($table === 'student_fitness') {
+            $stmt = $db->prepare("SELECT s.school_id FROM students s JOIN student_fitness sf ON sf.student_id = s.id WHERE sf.id = ?");
+            $stmt->execute([$id]);
+            return (int)$stmt->fetchColumn() === $schoolId;
+        }
+        
+        if ($table === 'student_badges') {
+            $stmt = $db->prepare("SELECT s.school_id FROM students s JOIN student_badges sb ON sb.student_id = s.id WHERE sb.id = ?");
+            $stmt->execute([$id]);
+            return (int)$stmt->fetchColumn() === $schoolId;
+        }
+
+        $allowedTables = ['students', 'classes', 'fitness_tests', 'badges', 'fitness_criteria', 'users', 'schools', 'attendance', 'activity_log', 'teacher_classes'];
+        if (!in_array($table, $allowedTables)) return false;
+
+        $stmt = $db->prepare("SELECT school_id FROM `$table` WHERE id = ?");
+        $stmt->execute([$id]);
+        $ownerId = $stmt->fetchColumn();
+        
+        return $ownerId !== false && (int)$ownerId === $schoolId;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function requireOwnership(string $table, int $id): void {
+    if (!verifyOwnership($table, $id)) {
+        jsonError("غير مسموح بالوصول لهذا السجل أو السجل غير موجود", 403);
+    }
 }
 
 /**

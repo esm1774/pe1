@@ -18,8 +18,15 @@ define('APP_TIMEZONE', 'Asia/Riyadh');
 // 3. Security Settings
 define('SESSION_LIFETIME', 7200);
 define('HASH_COST', 12);
-define('MAX_LOGIN_ATTEMPTS', 5);
 define('LOGIN_LOCKOUT_TIME', 900);
+define('MAX_LOGIN_ATTEMPTS', 5);
+
+// 3.1 Payment & Account Defaults
+define('PAYMENT_BANK_NAME', 'Bank Al-Inma');
+define('PAYMENT_IBAN', 'SA2405000068201010186000');
+define('PAYMENT_HOLDER', 'Esmail Mohammad Elbesawy');
+define('PAYMENT_STC_PAY', '0507949591');
+define('PAYMENT_WHATSAPP', '966507949591');
 
 // 4. Database Credentials (Main School)
 define('DB_HOST', '127.0.0.1');
