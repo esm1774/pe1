@@ -960,12 +960,19 @@ async function openSubModal(schoolId) {
     const planFeatures = school.plan_features ? JSON.parse(school.plan_features) : {};
     const mergedFeatures = schoolFeatures || planFeatures;
 
+    // Fetch current weights
+    const wr = await API.get(`get_school_weights&school_id=${schoolId}`);
+    const weights = wr?.success ? wr.data : {
+        attendance_pct: 20, uniform_pct: 20, behavior_skills_pct: 20, participation_pct: 0,
+        fitness_pct: 40, quiz_pct: 0, project_pct: 0, final_exam_pct: 0
+    };
+
     openModal(`
         <div class="modal-header">
             <h3>💳 اشتراك: ${esc(school.name)}</h3>
             <button class="modal-close" onclick="closeModal()">✕</button>
         </div>
-        <div class="modal-body" style="max-height:75vh;overflow-y:auto">
+        <div class="modal-body" id="subModalBody" style="max-height:75vh;overflow-y:auto">
 
             <!-- معلومات الحالة الراهنة -->
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
@@ -996,6 +1003,51 @@ async function openSubModal(schoolId) {
                     `).join('')}
                 </div>
                 ${!schoolFeatures ? `<p style="font-size:9px;color:var(--accent-orange);margin-top:8px">ℹ️ هذه الميزات مأخوذة حالياً من "خطة الاشتراك". عند تغييرها سيتم حفظ "نسخة مخصصة" لهذه المدرسة.</p>` : ''}
+            </div>
+
+            <!-- أوزان التقييم (Weights) -->
+            <div id="subWeightsSection" style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:10px;padding:14px;margin-bottom:18px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                    <h4 style="font-size:12px;color:var(--accent-emerald);text-transform:uppercase">⚖️ توزيع أوزان الدرجات (100%)</h4>
+                    <button class="btn btn-outline btn-xs" style="font-size:9px;padding:2px 8px" onclick="applyStandardWeights()">تطبيق التوزيع القياسي</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px">
+                    <div class="form-group-modal">
+                        <label style="font-size:9px">الحضور</label>
+                        <input type="number" id="w_att" class="form-input weight-input" value="${weights.attendance_pct || 0}" min="0" max="100">
+                    </div>
+                    <div class="form-group-modal">
+                        <label style="font-size:9px">الزي والروح</label>
+                        <input type="number" id="w_uni" class="form-input weight-input" value="${weights.uniform_pct || 0}" min="0" max="100">
+                    </div>
+                    <div class="form-group-modal">
+                        <label style="font-size:9px">السلوك والمهارة</label>
+                        <input type="number" id="w_beh" class="form-input weight-input" value="${weights.behavior_skills_pct || 0}" min="0" max="100">
+                    </div>
+                    <div class="form-group-modal">
+                        <label style="font-size:9px">المشاركة</label>
+                        <input type="number" id="w_part" class="form-input weight-input" value="${weights.participation_pct || 0}" min="0" max="100">
+                    </div>
+                    <div class="form-group-modal">
+                        <label style="font-size:9px">اللياقة</label>
+                        <input type="number" id="w_fit" class="form-input weight-input" value="${weights.fitness_pct || 0}" min="0" max="100">
+                    </div>
+                    <div class="form-group-modal">
+                        <label style="font-size:9px">الاختبارات القصيرة</label>
+                        <input type="number" id="w_quiz" class="form-input weight-input" value="${weights.quiz_pct || 0}" min="0" max="100">
+                    </div>
+                    <div class="form-group-modal">
+                        <label style="font-size:9px">المشاريع</label>
+                        <input type="number" id="w_proj" class="form-input weight-input" value="${weights.project_pct || 0}" min="0" max="100">
+                    </div>
+                    <div class="form-group-modal">
+                        <label style="font-size:9px">الاختبار النهائي</label>
+                        <input type="number" id="w_final" class="form-input weight-input" value="${weights.final_exam_pct || 0}" min="0" max="100">
+                    </div>
+                </div>
+                <div id="weightTotalDisplay" style="margin-top:10px;font-size:11px;font-weight:700;text-align:left">
+                    الإجمالي: <span id="weightTotalValue">100</span>%
+                </div>
             </div>
 
             <!-- تحديث الاشتراك -->
@@ -1080,6 +1132,12 @@ async function openSubModal(schoolId) {
         </div>
     `, 'lg');
 
+    // Add live total calculator
+    document.querySelectorAll('.weight-input').forEach(input => {
+        input.oninput = calculateWeightTotal;
+    });
+    calculateWeightTotal();
+
     // Auto-calculate if active and endsAt is empty
     if (school.subscription_status === 'active' && !school.subscription_ends_at) {
         recalculateExpiry();
@@ -1096,6 +1154,22 @@ async function updateSubscription(schoolId) {
         features[chk.dataset.feature] = chk.checked;
     });
 
+    const totalWeights = calculateWeightTotal();
+    if (totalWeights !== 100) {
+        return toast('إجمالي الأوزان يجب أن يكون 100% بالضبط (الحالي: ' + totalWeights + '%)', 'error');
+    }
+
+    const gradingWeights = {
+        attendance_pct: parseInt(gets('w_att').value || 0),
+        uniform_pct: parseInt(gets('w_uni').value || 0),
+        behavior_skills_pct: parseInt(gets('w_beh').value || 0),
+        participation_pct: parseInt(gets('w_part').value || 0),
+        fitness_pct: parseInt(gets('w_fit').value || 0),
+        quiz_pct: parseInt(gets('w_quiz').value || 0),
+        project_pct: parseInt(gets('w_proj').value || 0),
+        final_exam_pct: parseInt(gets('w_final').value || 0)
+    };
+
     const data = {
         id: schoolId,
         status: gets('subStatus').value,
@@ -1107,7 +1181,8 @@ async function updateSubscription(schoolId) {
         max_teachers: gets('subMaxTeachers')?.value || null,
         max_classes: gets('subMaxClasses')?.value || null,
         subscription_notes: gets('subNotes').value.trim(),
-        features: features
+        features: features,
+        grading_weights: gradingWeights
     };
 
     const r = await API.post('school_subscription', data);
@@ -2633,4 +2708,49 @@ async function toggleTestimonial(id, active) {
         toast('✅ ' + r.message);
         renderTestimonials();
     }
+}
+
+// ============================================================
+// GRADING WEIGHT HELPERS
+// ============================================================
+function calculateWeightTotal() {
+    const inputs = document.querySelectorAll('.weight-input');
+    let total = 0;
+    inputs.forEach(input => {
+        total += parseInt(input.value || 0);
+    });
+    
+    const display = document.getElementById('weightTotalValue');
+    const container = document.getElementById('weightTotalDisplay');
+    
+    if (display) display.textContent = total;
+    if (container) {
+        if (total === 100) {
+            container.style.color = 'var(--accent-emerald)';
+        } else {
+            container.style.color = 'var(--accent-red)';
+        }
+    }
+    return total;
+}
+
+function applyStandardWeights() {
+    const weights = {
+        w_att: 15,
+        w_uni: 15,
+        w_beh: 15,
+        w_part: 10,
+        w_fit: 20,
+        w_quiz: 10,
+        w_proj: 10,
+        w_final: 5
+    };
+    
+    Object.entries(weights).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    });
+    
+    calculateWeightTotal();
+    toast('تم تطبيق التوزيع القياسي (100%)', 'success');
 }

@@ -293,7 +293,7 @@ class Subscription {
     /**
      * Activate a school subscription with full parameters
      */
-    public static function activate(int $schoolId, ?int $planId, ?string $endsAt, ?string $startsAt = null, ?array $features = null, ?array $limits = null): void {
+    public static function activate(int $schoolId, ?int $planId, ?string $endsAt, ?string $startsAt = null, ?array $features = null, ?array $limits = null, ?array $gradingWeights = null): void {
         try {
             $db = getDB();
             
@@ -334,6 +334,10 @@ class Subscription {
             $params[] = $schoolId;
 
             $db->prepare($sql)->execute($params);
+
+            if ($gradingWeights !== null) {
+                self::saveGradingWeights($schoolId, $gradingWeights);
+            }
         } catch (Exception $e) {
             // Silent
         }
@@ -342,7 +346,7 @@ class Subscription {
     /**
      * Start/Update a trial for a school
      */
-    public static function startTrial(int $schoolId, int $days = 14, ?int $planId = null, ?array $features = null, ?array $limits = null, ?string $specificEndDate = null): void {
+    public static function startTrial(int $schoolId, int $days = 14, ?int $planId = null, ?array $features = null, ?array $limits = null, ?string $specificEndDate = null, ?array $gradingWeights = null): void {
         try {
             $db = getDB();
             
@@ -376,6 +380,10 @@ class Subscription {
             $params[] = $schoolId;
 
             $db->prepare($sql)->execute($params);
+
+            if ($gradingWeights !== null) {
+                self::saveGradingWeights($schoolId, $gradingWeights);
+            }
         } catch (Exception $e) {
             // Silent
         }
@@ -404,6 +412,41 @@ class Subscription {
         $stmt = $db->prepare("INSERT INTO fitness_tests (school_id, name, unit, type, max_score) VALUES (?, ?, ?, ?, ?)");
         foreach ($defaults as $d) {
             $stmt->execute([$schoolId, $d[0], $d[1], $d[2], $d[3]]);
+        }
+    }
+
+    /**
+     * Save/Update grading weights for a school
+     */
+    private static function saveGradingWeights(int $schoolId, array $weights): void {
+        try {
+            $db = getDB();
+            $sql = "INSERT INTO school_grading_weights 
+                    (school_id, attendance_pct, uniform_pct, behavior_skills_pct, participation_pct, fitness_pct, quiz_pct, project_pct, final_exam_pct)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE 
+                    attendance_pct = VALUES(attendance_pct),
+                    uniform_pct = VALUES(uniform_pct),
+                    behavior_skills_pct = VALUES(behavior_skills_pct),
+                    participation_pct = VALUES(participation_pct),
+                    fitness_pct = VALUES(fitness_pct),
+                    quiz_pct = VALUES(quiz_pct),
+                    project_pct = VALUES(project_pct),
+                    final_exam_pct = VALUES(final_exam_pct)";
+            
+            $db->prepare($sql)->execute([
+                $schoolId,
+                $weights['attendance_pct'] ?? 0,
+                $weights['uniform_pct'] ?? 0,
+                $weights['behavior_skills_pct'] ?? 0,
+                $weights['participation_pct'] ?? 0,
+                $weights['fitness_pct'] ?? 0,
+                $weights['quiz_pct'] ?? 0,
+                $weights['project_pct'] ?? 0,
+                $weights['final_exam_pct'] ?? 0
+            ]);
+        } catch (Exception $e) {
+            // Silent
         }
     }
 }

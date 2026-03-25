@@ -151,6 +151,7 @@ function updateSchoolSubscription() {
     $startsAt = !empty($data['starts_at']) ? sanitize($data['starts_at']) : null;
     $endsAt = !empty($data['ends_at']) ? sanitize($data['ends_at']) : null;
     $features = $data['features'] ?? null;
+    $gradingWeights = $data['grading_weights'] ?? null;
     $notes = isset($data['subscription_notes']) ? sanitize($data['subscription_notes']) : null;
     
     $limits = [
@@ -169,15 +170,42 @@ function updateSchoolSubscription() {
     }
 
     if ($status === 'active') {
-        Subscription::activate($id, $planId, $endsAt, $startsAt, $features, $limits);
+        Subscription::activate($id, $planId, $endsAt, $startsAt, $features, $limits, $gradingWeights);
     } elseif ($status === 'suspended') {
         Subscription::suspend($id);
     } elseif ($status === 'trial') {
         $days = !empty($data['trial_days']) ? (int)$data['trial_days'] : 14;
-        Subscription::startTrial($id, $days, $planId, $features, $limits, $endsAt);
+        Subscription::startTrial($id, $days, $planId, $features, $limits, $endsAt, $gradingWeights);
     }
 
     jsonSuccess(null, 'تم تحديث حالة الاشتراك');
+}
+
+function getSchoolWeights() {
+    requirePlatformAdmin();
+    $schoolId = (int)getParam('school_id', 0);
+    if (!$schoolId) jsonError('معرف مدرسة غير صالح');
+
+    $db = getDB();
+    $stmt = $db->prepare("SELECT * FROM school_grading_weights WHERE school_id = ?");
+    $stmt->execute([$schoolId]);
+    $weights = $weights = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // If no weights found, return standard defaults
+    if (!$weights) {
+        $weights = [
+            'attendance_pct' => 20,
+            'uniform_pct' => 20,
+            'behavior_skills_pct' => 20,
+            'participation_pct' => 0,
+            'fitness_pct' => 40,
+            'quiz_pct' => 0,
+            'project_pct' => 0,
+            'final_exam_pct' => 0
+        ];
+    }
+
+    jsonSuccess($weights);
 }
 
 // ============================================================
@@ -479,6 +507,7 @@ try {
         case 'platform_stats':    getPlatformStats(); break;
         case 'impersonate':       impersonateSchool(); break;
         case 'get_school_admins': getSchoolAdmins(); break;
+        case 'get_school_weights': getSchoolWeights(); break;
         case 'reset_school_admin': resetSchoolAdminPassword(); break;
         case 'announcements':     getAnnouncements(); break;
         case 'announcement_save': saveAnnouncement(); break;

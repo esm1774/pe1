@@ -62,7 +62,7 @@ try {
         'tempDir' => __DIR__ . '/tmp'
     ];
     
-    if ($type === 'monitoring') $config['format'] = 'A4-L';
+    if ($type === 'monitoring' || $type === 'grading') $config['format'] = 'A4-L';
 
     $mpdf = new \Mpdf\Mpdf($config);
 
@@ -241,8 +241,8 @@ function _buildStudentReport($data, $schoolName, $logoUrl) {
         $html .= '<div style="margin-top:20px;">';
         $html .= '<h4 style="color:#4f46e5; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">التقييم الشامل والتقدير النهائي: ' . ($gs['letter'] ?? '-') . '</h4>';
         $html .= '<table class="info-grid">';
-        $html .= '<tr><td>الحضور: '.$gs['attendance_pct'].'%</td><td>الزي: '.$gs['uniform_pct'].'%</td><td>المهارات: '.$gs['behavior_skills_pct'].'%</td></tr>';
-        $html .= '<tr><td>اللياقة: '.$gs['fitness_pct'].'%</td><td>المشاركة: '.$gs['participation_pct'].'%</td><td>التفوق: '.$gs['performance_score'] ?? '-'.'</td></tr>';
+        $html .= '<tr><td>الحضور: '.$gs['attendance_pct'].'%</td><td>الزي: '.$gs['uniform_pct'].'%</td><td>السلوك: '.$gs['behavior_skills_pct'].'%</td><td>اللياقة: '.$gs['fitness_pct'].'%</td></tr>';
+        $html .= '<tr><td>المشاركة: '.$gs['participation_pct'].'%</td><td>اختبار: '.$gs['quiz_score'].'</td><td>مشروع: '.$gs['project_score'].'</td><td>نهائي: '.$gs['final_exam_score'].'</td></tr>';
         $html .= '</table></div>';
     }
 
@@ -350,22 +350,33 @@ function _buildGradingReport($data, $schoolName, $logoUrl) {
     
     $html .= '<table class="data-table">';
     $html .= '<thead><tr>';
-    $html .= '<th>م</th><th>الطالب</th>';
-    if ($weights['attendance_pct'] > 0) $html .= '<th>ح</th>';
-    if ($weights['uniform_pct'] > 0) $html .= '<th>ز</th>';
-    if ($weights['behavior_skills_pct'] > 0) $html .= '<th>س/م</th>';
-    if ($weights['fitness_pct'] > 0) $html .= '<th>ل</th>';
-    $html .= '<th>المجموع</th><th>التقدير</th></tr></thead>';
+    $html .= '<th width="3%">م</th>';
+    $html .= '<th width="22%">اسم الطالب</th>';
+    $html .= '<th width="7.5%">حضور</th>';
+    $html .= '<th width="7.5%">زي</th>';
+    $html .= '<th width="7.5%">سلوك</th>';
+    $html .= '<th width="7.5%">مشاركة</th>';
+    $html .= '<th width="7.5%">لياقة</th>';
+    $html .= '<th width="7.5%">اختبار قصير</th>';
+    $html .= '<th width="7.5%">بحوث / مشاريع</th>';
+    $html .= '<th width="7.5%">اختبار نهائي</th>';
+    $html .= '<th width="7.5%">المجموع</th>';
+    $html .= '<th width="7.5%">التقدير</th>';
+    $html .= '</tr></thead>';
     $html .= '<tbody>';
     foreach ($students as $index => $s) {
         $html .= '<tr>';
         $html .= '<td>' . ($index + 1) . '</td>';
-        $html .= '<td style="text-align:right;">' . htmlspecialchars($s['name']) . '</td>';
-        if ($weights['attendance_pct'] > 0) $html .= '<td>' . $s['attendance_score'] . '</td>';
-        if ($weights['uniform_pct'] > 0) $html .= '<td>' . $s['uniform_score'] . '</td>';
-        if ($weights['behavior_skills_pct'] > 0) $html .= '<td>' . $s['behavior_skills_score'] . '</td>';
-        if ($weights['fitness_pct'] > 0) $html .= '<td>' . $s['fitness_score'] . '</td>';
-        $html .= '<td style="background:#fefce8; font-weight:bold;">' . $s['final_grade'] . '</td>';
+        $html .= '<td style="text-align:right; font-weight:bold;">' . htmlspecialchars($s['name']) . '</td>';
+        $html .= '<td>' . ($s['attendance_score'] ?? '0') . '</td>';
+        $html .= '<td>' . ($s['uniform_score'] ?? '0') . '</td>';
+        $html .= '<td>' . ($s['behavior_skills_score'] ?? '0') . '</td>'; // Use behavior_skills as "Behavior"
+        $html .= '<td>' . ($s['participation_score'] ?? '0') . '</td>';
+        $html .= '<td>' . ($s['fitness_score'] ?? '0') . '</td>';
+        $html .= '<td>' . ($s['quiz_score'] ?? '0') . '</td>';
+        $html .= '<td>' . ($s['project_score'] ?? '0') . '</td>';
+        $html .= '<td>' . ($s['final_exam_score'] ?? '0') . '</td>';
+        $html .= '<td style="background:#fefce8; font-weight:bold;">' . ($s['final_grade'] ?? '0') . '</td>';
         $html .= '<td>' . ($s['letter'] ?? '-') . '</td>';
         $html .= '</tr>';
     }

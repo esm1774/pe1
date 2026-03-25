@@ -97,7 +97,10 @@ async function renderSchoolSettings() {
 
                 <!-- Grading Weights -->
                 <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8">
-                    <h3 class="font-black text-gray-800 mb-6 flex items-center gap-2">⚖️ أوزان تقييم التربية البدنية</h3>
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-black text-gray-800 flex items-center gap-2">⚖️ أوزان تقييم التربية البدنية</h3>
+                        <button onclick="resetGradingWeights()" class="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition">إعادة تعيين للأوزان القياسية</button>
+                    </div>
                     <p class="text-[12px] text-gray-500 mb-4 font-bold">حدد النسبة المئوية لكل معيار ليتم حساب الدرجة النهائية للطالب. (يجب أن يكون المجموع 100%)</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
@@ -287,4 +290,26 @@ async function refreshBranding() {
             if (appleLink) appleLink.href = s.logo_url;
         }
     }
+}
+
+function resetGradingWeights() {
+    if (!confirm('هل أنت متأكد من إعادة تعيين كافة الأوزان إلى التوزيع القياسي للمنصة؟')) return;
+    
+    const defaults = {
+        attendancePct: 15,
+        uniformPct: 15,
+        behaviorPct: 15,
+        participationPct: 10,
+        fitnessPct: 20,
+        quizPct: 10,
+        projectPct: 10,
+        finalExamPct: 5
+    };
+
+    Object.entries(defaults).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    });
+
+    toast('تم استعادة التوزيع القياسي. لا تنسى الضغط على "حفظ جميع الإعدادات".', 'info');
 }

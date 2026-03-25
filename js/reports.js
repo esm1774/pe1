@@ -1014,18 +1014,18 @@ async function generateGradingReport() {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-gray-50/50">
-                        <th class="px-4 py-3 text-right font-black text-gray-500 rounded-r-xl">م</th>
-                        <th class="px-4 py-3 text-right font-black text-gray-500 border-x border-gray-100">الطالب</th>
-                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="الحضور (${weights.attendance_pct})">ح (${weights.attendance_pct})</th>
-                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="الزي (${weights.uniform_pct})">ز (${weights.uniform_pct})</th>
-                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="السلوك (${weights.behavior_skills_pct})">س (${weights.behavior_skills_pct})</th>
-                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="المشاركة (${weights.participation_pct})">م (${weights.participation_pct})</th>
-                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="اللياقة (${weights.fitness_pct})">ل (${weights.fitness_pct})</th>
-                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="إختبار قصير (${weights.quiz_pct})">ق (${weights.quiz_pct})</th>
-                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="مشروع/بحث (${weights.project_pct})">ج (${weights.project_pct})</th>
-                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" title="اختبار نهائي (${weights.final_exam_pct})">ن (${weights.final_exam_pct})</th>
-                        <th class="px-4 py-3 text-center font-black text-gray-800 border-l border-gray-100 bg-gray-100">المجموع</th>
-                        <th class="px-4 py-3 text-center font-black text-gray-500 rounded-l-xl">التقدير</th>
+                        <th class="px-4 py-3 text-right font-black text-gray-500 rounded-r-xl" style="width: 40px">م</th>
+                        <th class="px-4 py-3 text-right font-black text-gray-500 border-x border-gray-100" style="width: 20%">اسم الطالب</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" style="width: 7%">حضور</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" style="width: 7%">زي</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" style="width: 7%">سلوك</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" style="width: 7%">مشاركة</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" style="width: 7%">لياقة</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" style="width: 7%">اختبار قصير</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" style="width: 7%">بحوث / مشاريع</th>
+                        <th class="px-2 py-3 text-center font-black text-gray-500 border-l border-gray-100" style="width: 7%">اختبار نهائي</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-800 border-l border-gray-100 bg-gray-100" style="width: 8%">المجموع</th>
+                        <th class="px-4 py-3 text-center font-black text-gray-500 rounded-l-xl" style="width: 8%">التقدير</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">

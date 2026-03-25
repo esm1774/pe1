@@ -11,6 +11,7 @@ ini_set('log_errors', 1);
 
 // 2. Constants & Environment
 define('APP_NAME', 'PE Smart School');
+define('APP_VERSION', '2.5.0');
 define('BASE_URL', '/pe1');
 define('DEBUG_MODE', true); // Toggle for development
 define('APP_TIMEZONE', 'Asia/Riyadh');

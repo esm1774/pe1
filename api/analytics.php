@@ -40,25 +40,48 @@ function getAnalyticsDashboard() {
             $timeline['data'][] = 0;
             continue;
         }
-
         $totalScoreSum = 0;
         foreach ($stIds as $id) {
-            // This is heavy, but ensures consistency with the grading system rules
-            // Ideally we'd have a summary table, but let's stick to the core logic
+            // NEW: Assessments
+            $assStmt = $db->prepare("SELECT type, score FROM student_assessments WHERE student_id = ?");
+            $assStmt->execute([$id]);
+            $assRecords = $assStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            
+            $qScore = (float)($assRecords['quiz'] ?? 0);
+            $pScore = (float)($assRecords['project'] ?? 0);
+            $fScore = (float)($assRecords['final_exam'] ?? 0);
+            
+            $qMax = (float)($weights['quiz_max'] ?? 10);
+            $pMax = (float)($weights['project_max'] ?? 10);
+            $fMax = (float)($weights['final_exam_max'] ?? 10);
+
+            $qP = $qMax > 0 ? ($qScore / $qMax) * 100 : 0;
+            $pP = $pMax > 0 ? ($pScore / $pMax) * 100 : 0;
+            $fP = $fMax > 0 ? ($fScore / $fMax) * 100 : 0;
+
+            // Fitness
             $fit = $db->prepare("SELECT SUM(sf.score) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
             $fit->execute([$sid, $id, $start, $end]);
             $fr = $fit->fetch();
             $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;
 
-            $att = $db->prepare("SELECT COUNT(*) as d, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_e, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_e, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_m, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as s_e, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as s_m FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
+            $att = $db->prepare("SELECT COUNT(*) as d, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_e, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_e, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_m, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as s_e, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as s_m, SUM(participation_score) as p_e, SUM(max_participation_score) as p_m FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
             $att->execute([$id, $start, $end]);
             $ar = $att->fetch();
 
             $attP = ($ar['d'] > 0) ? ($ar['att_e'] / $ar['d']) * 100 : 100;
             $uniP = ($ar['uni_m'] > 0) ? ($ar['uni_e'] / $ar['uni_m']) * 100 : 100;
             $starP = ($ar['s_m'] > 0) ? ($ar['s_e'] / $ar['s_m']) * 100 : 100;
+            $partP = ($ar['p_m'] > 0) ? ($ar['p_e'] / $ar['p_m']) * 100 : 0;
 
-            $totalScoreSum += ($attP * ($weights['attendance_pct']/100)) + ($uniP * ($weights['uniform_pct']/100)) + ($starP * ($weights['behavior_skills_pct']/100)) + ($fitP * ($weights['fitness_pct']/100));
+            $totalScoreSum += ($attP * ($weights['attendance_pct']/100)) 
+                            + ($uniP * ($weights['uniform_pct']/100)) 
+                            + ($starP * ($weights['behavior_skills_pct']/100)) 
+                            + ($partP * (($weights['participation_pct'] ?? 0)/100))
+                            + ($fitP * ($weights['fitness_pct']/100))
+                            + ($qP * (($weights['quiz_pct'] ?? 0)/100))
+                            + ($pP * (($weights['project_pct'] ?? 0)/100))
+                            + ($fP * (($weights['final_exam_pct'] ?? 0)/100));
         }
         $timeline['data'][] = round($totalScoreSum / count($stIds), 1);
     }
@@ -92,15 +115,40 @@ function getAnalyticsDashboard() {
             $fr = $fit->fetch();
             $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;
 
-            $att = $db->prepare("SELECT COUNT(*) as d, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_e, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_e, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_m, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as s_e, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as s_m FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
+            // Assessments
+            $assStmt = $db->prepare("SELECT type, score FROM student_assessments WHERE student_id = ?");
+            $assStmt->execute([$id]);
+            $assRecords = $assStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            
+            $qScore = (float)($assRecords['quiz'] ?? 0);
+            $pScore = (float)($assRecords['project'] ?? 0);
+            $fScore = (float)($assRecords['final_exam'] ?? 0);
+            
+            $qMax = (float)($weights['quiz_max'] ?? 10);
+            $pMax = (float)($weights['project_max'] ?? 10);
+            $fMax = (float)($weights['final_exam_max'] ?? 10);
+
+            $qP = $qMax > 0 ? ($qScore / $qMax) * 100 : 0;
+            $pP = $pMax > 0 ? ($pScore / $pMax) * 100 : 0;
+            $fP = $fMax > 0 ? ($fScore / $fMax) * 100 : 0;
+
+            $att = $db->prepare("SELECT COUNT(*) as d, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_e, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_e, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_m, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as s_e, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as s_m, SUM(participation_score) as p_e, SUM(max_participation_score) as p_m FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
             $att->execute([$id, $currStart, $currEnd]);
             $ar = $att->fetch();
 
             $attP = ($ar['d'] > 0) ? ($ar['att_e'] / $ar['d']) * 100 : 100;
             $uniP = ($ar['uni_m'] > 0) ? ($ar['uni_e'] / $ar['uni_m']) * 100 : 100;
             $starP = ($ar['s_m'] > 0) ? ($ar['s_e'] / $ar['s_m']) * 100 : 100;
+            $partP = ($ar['p_m'] > 0) ? ($ar['p_e'] / $ar['p_m']) * 100 : 0;
 
-            $classSum += ($attP * ($weights['attendance_pct']/100)) + ($uniP * ($weights['uniform_pct']/100)) + ($starP * ($weights['behavior_skills_pct']/100)) + ($fitP * ($weights['fitness_pct']/100));
+            $classSum += ($attP * ($weights['attendance_pct']/100)) 
+                       + ($uniP * ($weights['uniform_pct']/100)) 
+                       + ($starP * ($weights['behavior_skills_pct']/100)) 
+                       + ($partP * (($weights['participation_pct'] ?? 0)/100))
+                       + ($fitP * ($weights['fitness_pct']/100))
+                       + ($qP * (($weights['quiz_pct'] ?? 0)/100))
+                       + ($pP * (($weights['project_pct'] ?? 0)/100))
+                       + ($fP * (($weights['final_exam_pct'] ?? 0)/100));
         }
         $classCompData[] = ['name' => $c['class_name'], 'score' => round($classSum / count($stIds), 1)];
     }
@@ -143,21 +191,46 @@ function getAnalyticsDashboard() {
     $studentLeads = [];
     foreach ($allStudents as $s) {
         $id = $s['id'];
-        // Re-use weighted calc
+        
         $fit = $db->prepare("SELECT SUM(sf.score) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
         $fit->execute([$sid, $id, $currStart, $currEnd]);
         $fr = $fit->fetch();
         $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;
 
-        $att = $db->prepare("SELECT COUNT(*) as d, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_e, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_e, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_m, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as s_e, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as s_m FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
+        // Assessments
+        $assStmt = $db->prepare("SELECT type, score FROM student_assessments WHERE student_id = ?");
+        $assStmt->execute([$id]);
+        $assRecords = $assStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        
+        $qScore = (float)($assRecords['quiz'] ?? 0);
+        $pScore = (float)($assRecords['project'] ?? 0);
+        $fScore = (float)($assRecords['final_exam'] ?? 0);
+        
+        $qMax = (float)($weights['quiz_max'] ?? 10);
+        $pMax = (float)($weights['project_max'] ?? 10);
+        $fMax = (float)($weights['final_exam_max'] ?? 10);
+
+        $qP = $qMax > 0 ? ($qScore / $qMax) * 100 : 0;
+        $pP = $pMax > 0 ? ($pScore / $pMax) * 100 : 0;
+        $fP = $fMax > 0 ? ($fScore / $fMax) * 100 : 0;
+
+        $att = $db->prepare("SELECT COUNT(*) as d, SUM(CASE WHEN status='present' THEN 1 WHEN status IN ('late','excused') THEN 0.5 ELSE 0 END) as att_e, SUM(CASE WHEN uniform_status='full' THEN 3 WHEN uniform_status='partial' THEN 2 WHEN uniform_status='wrong' THEN 1 ELSE 0 END) as uni_e, SUM(CASE WHEN uniform_status IS NOT NULL THEN 3 ELSE 0 END) as uni_m, SUM(COALESCE(behavior_stars,0)+COALESCE(skills_stars,0)) as s_e, SUM((CASE WHEN behavior_stars>0 THEN 3 ELSE 0 END)+(CASE WHEN skills_stars>0 THEN 3 ELSE 0 END)) as s_m, SUM(participation_score) as p_e, SUM(max_participation_score) as p_m FROM attendance WHERE student_id = ? AND attendance_date BETWEEN ? AND ?");
         $att->execute([$id, $currStart, $currEnd]);
         $ar = $att->fetch();
 
         $attP = ($ar['d'] > 0) ? ($ar['att_e'] / $ar['d']) * 100 : 100;
         $uniP = ($ar['uni_m'] > 0) ? ($ar['uni_e'] / $ar['uni_m']) * 100 : 100;
         $starP = ($ar['s_m'] > 0) ? ($ar['s_e'] / $ar['s_m']) * 100 : 100;
+        $partP = ($ar['p_m'] > 0) ? ($ar['p_e'] / $ar['p_m']) * 100 : 0;
 
-        $final = ($attP * ($weights['attendance_pct']/100)) + ($uniP * ($weights['uniform_pct']/100)) + ($starP * ($weights['behavior_skills_pct']/100)) + ($fitP * ($weights['fitness_pct']/100));
+        $final = ($attP * ($weights['attendance_pct']/100)) 
+               + ($uniP * ($weights['uniform_pct']/100)) 
+               + ($starP * ($weights['behavior_skills_pct']/100)) 
+               + ($partP * (($weights['participation_pct'] ?? 0)/100))
+               + ($fitP * ($weights['fitness_pct']/100))
+               + ($qP * (($weights['quiz_pct'] ?? 0)/100))
+               + ($pP * (($weights['project_pct'] ?? 0)/100))
+               + ($fP * (($weights['final_exam_pct'] ?? 0)/100));
         
         $studentLeads[] = [
             'id' => $id,
