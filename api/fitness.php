@@ -87,20 +87,29 @@ function getFitnessResults() {
                sf.value, sf.score, sf.test_date, sf.id as result_id,
                (SELECT GROUP_CONCAT(sh.condition_name SEPARATOR ', ') FROM student_health sh WHERE sh.student_id = s.id AND sh.is_active = 1) as health_notes
         FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id AND sf.test_id = ?
-        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name",
+        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name, sf.test_date DESC, sf.id DESC",
 
         "SELECT s.id as student_id, s.name, s.student_number,
                sf.value, sf.score, sf.test_date, sf.id as result_id,
                NULL as health_notes
         FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id AND sf.test_id = ?
-        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name"
+        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name, sf.test_date DESC, sf.id DESC"
     ];
 
     foreach ($queries as $sql) {
         try {
             $stmt = $db->prepare($sql);
             $stmt->execute([$testId, $classId]);
-            jsonSuccess($stmt->fetchAll());
+            $raw = $stmt->fetchAll();
+            $unique = [];
+            $seen = [];
+            foreach ($raw as $r) {
+                if (!isset($seen[$r['student_id']])) {
+                    $unique[] = $r;
+                    $seen[$r['student_id']] = true;
+                }
+            }
+            jsonSuccess($unique);
             return;
         } catch (PDOException $e) {
             continue;

@@ -61,16 +61,28 @@ function getStudentProfile() {
     $activeAlerts = array_filter($healthConditions, function($h) { return $h['is_active']; });
 
     $stmt = $db->prepare("
-        SELECT ft.name as test_name, ft.unit, ft.max_score, sf.value, sf.score, sf.test_date
+        SELECT ft.id as test_id, ft.name as test_name, ft.unit, ft.max_score, sf.value, sf.score, sf.test_date
         FROM fitness_tests ft LEFT JOIN student_fitness sf ON sf.test_id = ft.id AND sf.student_id = ?
-        WHERE ft.active = 1 ORDER BY ft.id
+        WHERE ft.active = 1 ORDER BY ft.id ASC, sf.test_date DESC, sf.id DESC
     ");
     $stmt->execute([$studentId]);
-    $fitnessResults = $stmt->fetchAll();
+    $rawResults = $stmt->fetchAll();
 
+    $fitnessResults = [];
+    $seenTests = [];
     $totalScore = 0; $totalMax = 0;
-    foreach ($fitnessResults as $r) {
-        if ($r['score'] !== null) { $totalScore += $r['score']; $totalMax += $r['max_score']; }
+
+    foreach ($rawResults as $r) {
+        if (!in_array($r['test_id'], $seenTests)) {
+            $seenTests[] = $r['test_id'];
+            
+            // إضافة الاختبار للسجل فقط إذا كان له درجة مسجلة الطالب
+            if ($r['score'] !== null || $r['value'] !== null) {
+                $fitnessResults[] = $r;
+                $totalScore += $r['score']; 
+                $totalMax += $r['max_score']; 
+            }
+        }
     }
 
     $stmt = $db->prepare("
