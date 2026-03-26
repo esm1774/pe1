@@ -189,3 +189,13 @@
 [2026-03-25 21:59:58] HTML Build Success. Length: 7873
 [2026-03-25 21:59:58] mPDF Write Success.
 [2026-03-25 21:59:58] PDF Output Success.
+[2026-03-26 04:29:20] --- NEW REQUEST ---
+[2026-03-26 04:29:20] Request URI: /pe1/api/generate_pdf.php?_t=1774495760919
+[2026-03-26 04:29:20] Remote IP: ::1
+[2026-03-26 04:29:20] JSON Payload length: 2713
+[2026-03-26 04:29:20] Auth Success. User: مدير المدرسة
+[2026-03-26 04:29:20] Request Decoded. Type: student
+[2026-03-26 04:29:20] Session School ID: 1
+[2026-03-26 04:29:21] HTML Build Success. Length: 5096
+[2026-03-26 04:29:21] mPDF Write Success.
+[2026-03-26 04:29:21] PDF Output Success.

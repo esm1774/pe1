@@ -152,6 +152,7 @@ async function renderStudentProfilePage() {
             ${hasFeature('badges') ? `<button onclick="switchProfileTab('badges')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'badges' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏅 الأوسمة</button>` : ''}
             <button onclick="switchProfileTab('health')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'health' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">🏥 الصحة</button>
             <button onclick="switchProfileTab('pattendance')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pattendance' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📅 الحضور</button>
+            <button onclick="switchProfileTab('pprogress')" class="tab-btn min-w-[70px] flex-1 px-2 py-3.5 text-[10px] md:text-sm font-black transition-all ${profileTab === 'pprogress' ? 'active text-emerald-600 border-b-4 border-emerald-600' : 'text-gray-400'} cursor-pointer whitespace-nowrap">📈 التطور</button>
         </div>
         <div id="profileTabContent" class="bg-white rounded-b-[2rem] shadow-2xl shadow-gray-100/50 border border-gray-100 border-t-0 p-4 md:p-10 mb-20 mx-1 scroll-mt-24"></div>
     </div>`;
@@ -651,6 +652,220 @@ async function renderProfileTab(sid) {
                 </div>
             </div>
         `;
+    } else if (profileTab === 'pprogress') {
+        const hMeas = d.measurements || [];
+        const hFit = d.fitnessHistory || [];
+        const hBadges = d.badges || [];
+
+        let timeline = [];
+        hMeas.forEach(m => timeline.push({
+            date: m.measurement_date,
+            type: 'measurement',
+            icon: '📏',
+            color: 'text-blue-500',
+            bg: 'bg-blue-50',
+            title: 'قياسات جسمية',
+            desc: `المؤشر: ${m.bmi || '-'} | الوزن: ${m.weight_kg || '-'} كجم | الطول: ${m.height_cm || '-'} سم`
+        }));
+
+        hFit.forEach(f => {
+            if (f.value !== null || f.score !== null) {
+                const isGood = (f.score / f.max_score) >= 0.8;
+                timeline.push({
+                    date: f.test_date,
+                    type: 'fitness',
+                    icon: '💪',
+                    color: isGood ? 'text-emerald-500' : 'text-amber-500',
+                    bg: isGood ? 'bg-emerald-50' : 'bg-amber-50',
+                    title: `اختبار لياقة: ${f.test_name}`,
+                    desc: `النتيجة: ${f.value || '-'} ${f.unit || ''} | الدرجة المستحقة: ${f.score || 0} من ${f.max_score}`
+                });
+            }
+        });
+
+        hBadges.forEach(b => timeline.push({
+            date: (b.awarded_at || '').split(' ')[0],
+            type: 'badge',
+            icon: b.icon || '🏅',
+            color: 'text-purple-500',
+            bg: 'bg-purple-50',
+            title: `حصل على وسام: ${b.name}`,
+            desc: b.description || 'إنجاز مميز واستثنائي'
+        }));
+
+        timeline.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        let tableRows = '';
+        if (timeline.length === 0) {
+            tableRows = `<tr><td colspan="4" class="p-12 text-center text-gray-400 font-bold italic">لا توجد سجلات أداء مسجلة حتى الآن</td></tr>`;
+        } else {
+            timeline.reverse(); 
+            let lastMeas = null;
+            let lastFitness = {}; 
+            
+            timeline.forEach(item => {
+                let changeHtml = '<span class="text-gray-300 font-mono">-</span>';
+                if (item.type === 'measurement') {
+                    const currentWeight = parseFloat((item.desc.match(/الوزن:\s([0-9.]+)/) || [])[1] || 0);
+                    if (lastMeas && currentWeight && lastMeas.weight) {
+                        const diff = (currentWeight - lastMeas.weight).toFixed(1);
+                        if (diff > 0) changeHtml = `<span class="bg-red-50 text-red-600 px-2 py-1 rounded text-xs font-black relative" dir="ltr">⬆ +${diff} kg</span>`;
+                        else if (diff < 0) changeHtml = `<span class="bg-green-50 text-green-600 px-2 py-1 rounded text-xs font-black relative" dir="ltr">⬇ ${diff} kg</span>`;
+                        else changeHtml = `<span class="bg-gray-50 text-gray-400 px-2 py-1 rounded text-[10px] font-black">↔ ثابت</span>`;
+                    }
+                    if(currentWeight > 0) lastMeas = { weight: currentWeight };
+                } else if (item.type === 'fitness') {
+                    const testName = item.title;
+                    const match = item.desc.match(/النتيجة:\s*([0-9.]+)/);
+                    if (match) {
+                        const currentVal = parseFloat(match[1]);
+                        if (lastFitness[testName] !== undefined) {
+                            const diff = (currentVal - lastFitness[testName]).toFixed(1);
+                            if (diff > 0) changeHtml = `<span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-[10px] font-black whitespace-nowrap" dir="ltr">⬆ +${diff}</span>`;
+                            else if (diff < 0) changeHtml = `<span class="bg-orange-50 text-orange-600 px-2 py-1 rounded text-[10px] font-black whitespace-nowrap" dir="ltr">⬇ ${diff}</span>`;
+                            else changeHtml = `<span class="bg-gray-50 text-gray-400 px-2 py-1 rounded text-[10px] font-black">↔ ثابت</span>`;
+                        }
+                        lastFitness[testName] = currentVal;
+                    }
+                } else if (item.type === 'badge') {
+                    changeHtml = `<span class="bg-purple-50 text-purple-600 px-2 py-1 rounded text-[10px] font-black whitespace-nowrap">⭐ إنجاز</span>`;
+                }
+                item.changeHtml = changeHtml;
+            });
+            timeline.reverse();
+
+            timeline.forEach(item => {
+                tableRows += `
+                <tr class="hover:bg-gray-50 transition-colors border-b border-gray-50">
+                    <td class="px-3 md:px-4 py-4 text-[10px] md:text-sm font-black text-gray-600 whitespace-nowrap">${item.date}</td>
+                    <td class="px-3 md:px-4 py-4">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 md:gap-3">
+                            <span class="w-6 h-6 md:w-8 md:h-8 rounded-full ${item.bg} ${item.color} flex items-center justify-center text-xs md:text-sm shadow-sm border border-white shrink-0">${item.icon}</span>
+                            <span class="font-black text-gray-800 text-[10px] md:text-sm whitespace-nowrap">${item.title}</span>
+                        </div>
+                    </td>
+                    <td class="px-3 md:px-4 py-4 text-[9px] md:text-xs text-gray-500 font-bold leading-relaxed">${item.desc}</td>
+                    <td class="px-3 md:px-4 py-4 text-center">${item.changeHtml}</td>
+                </tr>`;
+            });
+        }
+
+        tc.innerHTML = `
+        <div class="fade-in">
+            <div class="mb-8">
+                <h4 class="text-2xl font-black text-gray-800">📈 سجل التطور وتتبع النمو الشامل</h4>
+                <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">تتبع رحلة الطالب وتطوره البدني والمهاري عبر الزمن</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+                <div class="bg-white rounded-[2rem] p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden">
+                    <h5 class="font-black text-gray-700 mb-6 flex items-center gap-2"><span class="text-xl">⚖️</span> مسار تطور الوزن (كجم)</h5>
+                    <div class="h-[250px] w-full"><canvas id="weightChart"></canvas></div>
+                </div>
+                <div class="bg-white rounded-[2rem] p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden">
+                    <h5 class="font-black text-gray-700 mb-6 flex items-center gap-2"><span class="text-xl">💪</span> إجمالي درجات اللياقة المكتسبة عبر الزمن</h5>
+                    <div class="h-[250px] w-full"><canvas id="fitnessTotalChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Table View -->
+            <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-10">
+                <div class="p-6 border-b border-gray-50 bg-gray-50/50">
+                    <h5 class="font-black text-gray-800 flex items-center gap-2">📋 الجـدول التاريخي الشامـل</h5>
+                </div>
+                <div class="overflow-x-auto w-full">
+                    <table class="w-full text-right min-w-[500px]">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-100">
+                                <th class="px-3 md:px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest w-24">التاريخ</th>
+                                <th class="px-3 md:px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">نوع الإجراء</th>
+                                <th class="px-3 md:px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">النتائج المسجلة والتفاصيل</th>
+                                <th class="px-3 md:px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-28">التطور</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Timeline Mobile/Visual View -->
+            <div class="bg-white rounded-[2rem] p-6 sm:p-10 border border-gray-100 shadow-sm overflow-hidden relative">
+                <h5 class="font-black text-gray-800 flex items-center gap-2 mb-10">⏳ الخـط الزمنـي للرحلـة</h5>
+                <div class="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-1 before:bg-gradient-to-b before:from-emerald-50 before:via-gray-100 before:to-transparent">
+                    ${timeline.map((item, idx) => `
+                    <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                        <div class="flex items-center justify-center w-12 h-12 rounded-2xl border-4 border-white ${item.bg} ${item.color} shadow-lg shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 text-xl font-black">
+                            ${item.icon}
+                        </div>
+                        <div class="w-[calc(100%-3rem)] md:w-[calc(50%-3rem)] p-5 rounded-3xl border border-gray-50 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-black text-gray-800 text-sm md:text-base">${item.title}</span>
+                                <span class="font-bold text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">${item.date}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 font-bold leading-relaxed">${item.desc}</p>
+                        </div>
+                    </div>
+                    `).join('')}
+                    ${timeline.length === 0 ? '<p class="text-center text-gray-400 font-bold italic py-8 relative z-10 bg-white inline-block px-4 mx-auto block">رحلة الألف ميل تبدأ بخطوة.. لم يتم تسجيل أداء بعد.</p>' : ''}
+                </div>
+            </div>
+        </div>`;
+
+        setTimeout(() => {
+            if (hMeas.length > 0 && typeof Chart !== 'undefined') {
+                const ctx = document.getElementById('weightChart');
+                if (ctx) {
+                    const sorted = [...hMeas].sort((a,b) => new Date(a.measurement_date) - new Date(b.measurement_date));
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: sorted.map(m => m.measurement_date),
+                            datasets: [{
+                                label: 'الوزن (كجم)',
+                                data: sorted.map(m => parseFloat(m.weight_kg) || null),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 4,
+                                fill: true,
+                                tension: 0.4,
+                                pointBackgroundColor: '#fff',
+                                pointBorderColor: '#3b82f6',
+                                pointBorderWidth: 3,
+                                pointRadius: 5
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false, grid: { borderDash: [5, 5] } }, x: { grid: { display: false } } } }
+                    });
+                }
+            }
+
+            if (hFit.length > 0 && typeof Chart !== 'undefined') {
+                const ctx2 = document.getElementById('fitnessTotalChart');
+                if (ctx2) {
+                    const scoresByDate = {};
+                    hFit.forEach(f => {
+                        if(f.score !== null) {
+                            if(!scoresByDate[f.test_date]) scoresByDate[f.test_date] = 0;
+                            scoresByDate[f.test_date] += parseFloat(f.score);
+                        }
+                    });
+                    const dates = Object.keys(scoresByDate).sort((a,b) => new Date(a) - new Date(b));
+                    new Chart(ctx2, {
+                        type: 'bar',
+                        data: {
+                            labels: dates,
+                            datasets: [{
+                                label: 'إجمالي النقاط المكتسبة',
+                                data: dates.map(d => scoresByDate[d]),
+                                backgroundColor: '#10b981',
+                                borderRadius: 8
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { borderDash: [5, 5] } }, x: { grid: { display: false } } } }
+                    });
+                }
+            }
+        }, 100);
     }
 }
 

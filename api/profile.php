@@ -221,6 +221,7 @@ function getStudentProfile() {
         'healthConditions' => $healthConditions,
         'activeAlerts' => array_values($activeAlerts),
         'fitness' => $fitnessResults,
+        'fitnessHistory' => $rawResults ?? [],
         'badges' => $badges,
         'assessments' => $studentAssessments,
         'totalScore' => (int)$totalScore,
