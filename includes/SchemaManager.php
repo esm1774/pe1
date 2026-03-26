@@ -83,6 +83,19 @@ class SchemaManager
                 ");
             }
 
+            // Migration Phase 2 (Attendance Participation Columns) - v2.5.1
+            if (version_compare($dbVersion, '2.5.1', '<')) {
+                // Check if columns exist before adding
+                $stmt = $db->query("SHOW COLUMNS FROM `attendance` LIKE 'participation_score'");
+                if ($stmt->rowCount() == 0) {
+                    $db->exec("ALTER TABLE `attendance` ADD `participation_score` decimal(5,2) DEFAULT NULL AFTER `participation_stars`");
+                }
+                $stmt = $db->query("SHOW COLUMNS FROM `attendance` LIKE 'max_participation_score'");
+                if ($stmt->rowCount() == 0) {
+                    $db->exec("ALTER TABLE `attendance` ADD `max_participation_score` decimal(5,2) DEFAULT NULL AFTER `participation_score`");
+                }
+            }
+
             // --- END OF MIGRATIONS ---
 
             // Update schema version in DB

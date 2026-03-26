@@ -85,7 +85,8 @@
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (!refreshing) {
                     refreshing = true;
-                    window.location.reload();
+                    // تم إيقاف التحديث التلقائي لمنع مقاطعة عمل المستخدم
+                    // window.location.reload();
                 }
             });
         }
@@ -583,7 +584,7 @@
     <script src="js/students.js?v=3.2.3"></script>
     <script src="js/attendance.js?v=3.2.3"></script>
     <script src="js/assessments.js?v=3.2.3"></script>
-    <script src="js/fitness.js?v=3.2.3"></script>
+    <script src="js/fitness.js?v=3.2.4"></script>
     <script src="js/competition.js?v=3.2.3"></script>
     <script src="js/reports.js?v=5.0.0"></script>
     <script src="js/users.js?v=3.2.3"></script>
@@ -598,7 +599,7 @@
     <script src="js/notifications.js?v=3.2.3"></script>
     <script src="js/badges_admin.js?v=3.2.4"></script>
     <script src="js/calendar.js?v=3.2.3"></script>
-    <script src="js/analytics.js?v=3.2.3"></script>
+    <script src="js/analytics.js?v=3.2.4"></script>
     <script src="js/audit_log.js?v=3.2.3"></script>
     <script src="js/timetable.js?v=3.2.3"></script>
     <script src="js/school_settings.js?v=3.2.3"></script>
@@ -620,8 +621,8 @@
             window.addEventListener('load', () => {
                 const swPath = window.APP_BASE + 'sw.js';
                 navigator.serviceWorker.register(swPath).then(reg => {
-                    // Check for updates every 60 seconds while page is open
-                    setInterval(() => reg.update(), 60000);
+                    // تم إيقاف الفحص التلقائي كل دقيقة لمنع الإزعاج
+                    // setInterval(() => reg.update(), 60000);
 
                     reg.addEventListener('updatefound', () => {
                         const newWorker = reg.installing;

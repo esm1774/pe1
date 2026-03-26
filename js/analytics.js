@@ -15,7 +15,7 @@ async function renderAnalytics() {
         <div class="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 max-w-2xl mx-auto mt-10 shadow-sm">
             <div class="text-6xl mb-6 opacity-80">🔒</div>
             <h3 class="text-2xl font-black text-gray-800 mb-2">هذه الميزة غير مشمولة في باقتك الحالية</h3>
-            <p class="text-gray-500 font-bold mb-8 px-6">للوصول إلى التحليلات المتقدمة والتقارير الشاملة، يرجى ترقية اشتراك المدرسة إلى باقة أعلى.</p>
+            <p class="text-gray-500 font-bold mb-8 px-6">${r && r.error ? r.error : "للوصول إلى التحليلات المتقدمة والتقارير الشاملة، يرجى ترقية اشتراك المدرسة إلى باقة أعلى."}</p>
             <button onclick="navigateTo('subscription')" class="bg-emerald-600 text-white px-8 py-4 rounded-[1.5rem] font-black hover:bg-emerald-700 shadow-xl shadow-emerald-100 transition active:scale-95 cursor-pointer">
                 ⭐ ترقية الاشتراك الآن
             </button>
