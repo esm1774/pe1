@@ -86,6 +86,7 @@ async function renderReports() {
             <button onclick="reportType='compare';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'compare' ? 'bg-teal-600 text-white shadow-xl shadow-teal-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">⚖️ لوحة المقارنة</button>
             ${hasFeature('weighted_grading') ? `<button onclick="reportType='grading';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'grading' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📝 كشف الدرجات النهائي</button>` : ''}
             ${hasFeature('monitoring_report') ? `<button onclick="reportType='monitoring';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'monitoring' ? 'bg-orange-600 text-white shadow-xl shadow-orange-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📋 كشف متابعة فصل</button>` : ''}
+            <button onclick="reportType='progress';renderReports()" class="whitespace-nowrap px-6 md:px-8 py-3 rounded-2xl font-black transition-all duration-300 ${reportType === 'progress' ? 'bg-green-600 text-white shadow-xl shadow-green-100 scale-105' : 'bg-white text-gray-400 border border-gray-100 hover:text-gray-600'} cursor-pointer text-xs md:text-sm">📈 تقرير مسار التطور</button>
         </div>
         
         <div id="reportContent" class="mb-12">${showLoading()}</div>
@@ -93,6 +94,7 @@ async function renderReports() {
 
     if (reportType === 'student') renderStudentReport();
     else if (reportType === 'class') renderClassReport();
+    else if (reportType === 'progress') renderProgressReport();
     else if (reportType === 'grading' && hasFeature('weighted_grading')) renderGradingReport();
     else if (reportType === 'monitoring' && hasFeature('monitoring_report')) renderMonitoringReport();
     else renderCompareReport();
@@ -740,6 +742,192 @@ async function renderCompareReport() {
         </div>
     </div>`;
 }
+
+// ============================================================
+// PROGRESS REPORT GENERATION
+// ============================================================
+async function renderProgressReport() {
+    const cl = await API.get('classes');
+
+    document.getElementById('reportContent').innerHTML = `
+    <div class="fade-in">
+        <div class="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-5 md:p-8 mb-8 md:mb-10 no-print">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-end">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">اختيار الفصل</label>
+                    <select id="reportClass" onchange="updateReportStudents()" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl md:rounded-[1.5rem] focus:bg-white focus:border-green-500 focus:outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer text-sm">
+                        <option value="">-- اضغط للاختيار --</option>
+                        ${(cl?.data || []).map(c => `<option value="${c.id}">${esc(c.full_name || c.name)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">اختيار الطالب</label>
+                    <select id="reportStudent" class="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-50 rounded-2xl md:rounded-[1.5rem] focus:bg-white focus:border-green-500 focus:outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer text-sm">
+                        <option value="">-- اختر الفصل أولاً --</option>
+                    </select>
+                </div>
+                <div class="pt-1 flex gap-2">
+                    <button onclick="generateProgressReport()" class="w-full bg-green-600 text-white px-2 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-green-700 transition shadow-lg shadow-green-100 flex items-center justify-center gap-2 active:scale-95 text-xs md:text-sm">
+                        <span class="text-lg">📊</span> استخراج
+                    </button>
+                    <button onclick="window.print()" class="w-1/3 bg-gray-900 text-white px-2 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-black transition shadow-lg shadow-gray-200 flex items-center justify-center gap-2 active:scale-95 text-xs md:text-sm">
+                        <span class="text-lg">🖨️</span>
+                    </button>
+                    <button onclick="sendReportEmail('reportOutput', 'تقرير التطور التاريخي')" class="w-1/3 bg-emerald-600 text-white px-2 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-emerald-700 transition shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 active:scale-95 text-xs md:text-sm">
+                        <span class="text-lg">📧</span>
+                    </button>
+                    <button onclick="downloadReportPDF('reportOutput', 'تقرير التطور التاريخي')" class="w-1/3 bg-teal-600 text-white px-2 py-3.5 rounded-2xl md:rounded-[1.5rem] font-black hover:bg-teal-700 transition shadow-lg shadow-teal-200 flex items-center justify-center gap-2 active:scale-95 text-xs md:text-sm">
+                        <span class="text-lg">💾</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="reportOutput">
+            <div class="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-gray-100">
+                <div class="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 grayscale opacity-30">📈</div>
+                <p class="text-gray-400 font-black text-xl">يرجى اختيار الطالب لاستخراج التقرير</p>
+                <p class="text-gray-300 text-sm mt-1">يستعرض هذا التقرير مسار الأداء المستمر عبر الشهور والسنوات</p>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function generateProgressReport() {
+    const sid = document.getElementById('reportStudent').value;
+    if (!sid) {
+        showToast('اختر طالب', 'error');
+        return;
+    }
+
+    const ro = document.getElementById('reportOutput');
+    ro.innerHTML = showLoading();
+
+    const r = await API.get('student_profile', { student_id: sid });
+    if (!r || !r.success) {
+        ro.innerHTML = '<p class="text-red-500 text-center py-8">خطأ في تحميل التقرير</p>';
+        return;
+    }
+
+    renderProgressReportHTML(r.data, ro);
+}
+
+function renderProgressReportHTML(d, container) {
+    window._lastReportData = d;
+    window._lastReportType = 'progress_report';
+
+    const s = d.student;
+    const hMeas = d.measurements || [];
+    const hFit = d.fitnessHistory || [];
+
+    let timeline = [];
+    hMeas.forEach(m => timeline.push({
+        date: m.measurement_date, type: 'measurement', icon: '📏', title: 'قياسات جسمية', desc: `الوزن: ${m.weight_kg || '-'} كجم | الطول: ${m.height_cm || '-'} سم | BMI: ${m.bmi || '-'}`
+    }));
+    hFit.forEach(f => {
+        if (f.value !== null || f.score !== null) {
+            timeline.push({
+                date: f.test_date, type: 'fitness', icon: '💪', title: `اختبار لياقة: ${f.test_name}`, desc: `النتيجة: ${f.value || '-'} ${f.unit || ''} | الدرجة المسجلة: ${f.score || 0} من ${f.max_score || 0}`
+            });
+        }
+    });
+
+    timeline.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    let tableRows = '';
+    if (timeline.length === 0) {
+        tableRows = `<tr><td colspan="4" class="p-12 text-center text-gray-400 font-bold italic border-b border-gray-100 rounded-xl">لا توجد سجلات أداء مسجلة في هذا النطاق</td></tr>`;
+    } else {
+        timeline.reverse(); 
+        let lastMeas = null;
+        let lastFitness = {}; 
+        
+        timeline.forEach(item => {
+            let changeHtml = '<span class="text-gray-300 font-mono">-</span>';
+            if (item.type === 'measurement') {
+                const currentWeight = parseFloat((item.desc.match(/الوزن:\s([0-9.]+)/) || [])[1] || 0);
+                if (lastMeas && currentWeight && lastMeas.weight) {
+                    const diff = (currentWeight - lastMeas.weight).toFixed(1);
+                    if (diff > 0) changeHtml = `<span class="bg-red-50 text-red-600 px-2 py-0.5 rounded text-[10px] font-black" dir="ltr">⬆ +${diff} kg</span>`;
+                    else if (diff < 0) changeHtml = `<span class="bg-green-50 text-green-600 px-2 py-0.5 rounded text-[10px] font-black" dir="ltr">⬇ ${diff} kg</span>`;
+                    else changeHtml = `<span class="bg-gray-50 text-gray-400 px-2 py-0.5 rounded text-[10px] font-black">↔ ثابت</span>`;
+                }
+                if(currentWeight > 0) lastMeas = { weight: currentWeight };
+            } else if (item.type === 'fitness') {
+                const testName = item.title;
+                const match = item.desc.match(/النتيجة:\s*([0-9.]+)/);
+                if (match) {
+                    const currentVal = parseFloat(match[1]);
+                    if (lastFitness[testName] !== undefined) {
+                        const diff = (currentVal - lastFitness[testName]).toFixed(1);
+                        changeHtml = `<span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-black" dir="ltr">${diff > 0 ? '⬆ +'+diff : (diff < 0 ? '⬇ '+diff : '↔ ثابت')}</span>`;
+                    }
+                    lastFitness[testName] = currentVal;
+                }
+            }
+            item.changeHtml = changeHtml;
+        });
+        timeline.reverse();
+
+        timeline.forEach((item, i) => {
+            tableRows += `
+            <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'} border-b border-gray-100 text-xs">
+                <td class="px-4 py-3 font-black text-gray-600 whitespace-nowrap">${item.date}</td>
+                <td class="px-4 py-3"><span class="font-black text-gray-800">${item.icon} ${item.title}</span></td>
+                <td class="px-4 py-3 text-gray-600 font-bold leading-relaxed">${item.desc}</td>
+                <td class="px-4 py-3 text-center">${item.changeHtml}</td>
+            </tr>`;
+        });
+    }
+
+    container.innerHTML = `
+    <div id="printableProgressReport" class="bg-white rounded-[2rem] border-2 border-gray-100 p-8 md:p-12 fade-in relative overflow-hidden print-page" style="min-height: 297mm;">
+        <!-- Background elements for style -->
+        <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-green-50 to-emerald-50 rounded-full -mr-[150px] -mt-[150px] opacity-70 border-[20px] border-white/50"></div>
+        <div class="relative z-10 w-full text-black">
+            ${getReportHeaderHTML('التقرير التراكمي: مسار وتطور اللياقة والنمو')}
+
+            <div class="flex items-center gap-6 mb-8 pb-8 border-b-2 border-gray-100/60 print:break-inside-avoid">
+                <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-600 rounded-full flex items-center justify-center text-3xl text-white shadow-md overflow-hidden shrink-0 border-4 border-white ring-4 ring-green-50">
+                    ${s.photo_url ? `<img src="${s.photo_url}" class="w-full h-full object-cover">` : '👤'}
+                </div>
+                <div>
+                    <h3 class="text-3xl font-black text-gray-800">${esc(s.name)}</h3>
+                    <p class="text-sm text-green-600 font-black mt-1 bg-green-50 px-3 py-1 rounded-full inline-block border border-green-100">${esc(s.full_class_name)} | ${esc(s.student_number)}</p>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h4 class="font-black text-gray-800 mb-4 bg-gray-50/80 p-3 rounded-2xl border-2 border-gray-200 inline-flex items-center gap-2 pr-4 shadow-sm w-full"><span class="text-xl">📋</span> مقياس تطور الإنجاز والجسم</h4>
+                <div class="rounded-2xl overflow-hidden border-2 border-gray-100 shadow-sm mt-2">
+                    <table class="w-full text-right bg-white" style="border-collapse: collapse;">
+                        <thead>
+                            <tr class="bg-gray-100/60 border-b-2 border-gray-200">
+                                <th class="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest w-28 border-r border-gray-100">التاريخ</th>
+                                <th class="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-100">نوع الإنجاز أو القياس</th>
+                                <th class="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-100">تفاصيل وسجلات النتائج الدقيقة</th>
+                                <th class="px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest text-center w-28">الفرق / المؤشر</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="mt-8 bg-gradient-to-l from-emerald-50/50 to-green-50/50 rounded-2xl border border-emerald-100/50 p-6 flex flex-col md:flex-row items-center justify-between text-sm text-emerald-800 font-bold print-avoid-break shadow-sm gap-4 text-center md:text-right">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl block bg-white p-2 rounded-xl shadow-sm">🚀</span> 
+                    <div class="leading-relaxed font-black">يظهر هذا التقرير التتبع التحليلي التراكمي للطالب منذ أول اختبار وقياس له. <br><span class="opacity-70 text-xs mt-1 block font-bold">كل تقدم إيجابي يمثل تفاعل حيوي وصحي مع أنشطة المدرسة.</span></div>
+                </div>
+            </div>
+
+            <div class="mt-12 pt-6 border-t-2 border-gray-100 flex justify-between items-center text-[10px] text-gray-300 font-black print-avoid-break tracking-widest uppercase">
+                <div>نظام تتبع الأداء الرياضي</div>
+                <div>تاريخ وموعد الطباعة: ${new Date().toLocaleDateString('ar-SA')}</div>
+            </div>
+        </div>
+    </div>`;
+}
+
 
 // ============================================================
 // PDF GENERATION AND EMAIL DELIVERY

@@ -131,6 +131,9 @@ function _buildPdfHtmlByReportType($type, $data, $schoolName, $logoUrl) {
         case 'grading':
             $content = _buildGradingReport($data, $schoolName, $logoUrl);
             break;
+        case 'progress_report':
+            $content = _buildProgressReport($data, $schoolName, $logoUrl);
+            break;
         default:
             $content = '<h1>نوع التقرير غير مدعوم حالياً</h1>';
     }
@@ -381,5 +384,107 @@ function _buildGradingReport($data, $schoolName, $logoUrl) {
         $html .= '</tr>';
     }
     $html .= '</tbody></table>';
+    return $html;
+}
+
+/** 6. Progress Report */
+function _buildProgressReport($data, $schoolName, $logoUrl) {
+    $student = $data['student'] ?? [];
+    $hMeas = $data['measurements'] ?? [];
+    $hFit = $data['fitnessHistory'] ?? [];
+    
+    $html = _pdfHeaderHtml($schoolName, $logoUrl);
+    $html .= '<div class="report-title">التقرير التراكمي: مسار وتطور اللياقة والنمو</div>';
+    
+    $html .= '<div class="info-box">';
+    $html .= '<table class="info-grid"><tr>';
+    $html .= '<td><strong>اسم الطالب:</strong> ' . htmlspecialchars($student['name'] ?? '-') . '</td>';
+    $html .= '<td><strong>الصف/الفصل:</strong> ' . htmlspecialchars($student['full_class_name'] ?? '-') . '</td>';
+    $html .= '</tr><tr>';
+    $html .= '<td><strong>الرقم الأكاديمي:</strong> ' . htmlspecialchars($student['student_number'] ?? '-') . '</td>';
+    $html .= '<td><strong>العمر:</strong> ' . htmlspecialchars($student['age'] ?? '-') . ' سنة</td>';
+    $html .= '</tr></table>';
+    $html .= '</div>';
+    
+    $timeline = [];
+    foreach ($hMeas as $m) {
+        $timeline[] = [
+            'date' => $m['measurement_date'],
+            'type' => 'measurement',
+            'title' => 'قياسات جسمية',
+            'desc' => 'الوزن: ' . ($m['weight_kg'] ?? '-') . ' كجم | الطول: ' . ($m['height_cm'] ?? '-') . ' سم | BMI: ' . ($m['bmi'] ?? '-')
+        ];
+    }
+    foreach ($hFit as $f) {
+        if ($f['value'] !== null || $f['score'] !== null) {
+            $timeline[] = [
+                'date' => $f['test_date'],
+                'type' => 'fitness',
+                'title' => 'اختبار لياقة: ' . $f['test_name'],
+                'desc' => 'النتيجة: ' . ($f['value'] ?? '-') . ' ' . ($f['unit'] ?? '') . ' | الدرجة: ' . ($f['score'] ?? 0) . ' من ' . ($f['max_score'] ?? 0)
+            ];
+        }
+    }
+    
+    usort($timeline, function($a, $b) {
+        return strtotime($a['date']) - strtotime($b['date']);
+    });
+    
+    $html .= '<table class="data-table">';
+    $html .= '<thead><tr><th width="15%">التاريخ</th><th width="25%">نوع الإجراء</th><th width="45%">النتائج والتفاصيل</th><th width="15%">المؤشر</th></tr></thead>';
+    $html .= '<tbody>';
+    
+    if (empty($timeline)) {
+        $html .= '<tr><td colspan="4" style="text-align:center;">لا توجد سجلات أداء مسجلة</td></tr>';
+    } else {
+        $lastMeasWeight = 0;
+        $lastFitness = [];
+        
+        foreach ($timeline as $i => $item) {
+            $changeHtml = '-';
+            if ($item['type'] === 'measurement') {
+                preg_match('/الوزن:\s([0-9.]+)/', $item['desc'], $matches);
+                $currentWeight = floatval($matches[1] ?? 0);
+                if ($lastMeasWeight > 0 && $currentWeight > 0) {
+                    $diff = round($currentWeight - $lastMeasWeight, 1);
+                    if ($diff > 0) $changeHtml = '<span style="color:#d97706; font-size:10px;" dir="ltr">⬆ +'.$diff.'</span>';
+                    elseif ($diff < 0) $changeHtml = '<span style="color:#10b981; font-size:10px;" dir="ltr">⬇ '.$diff.'</span>';
+                    else $changeHtml = '<span style="font-size:10px;">ثابت</span>';
+                }
+                if ($currentWeight > 0) $lastMeasWeight = $currentWeight;
+            } else if ($item['type'] === 'fitness') {
+                $testName = $item['title'];
+                preg_match('/النتيجة:\s*([0-9.]+)/', $item['desc'], $matches);
+                if (!empty($matches[1])) {
+                    $currentVal = floatval($matches[1]);
+                    if (isset($lastFitness[$testName])) {
+                        $diff = round($currentVal - $lastFitness[$testName], 1);
+                        if ($diff > 0) $changeHtml = '<span style="color:#2563eb; font-size:10px;" dir="ltr">⬆ +'.$diff.'</span>';
+                        elseif ($diff < 0) $changeHtml = '<span style="color:#ea580c; font-size:10px;" dir="ltr">⬇ '.$diff.'</span>';
+                        else $changeHtml = '<span style="font-size:10px;">ثابت</span>';
+                    }
+                    $lastFitness[$testName] = $currentVal;
+                }
+            }
+            $timeline[$i]['changeHtml'] = $changeHtml;
+        }
+        
+        $timeline = array_reverse($timeline);
+        foreach ($timeline as $item) {
+            $html .= '<tr>';
+            $html .= '<td>' . htmlspecialchars($item['date']) . '</td>';
+            $html .= '<td style="text-align:right;"><strong>' . htmlspecialchars($item['title']) . '</strong></td>';
+            $html .= '<td style="text-align:right;">' . htmlspecialchars($item['desc']) . '</td>';
+            $html .= '<td style="text-align:center;">' . $item['changeHtml'] . '</td>';
+            $html .= '</tr>';
+        }
+    }
+    
+    $html .= '</tbody></table>';
+    
+    $html .= '<div style="margin-top:20px; font-size:12px; color:#4b5563; text-align:center; background:#f3f4f6; padding:10px; border-radius:10px; border: 1px dashed #d1d5db;">';
+    $html .= '<strong>ملاحظة هامة:</strong> هذا التقرير التراكمي يعكس أداء الطالب منذ أول تسجيل له وحتى آخر قياس. المتابعة المستمرة تعزز لياقة وصحة الطالب وتحفزه نحو تحقيق إنجازات أفضل.';
+    $html .= '</div>';
+    
     return $html;
 }

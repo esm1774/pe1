@@ -199,3 +199,33 @@
 [2026-03-26 04:29:21] HTML Build Success. Length: 5096
 [2026-03-26 04:29:21] mPDF Write Success.
 [2026-03-26 04:29:21] PDF Output Success.
+[2026-03-26 04:39:02] --- NEW REQUEST ---
+[2026-03-26 04:39:02] Request URI: /pe1/api/generate_pdf.php?_t=1774496342164
+[2026-03-26 04:39:02] Remote IP: ::1
+[2026-03-26 04:39:02] JSON Payload length: 5156
+[2026-03-26 04:39:02] Auth Success. User: مدير المدرسة
+[2026-03-26 04:39:02] Request Decoded. Type: student
+[2026-03-26 04:39:02] Session School ID: 1
+[2026-03-26 04:39:02] HTML Build Success. Length: 4878
+[2026-03-26 04:39:02] mPDF Write Success.
+[2026-03-26 04:39:02] PDF Output Success.
+[2026-03-26 04:40:49] --- NEW REQUEST ---
+[2026-03-26 04:40:49] Request URI: /pe1/api/generate_pdf.php?_t=1774496449514
+[2026-03-26 04:40:49] Remote IP: ::1
+[2026-03-26 04:40:49] JSON Payload length: 5156
+[2026-03-26 04:40:49] Auth Success. User: مدير المدرسة
+[2026-03-26 04:40:49] Request Decoded. Type: student
+[2026-03-26 04:40:49] Session School ID: 1
+[2026-03-26 04:40:49] HTML Build Success. Length: 4878
+[2026-03-26 04:40:49] mPDF Write Success.
+[2026-03-26 04:40:49] PDF Output Success.
+[2026-03-26 04:45:05] --- NEW REQUEST ---
+[2026-03-26 04:45:05] Request URI: /pe1/api/generate_pdf.php?_t=1774496705322
+[2026-03-26 04:45:05] Remote IP: ::1
+[2026-03-26 04:45:05] JSON Payload length: 4658
+[2026-03-26 04:45:05] Auth Success. User: مدير المدرسة
+[2026-03-26 04:45:05] Request Decoded. Type: progress_report
+[2026-03-26 04:45:05] Session School ID: 1
+[2026-03-26 04:45:05] HTML Build Success. Length: 5092
+[2026-03-26 04:45:05] mPDF Write Success.
+[2026-03-26 04:45:05] PDF Output Success.
