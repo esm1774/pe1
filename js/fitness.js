@@ -3,7 +3,20 @@
  */
 
 let fitnessTab = 'tests';
-let fitnessFilter = { class_id: '', test_id: '' };
+let fitnessFilter = { 
+    class_id: '', 
+    test_id: '', 
+    test_date: (function() {
+        try {
+            return new Date().toISOString().split('T')[0];
+        } catch(e) {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+    })()
+};
+
+console.log('Fitness Module Loaded. Current Date:', fitnessFilter.test_date);
 
 async function renderFitness() {
     if (typeof hasFeature === 'function' && !hasFeature('fitness_tests')) {
@@ -263,7 +276,7 @@ function addCriteriaRow() {
 async function saveCriteria(testId) {
     const rows = document.querySelectorAll('#criteriaList > div');
     const criteria = [];
-    rows.forEach(row => {
+rows.forEach(row => {
         const min = row.querySelector('.c-min').value;
         const max = row.querySelector('.c-max').value;
         const score = row.querySelector('.c-score').value;
@@ -290,53 +303,68 @@ async function renderFitnessEntry() {
     window._fitnessTests = tests;
 
     document.getElementById('fitnessContent').innerHTML = `
-    <div class="fade-in">
-        <div class="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-6 md:p-10 mb-10 overflow-hidden relative">
-            <!-- Decorative Accent -->
-            <div class="absolute top-0 left-0 w-2 h-full bg-emerald-500"></div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10 items-end">
+    <div class="fade-in space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-3xl font-black text-gray-800 tracking-tight flex items-center gap-3">
+                    💪 اختبارات الأداء البدني <span class="bg-blue-100 text-blue-600 text-[10px] px-2 py-1 rounded-lg border border-blue-200">v3.2.6-FINAL-DEBUG</span>
+                </h2>
+                <p class="text-gray-400 font-bold mt-1">إدارة الاختبارات الميدانية وتسجيل النتائج الرسمية</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 md:p-10 rounded-[2.5rem] shadow-sm border border-gray-100">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 items-end">
+                <!-- 1. DATE (BLUE THEME) -->
+                <div class="space-y-3">
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">📅 تاريخ الجلسة</label>
+                    <input type="date" id="fitDate" value="${fitnessFilter.test_date}" onchange="fitnessFilter.test_date=this.value;loadFitnessEntry()" 
+                        class="w-full px-6 py-4 md:py-5 bg-blue-50 border-2 border-blue-200 rounded-2xl md:rounded-[1.8rem] focus:bg-white focus:border-blue-500 focus:outline-none transition-all font-black text-gray-700 shadow-inner">
+                </div>
+
+                <!-- 2. CLASS -->
                 <div class="space-y-3">
                     <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">اختيار الفصل التعليمي</label>
                     <div class="relative group">
-                        <select id="fitClass" onchange="fitnessFilter.class_id=this.value;loadFitnessEntry()" class="w-full px-6 md:px-8 py-4 md:py-5 bg-gray-50 border-2 border-transparent rounded-2xl md:rounded-[1.8rem] focus:bg-white focus:border-emerald-500 focus:outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer shadow-inner">
+                        <select id="fitClass" onchange="fitnessFilter.class_id=this.value;loadFitnessEntry()" class="w-full px-6 py-4 md:py-5 bg-gray-50 border-2 border-transparent rounded-2xl md:rounded-[1.8rem] focus:bg-white focus:border-emerald-500 focus:outline-none appearance-none transition-all font-black text-gray-700 shadow-inner">
                             <option value="">-- اضغط للاختيار --</option>
                             ${classes.map(c => `<option value="${c.id}" ${fitnessFilter.class_id == c.id ? 'selected' : ''}>${esc(c.full_name || c.name)}</option>`).join('')}
                         </select>
-                        <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-400 group-hover:text-emerald-500 transition">
-                            <span class="text-xl">🏫</span>
-                        </div>
+                        <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-400">▾</div>
                     </div>
                 </div>
+
+                <!-- 3. TEST -->
                 <div class="space-y-3">
                     <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">نوع الاختبار البدني</label>
                     <div class="relative group">
-                        <select id="fitTest" onchange="fitnessFilter.test_id=this.value;loadFitnessEntry()" class="w-full px-6 md:px-8 py-4 md:py-5 bg-gray-50 border-2 border-transparent rounded-2xl md:rounded-[1.8rem] focus:bg-white focus:border-emerald-500 focus:outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer shadow-inner">
+                        <select id="fitTest" onchange="fitnessFilter.test_id=this.value;loadFitnessEntry()" class="w-full px-6 py-4 md:py-5 bg-gray-50 border-2 border-transparent rounded-2xl md:rounded-[1.8rem] focus:bg-white focus:border-emerald-500 focus:outline-none appearance-none transition-all font-black text-gray-700 shadow-inner">
                             <option value="">-- اضغط للاختيار --</option>
                             ${tests.map(t => `<option value="${t.id}" ${fitnessFilter.test_id == t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}
                         </select>
-                        <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-400 group-hover:text-emerald-500 transition">
-                            <span class="text-xl">📐</span>
-                        </div>
+                        <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-400">▾</div>
                     </div>
                 </div>
+
+                <!-- 4. SAVE BUTTON -->
                 ${canEdit() ? `
                 <div class="pt-2">
-                    <button onclick="saveFitnessResults()" class="w-full bg-emerald-600 text-white px-8 py-4 md:py-5 rounded-2xl md:rounded-[1.8rem] font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-100 flex items-center justify-center gap-4 active:scale-95 group text-sm md:text-base">
+                    <button onclick="saveFitnessResults(event)" class="w-full bg-emerald-600 text-white px-8 py-4 md:py-5 rounded-2xl md:rounded-[1.8rem] font-black hover:bg-emerald-700 transition shadow-xl shadow-emerald-100 flex items-center justify-center gap-4 active:scale-95 group text-sm md:text-base">
                         <span class="text-2xl group-hover:rotate-12 transition transform">💾</span> 
-                        <span>حفظ بيانات الرصد</span>
+                        <span>حفظ بيانات الجلسة</span>
                     </button>
                 </div>` : ''}
             </div>
         </div>
         
+        <div id="fitnessSessionBar" class="mb-6"></div>
         <div id="fitnessEntryList">
             <div class="text-center py-32 bg-white rounded-[3.5rem] border-2 border-dashed border-gray-100 overflow-hidden relative">
                 <div class="absolute -right-20 -top-20 w-64 h-64 bg-gray-50 rounded-full opacity-50 blur-3xl"></div>
                 <div class="relative z-10">
-                    <div class="w-32 h-32 bg-gray-50 rounded-3xl flex items-center justify-center text-6xl mx-auto mb-8 grayscale opacity-20 transform -rotate-12 group-hover:rotate-0 transition">📝</div>
+                    <div class="w-32 h-32 bg-gray-50 rounded-3xl flex items-center justify-center text-6xl mx-auto mb-8 grayscale opacity-20 transform -rotate-12">📝</div>
                     <p class="text-gray-400 font-black text-2xl">بانتظار تحديد نطاق الرصد</p>
-                    <p class="text-gray-300 font-bold mt-2">اختر الفصل ونوع الاختبار للبدء في إدخال النتائج الرسمية</p>
+                    <p class="text-gray-300 font-bold mt-2">اختر الفصل ونوع الاختبار والتاريخ للبدء</p>
                 </div>
             </div>
         </div>
@@ -348,22 +376,26 @@ async function renderFitnessEntry() {
 async function loadFitnessEntry() {
     if (!fitnessFilter.class_id || !fitnessFilter.test_id) return;
 
-    const r = await API.get('fitness_results', { class_id: fitnessFilter.class_id, test_id: fitnessFilter.test_id });
-    const cr = await API.get('fitness_criteria', { test_id: fitnessFilter.test_id });
+    // Load session dates & student results in parallel
+    const [r, cr, sd] = await Promise.all([
+        API.get('fitness_results', { class_id: fitnessFilter.class_id, test_id: fitnessFilter.test_id, test_date: fitnessFilter.test_date }),
+        API.get('fitness_criteria', { test_id: fitnessFilter.test_id }),
+        API.get('fitness_session_dates', { test_id: fitnessFilter.test_id, class_id: fitnessFilter.class_id })
+    ]);
 
     if (!r || !r.success) return;
 
     const students = r.data;
     const test = (window._fitnessTests || []).find(t => t.id == fitnessFilter.test_id);
     const criteria = cr?.data || [];
+    const sessionDates = sd?.data || [];
 
-    // Helper to calculate score
+    // Auto-score helper
     window.autoCalcScore = (input) => {
         const val = parseFloat(input.value);
         if (isNaN(val)) return;
         const row = input.closest('.fit-row');
         const scoreInput = row.querySelector('.fit-score');
-
         const match = criteria.find(c => val >= parseFloat(c.min_value) && val <= parseFloat(c.max_value));
         if (match) {
             scoreInput.value = match.score;
@@ -372,22 +404,52 @@ async function loadFitnessEntry() {
         }
     };
 
-    // Fix #7: Guard against undefined test (find() may return undefined if test_id doesn't match)
     if (!test) {
         document.getElementById('fitnessEntryList').innerHTML =
             `<div class="p-10 text-center text-red-500 font-bold">لم يتم العثور على بيانات الاختبار المحدد</div>`;
         return;
     }
 
+    // ---- Render Session History Bar ----
+    const sessionBarEl = document.getElementById('fitnessSessionBar');
+    if (sessionBarEl) {
+        if (sessionDates.length > 0) {
+            sessionBarEl.innerHTML = `
+            <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-5 mb-2">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-xs font-black text-gray-400 uppercase tracking-widest">📅 جلسات الرصد السابقة</p>
+                        <p class="text-[10px] text-gray-300 font-bold mt-0.5">اضغط على تاريخ لتحميل بياناته</p>
+                    </div>
+                    <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-black rounded-full">${sessionDates.length} جلسة</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    ${sessionDates.map(s => `
+                    <div class="flex items-center gap-1 group">
+                        <button onclick="fitnessFilter.test_date='${s.test_date}';document.getElementById('fitDate').value='${s.test_date}';loadFitnessEntry()" 
+                            class="px-4 py-2 rounded-xl text-xs font-black transition-all ${ s.test_date === fitnessFilter.test_date ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100' : 'bg-gray-50 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-100'} flex items-center gap-2">
+                            📅 ${s.test_date}
+                            <span class="px-1.5 py-0.5 bg-white/20 rounded-full text-[9px]">${s.student_count} طالب</span>
+                        </button>
+                        ${canEdit() ? `<button onclick="confirmDeleteSession('${s.test_date}', event)" class="w-6 h-6 flex items-center justify-center bg-red-50 text-red-400 rounded-lg opacity-0 group-hover:opacity-100 transition hover:bg-red-500 hover:text-white text-xs">✕</button>` : ''}
+                    </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        } else {
+            sessionBarEl.innerHTML = '';
+        }
+    }
+
+    // ---- Render Entry Table ----
     document.getElementById('fitnessEntryList').innerHTML = `
     <div class="fade-in">
-        <!-- Dashboard Header Info -->
         <div class="bg-green-900 rounded-[2.5rem] p-8 md:p-10 mb-8 text-white relative overflow-hidden shadow-2xl">
             <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
             <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
                 <div>
                     <h5 class="text-2xl font-black mb-2">${esc(test.name)}</h5>
-                    <p class="text-green-200 font-bold opacity-80">رصد مخرجات الطلاب بـ (${esc(test.unit)}) - الدرجة من ${test.max_score}</p>
+                    <p class="text-green-200 font-bold opacity-80">رصد بـ (${esc(test.unit)}) — الدرجة من ${test.max_score} — تاريخ: <span class="bg-white/10 px-2 py-0.5 rounded-lg">${fitnessFilter.test_date}</span></p>
                     ${criteria.length > 0 ? '<span class="inline-block mt-3 px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-emerald-400">⚡ الرصد الآلي مفعل</span>' : ''}
                 </div>
                 <div class="flex items-center gap-6 text-center">
@@ -397,13 +459,13 @@ async function loadFitnessEntry() {
                     </div>
                     <div class="bg-emerald-500/20 px-6 py-3 rounded-2xl backdrop-blur-md border border-emerald-500/20">
                         <p class="text-3xl font-black text-emerald-400">${students.filter(s => s.value !== null).length}</p>
-                        <p class="text-[10px] uppercase font-black text-emerald-300">تم رصدهم</p>
+                        <p class="text-[10px] uppercase font-black text-emerald-300">تم رصدهم اليوم</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Desktop View -->
+        <!-- Desktop -->
         <div class="hidden lg:block bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden mb-12">
             <table class="w-full text-right border-collapse">
                 <thead>
@@ -411,8 +473,9 @@ async function loadFitnessEntry() {
                         <th class="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest w-16">#</th>
                         <th class="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">اسم الطالب</th>
                         <th class="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">الحالة الصحية</th>
-                        <th class="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">القيمة المكتسبة (${test ? esc(test.unit) : ''})</th>
-                        <th class="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">الدرجة النهائية</th>
+                        <th class="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">القيمة (${esc(test.unit)})</th>
+                        <th class="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">الدرجة</th>
+                        ${canEdit() ? '<th class="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">حذف</th>' : ''}
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
@@ -429,40 +492,43 @@ async function loadFitnessEntry() {
                         <td class="px-8 py-5 text-center">
                             <input type="number" step="0.1" oninput="autoCalcScore(this)" class="fit-value w-32 px-4 py-3 bg-gray-50 border-2 border-gray-50 rounded-xl text-center focus:bg-white focus:border-green-600 focus:outline-none transition-all font-black text-lg" value="${s.value || ''}" ${!canEdit() ? 'disabled' : ''} placeholder="0.0">
                         </td>
-                        <td class="px-8 py-5 text-center font-black">
-                            <input type="number" min="0" max="${test ? test.max_score : 10}" class="fit-score w-24 px-4 py-3 bg-gray-50 border-2 border-gray-50 rounded-xl text-center focus:bg-white focus:border-emerald-500 focus:outline-none transition-all font-black text-lg" value="${s.score || ''}" ${!canEdit() ? 'disabled' : ''} placeholder="0">
+                        <td class="px-8 py-5 text-center">
+                            <input type="number" min="0" max="${test.max_score}" class="fit-score w-24 px-4 py-3 bg-gray-50 border-2 border-gray-50 rounded-xl text-center focus:bg-white focus:border-emerald-500 focus:outline-none transition-all font-black text-lg" value="${s.score || ''}" ${!canEdit() ? 'disabled' : ''} placeholder="0">
                         </td>
+                        ${canEdit() ? `<td class="px-8 py-5 text-center">
+                            ${s.value !== null ? `<button onclick="deleteSingleResult(${s.student_id}, event)" class="w-9 h-9 flex items-center justify-center mx-auto bg-red-50 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition text-sm" title="حذف نتيجة هذا الطالب">🗑️</button>` : '<span class="text-gray-200">—</span>'}
+                        </td>` : ''}
                     </tr>
                     `).join('')}
                 </tbody>
             </table>
         </div>
 
-        <!-- Mobile/Tablet View -->
+        <!-- Mobile -->
         <div class="lg:hidden space-y-4 mb-20">
             ${students.map((s, i) => `
-            <div class="bg-white rounded-[2rem] p-5 md:p-6 border border-gray-100 shadow-xl shadow-gray-100/20 relative overflow-hidden fit-row ${s.health_notes ? 'ring-4 ring-red-50' : ''} transition-all duration-300 active:scale-95" data-student-id="${s.student_id}">
-                <div class="flex items-center justify-between mb-6">
+            <div class="bg-white rounded-[2rem] p-5 border border-gray-100 shadow-xl shadow-gray-100/20 relative overflow-hidden fit-row ${s.health_notes ? 'ring-4 ring-red-50' : ''}" data-student-id="${s.student_id}">
+                <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-gray-50 text-gray-400 font-black flex items-center justify-center text-sm shadow-inner">${i + 1}</div>
                         <div>
                             <h5 class="font-black text-gray-800 text-base leading-tight">${esc(s.name)}</h5>
-                            <p class="text-[9px] text-gray-400 font-black mt-0.5 tracking-tight">رقم القيد: ${s.student_number || 'N/A'}</p>
+                            <p class="text-[9px] text-gray-400 font-black mt-0.5">رقم القيد: ${s.student_number || 'N/A'}</p>
                         </div>
                     </div>
-                    ${s.health_notes ? `
-                        <div class="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center animate-pulse" title="${esc(s.health_notes)}">⚠️</div>
-                    ` : '<div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-sm">✅</div>'}
+                    <div class="flex items-center gap-2">
+                        ${s.health_notes ? `<div class="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center animate-pulse" title="${esc(s.health_notes)}">⚠️</div>` : '<div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-sm">✅</div>'}
+                        ${canEdit() && s.value !== null ? `<button onclick="deleteSingleResult(${s.student_id}, event)" class="w-9 h-9 flex items-center justify-center bg-red-50 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition text-sm">🗑️</button>` : ''}
+                    </div>
                 </div>
-                
-                <div class="grid grid-cols-2 gap-3 md:gap-4 bg-gray-50 p-1 rounded-3xl border border-gray-100 shadow-inner">
+                <div class="grid grid-cols-2 gap-3 bg-gray-50 p-1 rounded-3xl border border-gray-100 shadow-inner">
                     <div class="space-y-1.5 p-3">
-                        <label class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mr-1">القيمة (${test ? esc(test.unit) : ''})</label>
+                        <label class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mr-1">القيمة (${esc(test.unit)})</label>
                         <input type="number" step="0.1" oninput="autoCalcScore(this)" class="fit-value w-full px-2 py-3 bg-white border-2 border-transparent rounded-2xl text-center focus:border-emerald-500 focus:outline-none transition-all font-black text-lg shadow-sm" value="${s.value || ''}" ${!canEdit() ? 'disabled' : ''} placeholder="0.0">
                     </div>
                     <div class="space-y-1.5 p-3">
                         <label class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mr-1">الدرجة</label>
-                        <input type="number" min="0" max="${test ? test.max_score : 10}" class="fit-score w-full px-2 py-3 bg-white border-2 border-transparent rounded-2xl text-center focus:border-emerald-500 focus:outline-none transition-all font-black text-lg shadow-sm" value="${s.score || ''}" ${!canEdit() ? 'disabled' : ''} placeholder="0">
+                        <input type="number" min="0" max="${test.max_score}" class="fit-score w-full px-2 py-3 bg-white border-2 border-transparent rounded-2xl text-center focus:border-emerald-500 focus:outline-none transition-all font-black text-lg shadow-sm" value="${s.score || ''}" ${!canEdit() ? 'disabled' : ''} placeholder="0">
                     </div>
                 </div>
             </div>
@@ -471,22 +537,66 @@ async function loadFitnessEntry() {
     </div>`;
 }
 
+// حذف نتيجة طالب واحد في التاريخ الحالي
+window.deleteSingleResult = async (studentId) => {
+    if (!confirm('هل تريد حذف نتيجة هذا الطالب في هذه الجلسة؟')) return;
+    const r = await API.post('fitness_result_delete', {
+        student_id: studentId,
+        test_id: fitnessFilter.test_id,
+        test_date: fitnessFilter.test_date
+    });
+    if (r && r.success) { showToast(r.message); loadFitnessEntry(); }
+    else showToast(r?.error || 'خطأ', 'error');
+};
+
+// حذف جلسة كاملة
+window.confirmDeleteSession = async (testDate) => {
+    if (!confirm(`هل تريد حذف جلسة ${testDate} بالكامل؟ سيتم حذف نتائج جميع الطلاب في هذا التاريخ.`)) return;
+    const r = await API.post('fitness_session_delete', {
+        test_id: fitnessFilter.test_id,
+        class_id: fitnessFilter.class_id,
+        test_date: testDate
+    });
+    if (r && r.success) {
+        showToast(r.message);
+        if (fitnessFilter.test_date === testDate) {
+            fitnessFilter.test_date = new Date().toISOString().split('T')[0];
+            document.getElementById('fitDate').value = fitnessFilter.test_date;
+        }
+        loadFitnessEntry();
+    } else showToast(r?.error || 'خطأ', 'error');
+};
+
 async function saveFitnessResults() {
     const rows = document.querySelectorAll('.fit-row');
-    const records = [];
+    const recordsMap = {};
 
     rows.forEach(row => {
         const sid = row.dataset.studentId;
         const v = row.querySelector('.fit-value').value;
         const sc = row.querySelector('.fit-score').value;
-        if (v !== '' && sc !== '') {
-            records.push({ student_id: sid, value: parseFloat(v), score: parseInt(sc) });
+        
+        // Only overwrite if current map entry is empty OR new value is not empty
+        if (!recordsMap[sid] || v !== '') {
+            recordsMap[sid] = {
+                student_id: sid,
+                value: v !== '' ? parseFloat(v) : '',
+                score: sc !== '' ? parseInt(sc) : ''
+            };
         }
     });
 
-    const r = await API.post('fitness_results_save', { test_id: fitnessFilter.test_id, records });
+    const records = Object.values(recordsMap);
+
+    const r = await API.post('fitness_results_save', {
+        test_id: fitnessFilter.test_id,
+        class_id: fitnessFilter.class_id,
+        test_date: fitnessFilter.test_date,
+        records
+    });
     if (r && r.success) {
         showToast(r.message);
+        loadFitnessEntry(); // reload to refresh session bar
     } else if (r) {
         showToast(r.error, 'error');
     }

@@ -378,7 +378,12 @@ async function renderProfileTab(sid) {
                         <span class="px-3 py-1 bg-white text-[10px] font-black uppercase severity-${c.severity} rounded-full border border-red-100">${SEVERITY_AR[c.severity]}</span>
                     </div>
                     ${c.notes ? `<div class="bg-white/40 rounded-2xl p-4 text-sm text-red-800 leading-relaxed italic border border-red-50/50">"${esc(c.notes)}"</div>` : ''}
-                    ${canEdit() ? `<button onclick="deleteHealth(${c.id},${sid})" class="absolute top-4 left-4 text-red-200 hover:text-red-600 transition cursor-pointer">🗑️</button>` : ''}
+                    ${canEdit() ? `
+                    <div class="absolute top-4 left-4 flex gap-2">
+                        <button onclick='showHealthForm(${sid}, ${JSON.stringify(c).replace(/'/g, "&apos;")})' class="text-gray-300 hover:text-blue-500 transition cursor-pointer" title="تعديل">✏️</button>
+                        <button onclick="deleteHealth(${c.id},${sid})" class="text-red-200 hover:text-red-600 transition cursor-pointer" title="حذف">🗑️</button>
+                    </div>
+                    ` : ''}
                 </div>
                 `).join('')}
             </div>
@@ -388,6 +393,31 @@ async function renderProfileTab(sid) {
                 <p class="text-green-800 font-black text-lg">لا توجد قياسات صحية مسجلة</p>
                 <p class="text-green-600 text-sm mt-1">الطالب مؤهل بدنياً لجميع الأنشطة</p>
             </div>`}
+
+            ${inactive.length > 0 ? `
+            <div class="mt-12">
+                <h5 class="font-black text-gray-400 uppercase tracking-widest text-xs mb-4">📜 سجل الحالات السابقة (تم التحسن)</h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${inactive.map(c => `
+                    <div class="bg-gray-50 rounded-[1.5rem] p-5 border border-gray-100 flex items-center justify-between group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl grayscale opacity-50">${CONDITION_TYPES[c.condition_type]?.split(' ')[0] || '⚠️'}</div>
+                            <div>
+                                <p class="font-bold text-gray-500 line-through decoration-gray-300">${esc(c.condition_name)}</p>
+                                <p class="text-[9px] text-gray-400 font-black uppercase">تم التعافي 🎉</p>
+                            </div>
+                        </div>
+                         ${canEdit() ? `
+                        <div class="flex gap-2">
+                            <button onclick='showHealthForm(${sid}, ${JSON.stringify(c).replace(/'/g, "&apos;")})' class="text-gray-300 hover:text-blue-500 transition cursor-pointer" title="تعديل">✏️</button>
+                            <button onclick="deleteHealth(${c.id},${sid})" class="text-red-100 hover:text-red-400 transition cursor-pointer" title="حذف نهائي">🗑️</button>
+                        </div>
+                        ` : ''}
+                    </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
         </div>`;
     } else if (profileTab === 'pfitness' && hasFeature('fitness_tests')) {
         const fit = d.fitness || [];
@@ -395,35 +425,95 @@ async function renderProfileTab(sid) {
         <div class="fade-in">
             <div class="mb-6">
                 <h4 class="text-xl font-black text-gray-800">💪 سجل الأداء البدني</h4>
-                <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">نتائج الطالب في الاختبارات الرسمية</p>
+                <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">جميع جلسات الاختبارات الرسمية مرتبة زمنياً</p>
             </div>
 
-            <!-- Dashboard Style Stats -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4 md:gap-6 mb-8">
-                ${fit.map(f => `
-                <div class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm relative overflow-hidden group">
-                    <div class="absolute top-0 left-0 w-2 h-full ${f.score / f.max_score >= 0.8 ? 'bg-green-500' : f.score / f.max_score >= 0.5 ? 'bg-yellow-500' : 'bg-red-500'}"></div>
-                    <div class="flex justify-between items-center mb-4">
-                        <h5 class="font-black text-gray-800 text-lg">${esc(f.test_name)}</h5>
-                        <span class="px-3 py-1 bg-gray-50 rounded-full text-xs font-black text-gray-400">${f.test_date || '-'}</span>
-                    </div>
-                    <div class="flex items-end justify-between gap-4">
-                        <div>
-                            <p class="text-[10px] text-gray-400 font-black uppercase mb-1">النتيجة</p>
-                            <p class="text-2xl font-black text-gray-900">${f.value !== null ? f.value + ' <span class="text-sm">' + f.unit + '</span>' : '-'}</p>
+            <div class="space-y-6 mb-8">
+                ${fit.length === 0 ? `
+                <div class="text-center py-16 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
+                    <div class="text-5xl mb-4 opacity-20">💪</div>
+                    <p class="text-gray-400 font-black">لا توجد نتائج مسجلة بعد</p>
+                </div>` : fit.map(f => {
+                    const sessions = f.sessions || [];
+                    const hasSessions = sessions.length > 0;
+                    const bestScore = f.best_score || f.score;
+                    const bestValue = f.best_value || f.value;
+                    const scoreRatio = bestScore / f.max_score;
+                    const colorClass = scoreRatio >= 0.8 ? 'bg-green-500' : scoreRatio >= 0.5 ? 'bg-yellow-500' : 'bg-red-500';
+                    const textColorClass = scoreRatio >= 0.8 ? 'text-green-600' : scoreRatio >= 0.5 ? 'text-yellow-600' : 'text-red-600';
+
+                    return `
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <!-- Test Header -->
+                    <div class="p-6 relative">
+                        <div class="absolute top-0 left-0 w-2 h-full ${colorClass}"></div>
+                        <div class="flex justify-between items-start ml-2">
+                            <div>
+                                <h5 class="font-black text-gray-800 text-lg">${esc(f.test_name)}</h5>
+                                <div class="flex items-center gap-3 mt-2">
+                                    <span class="text-xs font-black text-gray-400 uppercase">${esc(f.unit)}</span>
+                                    ${sessions.length > 1 ? `<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">${sessions.length} جلسات</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="text-left">
+                                <p class="text-[10px] text-gray-400 font-black uppercase mb-1">أفضل درجة</p>
+                                <p class="text-2xl font-black ${textColorClass}">${bestScore !== null ? bestScore + '/' + f.max_score : '-'}</p>
+                            </div>
                         </div>
-                        <div class="text-left">
-                            <p class="text-[10px] text-gray-400 font-black uppercase mb-1">الدرجة المستحقة</p>
-                            <p class="text-2xl font-black ${f.score / f.max_score >= 0.8 ? 'text-green-600' : f.score / f.max_score >= 0.5 ? 'text-yellow-600' : 'text-red-600'}">${f.score !== null ? f.score + '/' + f.max_score : '-'}</p>
+                        <!-- Best progress bar -->
+                        <div class="mt-4 ml-2">
+                            <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-1000 ${colorClass}" style="width: ${bestScore !== null ? (bestScore/f.max_score*100) : 0}%"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                            <div class="h-full rounded-full transition-all duration-1000 ${f.score / f.max_score >= 0.8 ? 'bg-green-500' : f.score / f.max_score >= 0.5 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${f.score / f.max_score * 100}%"></div>
-                        </div>
-                    </div>
-                </div>
-                `).join('')}
+
+                    <!-- Sessions Table (only if more than 1 session) -->
+                    ${hasSessions && sessions.length > 1 ? `
+                    <div class="border-t border-gray-50 bg-gray-50/50">
+                        <table class="w-full text-right text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-100">
+                                    <th class="px-5 py-3 text-[10px] font-black text-gray-400 uppercase">التاريخ</th>
+                                    <th class="px-5 py-3 text-[10px] font-black text-gray-400 uppercase text-center">القيمة</th>
+                                    <th class="px-5 py-3 text-[10px] font-black text-gray-400 uppercase text-center">الدرجة</th>
+                                    <th class="px-5 py-3 text-[10px] font-black text-gray-400 uppercase text-center">التقييم</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sessions.map((s, idx) => {
+                                    const sRatio = s.score / f.max_score;
+                                    const prev = idx > 0 ? sessions[idx-1].score : null;
+                                    const trend = prev !== null ? (s.score > prev ? '↑' : s.score < prev ? '↓' : '→') : '';
+                                    const trendColor = trend === '↑' ? 'text-green-500' : trend === '↓' ? 'text-red-400' : 'text-gray-400';
+                                    const isBest = s.score === bestScore && s.value == bestValue;
+                                    return `
+                                <tr class="border-b border-gray-50 ${isBest ? 'bg-emerald-50/50' : ''}">
+                                    <td class="px-5 py-3 font-bold text-gray-600 flex items-center gap-2">
+                                        ${s.test_date}
+                                        ${isBest ? '<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-black">الأفضل ⭐</span>' : ''}
+                                    </td>
+                                    <td class="px-5 py-3 text-center font-black text-gray-700">${s.value}</td>
+                                    <td class="px-5 py-3 text-center font-black text-gray-700">${s.score}</td>
+                                    <td class="px-5 py-3 text-center">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <div class="w-12 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                                <div class="h-full ${sRatio >= 0.8 ? 'bg-green-500' : sRatio >= 0.5 ? 'bg-yellow-500' : 'bg-red-500'} rounded-full" style="width:${sRatio*100}%"></div>
+                                            </div>
+                                            ${idx > 0 ? `<span class="text-xs font-black ${trendColor}">${trend}</span>` : ''}
+                                        </div>
+                                    </td>
+                                </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>` : hasSessions && sessions.length === 1 ? `
+                    <div class="border-t border-gray-50 px-6 py-3 flex justify-between items-center bg-gray-50/30">
+                        <span class="text-xs text-gray-400 font-bold">📅 ${sessions[0].test_date}</span>
+                        <span class="text-xs font-black text-gray-600">القيمة: ${sessions[0].value} ${esc(f.unit)}</span>
+                    </div>` : ''}
+                </div>`;
+                }).join('')}
             </div>
 
             <!-- Total Score Card -->
@@ -432,7 +522,7 @@ async function renderProfileTab(sid) {
                 <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 text-center lg:text-right">
                     <div>
                         <h4 class="text-3xl font-black mb-2">التقييم العام للياقة البدنية</h4>
-                        <p class="text-gray-400 font-bold">بناءً على متوسط نتائج جميع الاختبارات المؤداة</p>
+                        <p class="text-gray-400 font-bold">بناءً على أفضل نتائج جميع الاختبارات المؤداة</p>
                     </div>
                     <div class="flex items-center gap-6">
                         <div class="text-center">
@@ -978,37 +1068,47 @@ async function deleteMeasurement(id, sid) {
 }
 
 // Health Form
-async function showHealthForm(studentId) {
+async function showHealthForm(studentId, data = null) {
+    const isEdit = !!data;
     showModal(`
         <div class="p-6">
-            <h3 class="text-xl font-bold mb-4">إضافة حالة صحية</h3>
+            <h3 class="text-xl font-bold mb-4">${isEdit ? 'تعديل الحالة الصحية' : 'إضافة حالة صحية'}</h3>
             <div class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">نوع الحالة *</label>
                         <select id="healthType" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
-                            ${Object.entries(CONDITION_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}
+                            ${Object.entries(CONDITION_TYPES).map(([k, v]) => `<option value="${k}" ${isEdit && data.condition_type === k ? 'selected' : ''}>${v}</option>`).join('')}
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">اسم الحالة *</label>
-                        <input type="text" id="healthName" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" placeholder="مثال: ربو تحسسي">
+                        <input type="text" id="healthName" value="${isEdit ? esc(data.condition_name) : ''}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" placeholder="مثال: ربو تحسسي">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">الشدة</label>
+                        <select id="healthSeverity" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                            <option value="mild" ${isEdit && data.severity === 'mild' ? 'selected' : ''}>🟡 خفيف</option>
+                            <option value="moderate" ${isEdit && data.severity === 'moderate' ? 'selected' : ''}>🟠 متوسط</option>
+                            <option value="severe" ${isEdit && data.severity === 'severe' ? 'selected' : ''}>🔴 شديد</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">حالة الحالة</label>
+                        <select id="healthIsActive" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
+                            <option value="1" ${!isEdit || data.is_active == 1 ? 'selected' : ''}>✅ نشطة (تظهر في التنبيهات)</option>
+                            <option value="0" ${isEdit && data.is_active == 0 ? 'selected' : ''}>🎉 تم التحسن (تنتقل للأرشيف)</option>
+                        </select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">الشدة</label>
-                    <select id="healthSeverity" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none">
-                        <option value="mild">🟡 خفيف</option>
-                        <option value="moderate">🟠 متوسط</option>
-                        <option value="severe">🔴 شديد</option>
-                    </select>
-                </div>
-                <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">ملاحظات وتوصيات</label>
-                    <textarea id="healthNotes" rows="3" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" placeholder="مثال: يحتاج بخاخ قبل الجري"></textarea>
+                    <textarea id="healthNotes" rows="3" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none" placeholder="مثال: يحتاج بخاخ قبل الجري">${isEdit ? esc(data.notes || '') : ''}</textarea>
                 </div>
                 <div class="flex gap-3 pt-2">
-                    <button onclick="saveHealth(${studentId})" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 cursor-pointer">حفظ</button>
+                    <button onclick="saveHealth(${studentId}, ${isEdit ? data.id : 'null'})" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 cursor-pointer">💾 حفظ</button>
                     <button onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 cursor-pointer">إلغاء</button>
                 </div>
             </div>
@@ -1016,14 +1116,15 @@ async function showHealthForm(studentId) {
     `);
 }
 
-async function saveHealth(studentId) {
+async function saveHealth(studentId, id = null) {
     const data = {
+        id: id,
         student_id: studentId,
         condition_type: document.getElementById('healthType').value,
         condition_name: document.getElementById('healthName').value.trim(),
         severity: document.getElementById('healthSeverity').value,
         notes: document.getElementById('healthNotes').value.trim(),
-        is_active: 1
+        is_active: parseInt(document.getElementById('healthIsActive').value)
     };
 
     if (!data.condition_name) {
@@ -1036,6 +1137,17 @@ async function saveHealth(studentId) {
         closeModal();
         showToast(r.message);
         renderProfileTab(studentId);
+    } else if (r) {
+        showToast(r.error, 'error');
+    }
+}
+
+async function deleteHealth(id, sid) {
+    if (!confirm('هل أنت متأكد من حذف هذه الحالة الصحية نهائياً؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    const r = await API.post('health_delete', null, { id });
+    if (r && r.success) {
+        showToast(r.message);
+        renderProfileTab(sid);
     } else if (r) {
         showToast(r.error, 'error');
     }

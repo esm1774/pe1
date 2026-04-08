@@ -59,8 +59,8 @@ function getAnalyticsDashboard() {
             $pP = $pMax > 0 ? ($pScore / $pMax) * 100 : 0;
             $fP = $fMax > 0 ? ($fScore / $fMax) * 100 : 0;
 
-            // Fitness
-            $fit = $db->prepare("SELECT SUM(sf.score) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+            // Fitness (أفضل نتيجة لكل اختبار)
+            $fit = $db->prepare("SELECT COALESCE(SUM(bs),0) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM (SELECT CASE WHEN ft.type='lower_better' THEN (SELECT sf2.score FROM student_fitness sf2 WHERE sf2.student_id=sf.student_id AND sf2.test_id=sf.test_id ORDER BY sf2.value ASC LIMIT 1) ELSE MAX(sf.score) END as bs FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id=ft.id WHERE sf.student_id=? AND sf.test_date BETWEEN ? AND ? GROUP BY sf.test_id, ft.type) as bests");
             $fit->execute([$sid, $id, $start, $end]);
             $fr = $fit->fetch();
             $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;
@@ -110,7 +110,7 @@ function getAnalyticsDashboard() {
 
         $classSum = 0;
         foreach ($stIds as $id) {
-            $fit = $db->prepare("SELECT SUM(sf.score) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+            $fit = $db->prepare("SELECT COALESCE(SUM(bs),0) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM (SELECT CASE WHEN ft.type='lower_better' THEN (SELECT sf2.score FROM student_fitness sf2 WHERE sf2.student_id=sf.student_id AND sf2.test_id=sf.test_id ORDER BY sf2.value ASC LIMIT 1) ELSE MAX(sf.score) END as bs FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id=ft.id WHERE sf.student_id=? AND sf.test_date BETWEEN ? AND ? GROUP BY sf.test_id, ft.type) as bests");
             $fit->execute([$sid, $id, $currStart, $currEnd]);
             $fr = $fit->fetch();
             $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;
@@ -192,7 +192,7 @@ function getAnalyticsDashboard() {
     foreach ($allStudents as $s) {
         $id = $s['id'];
         
-        $fit = $db->prepare("SELECT SUM(sf.score) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM student_fitness sf WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?");
+        $fit = $db->prepare("SELECT COALESCE(SUM(bs),0) as e, (SELECT SUM(max_score) FROM fitness_tests WHERE active = 1 AND school_id = ?) as m FROM (SELECT CASE WHEN ft.type='lower_better' THEN (SELECT sf2.score FROM student_fitness sf2 WHERE sf2.student_id=sf.student_id AND sf2.test_id=sf.test_id ORDER BY sf2.value ASC LIMIT 1) ELSE MAX(sf.score) END as bs FROM student_fitness sf JOIN fitness_tests ft ON sf.test_id=ft.id WHERE sf.student_id=? AND sf.test_date BETWEEN ? AND ? GROUP BY sf.test_id, ft.type) as bests");
         $fit->execute([$sid, $id, $currStart, $currEnd]);
         $fr = $fit->fetch();
         $fitP = ($fr['m'] > 0) ? ($fr['e'] / $fr['m']) * 100 : 100;

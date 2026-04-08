@@ -214,9 +214,18 @@ const API = {
 // ============================================================
 // GLOBAL STATE
 // ============================================================
-let currentUser = null;
-let currentPage = 'dashboard';
 let currentSchool = null; // SaaS: current school context
+window.formIsDirty = false; // Flag to prevent data loss on navigate
+
+// Fix: Catch accidental browser tab/page close or refresh
+window.addEventListener('beforeunload', (e) => {
+    if (window.formIsDirty) {
+        // MODERN BROWSER STANDARD
+        e.preventDefault();
+        e.returnValue = 'هل أنت متأكد من المغادرة؟ قد تفقد البيانات غير المحفوظة.'; 
+        return e.returnValue;
+    }
+});
 
 // ============================================================
 // AUTH FUNCTIONS
@@ -655,7 +664,21 @@ const PAGE_FEATURE_MAP = {
 // ============================================================
 // NAVIGATION
 // ============================================================
-function navigateTo(page) {
+function navigateTo(page, event = null) {
+    // If an actual event is passed (from an onclick), prevent default browser navigation
+    if (event) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    }
+
+    // Unsaved changes protection
+    if (window.formIsDirty) {
+        if (!confirm('لديك تغييرات غير محفوظة، هل أنت متأكد من مغادرة هذه الصفحة؟')) {
+            return false;
+        }
+        window.formIsDirty = false;
+    }
+
     // Role-aware dashboard redirection
     if (page === 'dashboard' && currentUser) {
         if (currentUser.role === 'student') page = 'studentDashboard';
@@ -680,6 +703,7 @@ function navigateTo(page) {
 
     currentPage = page;
     window.location.hash = page;
+    window.onscroll = null; // Cleanup scroll listeners from previous pages
 
     const parts = page.split('/');
     const basePage = parts[0];

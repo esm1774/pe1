@@ -152,11 +152,14 @@ try {
         case 'fitness_test_delete': deleteFitnessTest(); break;
 
         // FITNESS RESULTS
-        case 'fitness_results':      getFitnessResults(); break;
-        case 'fitness_results_save': saveFitnessResults(); break;
-        case 'fitness_view':         getFitnessView(); break;
-        case 'fitness_criteria':      getFitnessCriteria(); break;
-        case 'fitness_criteria_save': saveFitnessCriteria(); break;
+        case 'fitness_results':          getFitnessResults(); break;
+        case 'fitness_results_save':      saveFitnessResults(); break;
+        case 'fitness_view':              getFitnessView(); break;
+        case 'fitness_criteria':          getFitnessCriteria(); break;
+        case 'fitness_criteria_save':     saveFitnessCriteria(); break;
+        case 'fitness_session_dates':     getFitnessSessionDates(); break;
+        case 'fitness_result_delete':     deleteFitnessResult(); break;
+        case 'fitness_session_delete':    deleteFitnessSession(); break;
 
         // BADGES
         case 'get_badges':         getBadges(); break;

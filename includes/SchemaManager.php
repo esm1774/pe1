@@ -96,6 +96,31 @@ class SchemaManager
                 }
             }
 
+            // Migration Phase 3 (Fitness Multi-Session Index) - v2.5.2
+            if (version_compare($dbVersion, '2.5.2', '<')) {
+                try {
+                    // 1. Drop old UK if exists
+                    $stmt = $db->query("SHOW INDEX FROM student_fitness WHERE Key_name = 'uk_student_test'");
+                    if ($stmt->fetch()) {
+                        $db->exec("ALTER TABLE student_fitness DROP INDEX uk_student_test");
+                    }
+                    
+                    // 2. Add new UK that includes test_date
+                    $stmt = $db->query("SHOW INDEX FROM student_fitness WHERE Key_name = 'uk_student_test_date'");
+                    if (!$stmt->fetch()) {
+                        $db->exec("ALTER TABLE student_fitness ADD UNIQUE KEY uk_student_test_date (student_id, test_id, test_date)");
+                    }
+
+                    // 3. Add performance index for date
+                    $stmt = $db->query("SHOW INDEX FROM student_fitness WHERE Key_name = 'idx_test_date'");
+                    if (!$stmt->fetch()) {
+                        $db->exec("CREATE INDEX idx_test_date ON student_fitness (test_date)");
+                    }
+                } catch (Exception $e) {
+                    error_log("Fitness Migration Warning: " . $e->getMessage());
+                }
+            }
+
             // --- END OF MIGRATIONS ---
 
             // Update schema version in DB

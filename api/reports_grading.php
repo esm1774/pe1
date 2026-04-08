@@ -100,13 +100,23 @@ function getGradingReport() {
             $partPercent = ((float)$attData['participation_score'] / (float)$attData['max_participation_score']) * 100;
         }
 
-        // --- FITNESS SCORE ---
+        // --- FITNESS SCORE (Best result per test) ---
         $fStmt = $db->prepare("
             SELECT 
-                SUM(sf.score) as total_earned,
+                COALESCE(SUM(best_score), 0) as total_earned,
                 (SELECT SUM(max_score) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = ?) as total_max
-            FROM student_fitness sf
-            WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?
+            FROM (
+                SELECT sf.test_id,
+                       CASE
+                           WHEN ft.type = 'lower_better' THEN
+                               (SELECT sf2.score FROM student_fitness sf2 WHERE sf2.student_id = sf.student_id AND sf2.test_id = sf.test_id ORDER BY sf2.value ASC LIMIT 1)
+                           ELSE MAX(sf.score)
+                       END as best_score
+                FROM student_fitness sf
+                JOIN fitness_tests ft ON sf.test_id = ft.id
+                WHERE sf.student_id = ? AND sf.test_date BETWEEN ? AND ?
+                GROUP BY sf.test_id, ft.type
+            ) as best_scores
         ");
         $fStmt->execute([$sid, $stId, $startDate, $endDate]);
         $fitData = $fStmt->fetch(PDO::FETCH_ASSOC);

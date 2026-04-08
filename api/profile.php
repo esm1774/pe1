@@ -61,29 +61,66 @@ function getStudentProfile() {
     $activeAlerts = array_filter($healthConditions, function($h) { return $h['is_active']; });
 
     $stmt = $db->prepare("
-        SELECT ft.id as test_id, ft.name as test_name, ft.unit, ft.max_score, sf.value, sf.score, sf.test_date
-        FROM fitness_tests ft LEFT JOIN student_fitness sf ON sf.test_id = ft.id AND sf.student_id = ?
-        WHERE ft.active = 1 ORDER BY ft.id ASC, sf.test_date DESC, sf.id DESC
+        SELECT ft.id as test_id, ft.name as test_name, ft.unit, ft.max_score, ft.type,
+               sf.value, sf.score, sf.test_date, sf.id as result_id
+        FROM fitness_tests ft
+        JOIN student_fitness sf ON sf.test_id = ft.id AND sf.student_id = ?
+        WHERE ft.active = 1
+        ORDER BY ft.id ASC, sf.test_date ASC
     ");
     $stmt->execute([$studentId]);
     $rawResults = $stmt->fetchAll();
 
+    // Group sessions by test_id
     $fitnessResults = [];
-    $seenTests = [];
-    $totalScore = 0; $totalMax = 0;
+    $testMap = []; // test_id => index in fitnessResults
+    $totalScore = 0;
+    $totalMax = 0;
+    $countedTests = [];
 
     foreach ($rawResults as $r) {
-        if (!in_array($r['test_id'], $seenTests)) {
-            $seenTests[] = $r['test_id'];
-            
-            // إضافة الاختبار للسجل فقط إذا كان له درجة مسجلة الطالب
-            if ($r['score'] !== null || $r['value'] !== null) {
-                $fitnessResults[] = $r;
-                $totalScore += $r['score']; 
-                $totalMax += $r['max_score']; 
-            }
+        $tid = $r['test_id'];
+        if (!isset($testMap[$tid])) {
+            $testMap[$tid] = count($fitnessResults);
+            $fitnessResults[] = [
+                'test_id'   => $r['test_id'],
+                'test_name' => $r['test_name'],
+                'unit'      => $r['unit'],
+                'max_score' => $r['max_score'],
+                'type'      => $r['type'],
+                'sessions'  => []
+            ];
         }
+        $fitnessResults[$testMap[$tid]]['sessions'][] = [
+            'value'     => $r['value'],
+            'score'     => $r['score'],
+            'test_date' => $r['test_date'],
+            'result_id' => $r['result_id']
+        ];
     }
+
+    // Calculate best score per test for totals
+    foreach ($fitnessResults as &$ft) {
+        $sessions = $ft['sessions'];
+        if (empty($sessions)) continue;
+        if ($ft['type'] === 'lower_better') {
+            usort($sessions, fn($a, $b) => $a['value'] <=> $b['value']);
+            $best = $sessions[0];
+        } else {
+            usort($sessions, fn($a, $b) => $b['score'] <=> $a['score']);
+            $best = $sessions[0];
+        }
+        $ft['best_score'] = $best['score'];
+        $ft['best_value'] = $best['value'];
+        $ft['best_date']  = $best['test_date'];
+        // For backward compatibility
+        $ft['score']      = $best['score'];
+        $ft['value']      = $best['value'];
+        $ft['test_date']  = $best['test_date'];
+        $totalScore += $best['score'];
+        $totalMax   += $ft['max_score'];
+    }
+    unset($ft);
 
     $stmt = $db->prepare("
         SELECT SUM(CASE WHEN status='present' THEN 1 ELSE 0 END) as present_count,

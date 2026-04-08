@@ -117,16 +117,29 @@ function getDashboard() {
     // Fix: Use parameterized query for school filter
     if ($teacherClassIds === null) {
         $rankSql = "
-            SELECT c.id as class_id, CONCAT(g.name, ' - ', c.name) as class_name,
-                   COUNT(DISTINCT s.id) as students_count,
-                   ROUND(COALESCE(SUM(sf.score), 0) / (
-                       SELECT GREATEST(1, COUNT(*) * COUNT(DISTINCT s2.id))
-                       FROM fitness_tests ft2, students s2
-                       WHERE ft2.active = 1 AND ft2.school_id = c.school_id AND s2.class_id = c.id AND s2.active = 1
-                   ), 2) as avg_score
-            FROM classes c JOIN grades g ON c.grade_id = g.id
-            LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-            LEFT JOIN student_fitness sf ON sf.student_id = s.id
+            SELECT 
+                c.id as class_id, 
+                CONCAT(g.name, ' - ', c.name) as class_name,
+                COUNT(DISTINCT s_main.id) as students_count,
+                ROUND(
+                    COALESCE(class_totals.sum_best, 0) / 
+                    GREATEST(1, (SELECT COUNT(*) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = c.school_id) * COUNT(DISTINCT s_main.id)),
+                    2
+                ) as avg_score
+            FROM classes c
+            JOIN grades g ON c.grade_id = g.id
+            LEFT JOIN students s_main ON s_main.class_id = c.id AND s_main.active = 1
+            LEFT JOIN (
+                SELECT s3.class_id, SUM(sf3.max_score) as sum_best
+                FROM students s3
+                JOIN (
+                    SELECT student_id, test_id, MAX(score) as max_score
+                    FROM student_fitness
+                    GROUP BY student_id, test_id
+                ) sf3 ON s3.id = sf3.student_id
+                WHERE s3.active = 1
+                GROUP BY s3.class_id
+            ) class_totals ON c.id = class_totals.class_id
             WHERE c.active = 1";
         $rankParams = [];
         if ($sid) { $rankSql .= " AND c.school_id = ?"; $rankParams[] = $sid; }
@@ -137,16 +150,29 @@ function getDashboard() {
     } else {
         $ph      = implode(',', array_fill(0, count($teacherClassIds), '?'));
         $stmt    = $db->prepare("
-            SELECT c.id as class_id, CONCAT(g.name, ' - ', c.name) as class_name,
-                   COUNT(DISTINCT s.id) as students_count,
-                   ROUND(COALESCE(SUM(sf.score), 0) / (
-                       SELECT GREATEST(1, COUNT(*) * COUNT(DISTINCT s2.id)) 
-                       FROM fitness_tests ft2, students s2 
-                       WHERE ft2.active = 1 AND ft2.school_id = c.school_id AND s2.class_id = c.id AND s2.active = 1
-                   ), 2) as avg_score
-            FROM classes c JOIN grades g ON c.grade_id = g.id
-            LEFT JOIN students s ON s.class_id = c.id AND s.active = 1
-            LEFT JOIN student_fitness sf ON sf.student_id = s.id
+            SELECT 
+                c.id as class_id, 
+                CONCAT(g.name, ' - ', c.name) as class_name,
+                COUNT(DISTINCT s_main.id) as students_count,
+                ROUND(
+                    COALESCE(class_totals.sum_best, 0) / 
+                    GREATEST(1, (SELECT COUNT(*) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = c.school_id) * COUNT(DISTINCT s_main.id)),
+                    2
+                ) as avg_score
+            FROM classes c
+            JOIN grades g ON c.grade_id = g.id
+            LEFT JOIN students s_main ON s_main.class_id = c.id AND s_main.active = 1
+            LEFT JOIN (
+                SELECT s3.class_id, SUM(sf3.max_score) as sum_best
+                FROM students s3
+                JOIN (
+                    SELECT student_id, test_id, MAX(score) as max_score
+                    FROM student_fitness
+                    GROUP BY student_id, test_id
+                ) sf3 ON s3.id = sf3.student_id
+                WHERE s3.active = 1
+                GROUP BY s3.class_id
+            ) class_totals ON c.id = class_totals.class_id
             WHERE c.active = 1 AND c.id IN ($ph)
             GROUP BY c.id ORDER BY avg_score DESC LIMIT 5
         ");
@@ -159,10 +185,23 @@ function getDashboard() {
     if ($teacherClassIds === null) {
         $topSql = "
             SELECT s.id, s.name, CONCAT(g.name, ' - ', c.name) as class_name,
-                   ROUND(COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = s.school_id), 2) as avg_score
-            FROM students s JOIN student_fitness sf ON sf.student_id = s.id
-            JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
-            WHERE s.active = 1";
+                   ROUND(COALESCE(st.total_score, 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = s.school_id), 2) as avg_score
+            FROM students s 
+            JOIN classes c ON s.class_id = c.id 
+            JOIN grades g ON c.grade_id = g.id
+            LEFT JOIN (
+                SELECT s3.id as student_id, SUM(sf3.max_score) as total_score
+                FROM students s3
+                JOIN (
+                    SELECT student_id, test_id, MAX(score) as max_score
+                    FROM student_fitness
+                    GROUP BY student_id, test_id
+                ) sf3 ON s3.id = sf3.student_id
+                WHERE s3.active = 1
+                GROUP BY s3.id
+            ) st ON s.id = st.student_id
+            WHERE s.active = 1
+";
         $topParams = [];
         if ($sid) { $topSql .= " AND s.school_id = ?"; $topParams[] = $sid; }
         $topSql .= " GROUP BY s.id ORDER BY avg_score DESC LIMIT 1";
@@ -172,10 +211,29 @@ function getDashboard() {
     } else {
         $ph   = implode(',', array_fill(0, count($teacherClassIds), '?'));
         $stmt = $db->prepare("
-            SELECT s.id, s.name, CONCAT(g.name, ' - ', c.name) as class_name,
-                   ROUND(COALESCE(SUM(sf.score), 0) / (SELECT GREATEST(1, COUNT(*)) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = s.school_id), 2) as avg_score
-            FROM students s JOIN student_fitness sf ON sf.student_id = s.id
-            JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id
+            SELECT 
+                s.id, 
+                s.name, 
+                CONCAT(g.name, ' - ', c.name) as class_name,
+                ROUND(
+                    COALESCE(st.total_score, 0) / 
+                    GREATEST(1, (SELECT COUNT(*) FROM fitness_tests ft2 WHERE ft2.active = 1 AND ft2.school_id = s.school_id)), 
+                    2
+                ) as avg_score
+            FROM students s 
+            JOIN classes c ON s.class_id = c.id 
+            JOIN grades g ON c.grade_id = g.id
+            LEFT JOIN (
+                SELECT s3.id as student_id, SUM(sf3.max_score) as total_score
+                FROM students s3
+                JOIN (
+                    SELECT student_id, test_id, MAX(score) as max_score
+                    FROM student_fitness
+                    GROUP BY student_id, test_id
+                ) sf3 ON s3.id = sf3.student_id
+                WHERE s3.active = 1
+                GROUP BY s3.id
+            ) st ON s.id = st.student_id
             WHERE s.active = 1 AND s.class_id IN ($ph)
             GROUP BY s.id ORDER BY avg_score DESC LIMIT 1
         ");

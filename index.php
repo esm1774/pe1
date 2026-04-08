@@ -9,15 +9,17 @@ try {
     // 2. Fetch Testimonials from local database
     $stmtTest = $db->query("SELECT * FROM testimonials WHERE active = 1 ORDER BY sort_order ASC, id DESC LIMIT 6");
     $testimonials = $stmtTest->fetchAll();
-} catch (Exception $e) {
-    // Silent fail
+}
+catch (Exception $e) {
+// Silent fail
 }
 
 // Fetch active subscription plans
 $stmt = $db->query("SELECT * FROM plans WHERE active = 1 ORDER BY sort_order ASC");
 $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-function esc($str) {
+function esc($str)
+{
     return htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
 }
 ?>
@@ -28,11 +30,11 @@ function esc($str) {
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-2TER3M09VF"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-      gtag('config', 'G-2TER3M09VF');
+        gtag('config', 'G-2TER3M09VF');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,7 +43,8 @@ function esc($str) {
     <!-- SEO & Identity -->
     <meta name="description"
         content="المنصة السحابية الأولى (SaaS) لإدارة التربية البدنية، البطولات المعقدة، التحليلات المتقدمة للصحة واللياقة، وإصدار الشهادات للمدارس والمجمعات التعليمية.">
-    <meta name="keywords" content="تربية بدنية, إدارة مدرسة رياضية, بطولات مدرسية, لياقة بدنية طلاب, نظام SaaS رياضي, صحة المدارس">
+    <meta name="keywords"
+        content="تربية بدنية, إدارة مدرسة رياضية, بطولات مدرسية, لياقة بدنية طلاب, نظام SaaS رياضي, صحة المدارس">
     <link rel="canonical" href="https://pesmartschool.com/" />
     <meta name="theme-color" content="#10b981">
 
@@ -49,15 +52,18 @@ function esc($str) {
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://pesmartschool.com/">
     <meta property="og:title" content="PE Smart School | منصة التحول الرقمي للتربية البدنية">
-    <meta property="og:description" content="المنصة السحابية المتكاملة لإدارة الرياضة المدرسية، تحليل اللياقة، وإدارة البطولات.">
-    <meta property="og:image" content="https://pesmartschool.com/assets/img/pe_smart_landing_hero_boys_1772252970163.png">
+    <meta property="og:description"
+        content="المنصة السحابية المتكاملة لإدارة الرياضة المدرسية، تحليل اللياقة، وإدارة البطولات.">
+    <meta property="og:image"
+        content="https://pesmartschool.com/assets/img/pe_smart_landing_hero_boys_1772252970163.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://pesmartschool.com/">
     <meta property="twitter:title" content="PE Smart School | إدارة رياضية مدرسية ذكية">
     <meta property="twitter:description" content="حول مدرستك رقمياً وجدول بطولاتك بضغطة زر مع منصة PE Smart.">
-    <meta property="twitter:image" content="https://pesmartschool.com/assets/img/pe_smart_landing_hero_boys_1772252970163.png">
+    <meta property="twitter:image"
+        content="https://pesmartschool.com/assets/img/pe_smart_landing_hero_boys_1772252970163.png">
 
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
@@ -263,7 +269,8 @@ function esc($str) {
                 </div>
                 <div class="flex flex-col">
                     <span class="text-xl font-black text-slate-800 leading-none">PE Smart</span>
-                    <span class="text-[7px] font-black tracking-[0.2em] text-emerald-600 uppercase">Smart Solution</span>
+                    <span class="text-[7px] font-black tracking-[0.2em] text-emerald-600 uppercase">Smart
+                        Solution</span>
                 </div>
             </div>
 
@@ -278,21 +285,24 @@ function esc($str) {
 
             <div class="flex items-center gap-3">
                 <?php if (isLoggedIn()): ?>
-                    <a href="app.html"
-                        class="px-8 py-2.5 text-sm font-black text-white emerald-gradient rounded-full shadow-lg shadow-emerald-500/30 transform transition-transform hover:scale-105 flex items-center gap-2">
-                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> لوحة التحكم
-                    </a>
-                <?php else: ?>
-                    <a href="app.html"
-                        class="hidden sm:block text-sm font-black text-slate-600 px-5 py-2 hover:bg-slate-100 rounded-full transition-all">تسجيل
-                        الدخول</a>
-                    <a href="register.html"
-                        class="px-6 py-2.5 text-sm font-black text-white emerald-gradient rounded-full shadow-lg shadow-emerald-500/30 transform transition-transform hover:scale-105">تأسيس
-                        مدرستك</a>
-                <?php endif; ?>
-                
+                <a href="app.html"
+                    class="px-8 py-2.5 text-sm font-black text-white emerald-gradient rounded-full shadow-lg shadow-emerald-500/30 transform transition-transform hover:scale-105 flex items-center gap-2">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> لوحة التحكم
+                </a>
+                <?php
+else: ?>
+                <a href="app.html"
+                    class="hidden sm:block text-sm font-black text-slate-600 px-5 py-2 hover:bg-slate-100 rounded-full transition-all">تسجيل
+                    الدخول</a>
+                <a href="register.html"
+                    class="px-6 py-2.5 text-sm font-black text-white emerald-gradient rounded-full shadow-lg shadow-emerald-500/30 transform transition-transform hover:scale-105">تأسيس
+                    مدرستك</a>
+                <?php
+endif; ?>
+
                 <!-- Mobile Toggle -->
-                <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-full transition-all">
+                <button onclick="toggleMobileMenu()"
+                    class="lg:hidden w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-full transition-all">
                     <i data-lucide="menu" class="w-6 h-6"></i>
                 </button>
             </div>
@@ -302,33 +312,45 @@ function esc($str) {
     <!-- Mobile Menu Overlay -->
     <div id="mobileMenu" class="fixed inset-0 z-[100] hidden">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="toggleMobileMenu()"></div>
-        <div id="mobileMenuPanel" class="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col p-8 transform transition-transform duration-500 translate-x-full">
+        <div id="mobileMenuPanel"
+            class="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl flex flex-col p-8 transform transition-transform duration-500 translate-x-full">
             <div class="flex items-center justify-between mb-10">
                 <span class="text-xl font-black text-emerald-600">القائمة</span>
-                <button onclick="toggleMobileMenu()" class="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 rounded-xl hover:text-rose-500 transition-all">
+                <button onclick="toggleMobileMenu()"
+                    class="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 rounded-xl hover:text-rose-500 transition-all">
                     <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
             <nav class="flex flex-col gap-6 font-bold text-slate-600 text-right">
-                <a href="#features" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المقومات الشاملة</a>
-                <a href="#analytics" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">التحليلات والصحة</a>
-                <a href="#tournaments" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">محرك البطولات</a>
-                <a href="#blog" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المدونة والدروس</a>
-                <a href="#faq" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">أسئلة شائعة</a>
-                <a href="#pricing" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">رسوم الاستئجار</a>
+                <a href="#features" onclick="toggleMobileMenu()"
+                    class="hover:text-emerald-600 transition-colors">المقومات الشاملة</a>
+                <a href="#analytics" onclick="toggleMobileMenu()"
+                    class="hover:text-emerald-600 transition-colors">التحليلات والصحة</a>
+                <a href="#tournaments" onclick="toggleMobileMenu()"
+                    class="hover:text-emerald-600 transition-colors">محرك البطولات</a>
+                <a href="#blog" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">المدونة
+                    والدروس</a>
+                <a href="#faq" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">أسئلة
+                    شائعة</a>
+                <a href="#pricing" onclick="toggleMobileMenu()" class="hover:text-emerald-600 transition-colors">رسوم
+                    الاستئجار</a>
                 <hr class="border-slate-100 my-4">
                 <?php if (isLoggedIn()): ?>
-                    <a href="app.html" class="emerald-gradient text-white py-4 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4 flex items-center justify-center gap-3">
-                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i> لوحة التحكم
-                    </a>
-                <?php else: ?>
-                    <a href="app.html" class="flex items-center justify-end gap-3 text-emerald-600">
-                        تسجيل الدخول <i data-lucide="log-in" class="w-5 h-5"></i>
-                    </a>
-                    <a href="register.html" class="emerald-gradient text-white py-3 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4">
-                        تأسيس مدرستك
-                    </a>
-                <?php endif; ?>
+                <a href="app.html"
+                    class="emerald-gradient text-white py-4 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4 flex items-center justify-center gap-3">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> لوحة التحكم
+                </a>
+                <?php
+else: ?>
+                <a href="app.html" class="flex items-center justify-end gap-3 text-emerald-600">
+                    تسجيل الدخول <i data-lucide="log-in" class="w-5 h-5"></i>
+                </a>
+                <a href="register.html"
+                    class="emerald-gradient text-white py-3 px-6 rounded-2xl text-center shadow-lg shadow-emerald-500/20 mt-4">
+                    تأسيس مدرستك
+                </a>
+                <?php
+endif; ?>
             </nav>
         </div>
     </div>
@@ -369,16 +391,18 @@ function esc($str) {
 
                 <div class="flex flex-col sm:flex-row items-center justify-center xl:justify-start gap-4">
                     <?php if (isLoggedIn()): ?>
-                        <a href="app.html"
-                            class="w-full sm:w-auto px-10 py-5 emerald-gradient text-white rounded-full font-black text-xl shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
-                            <i data-lucide="layout-dashboard" class="w-6 h-6"></i> انتقل إلى لوحة التحكم
-                        </a>
-                    <?php else: ?>
-                        <a href="register.html"
-                            class="w-full sm:w-auto px-8 py-4 emerald-gradient text-white rounded-full font-black text-lg shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
-                            <i data-lucide="rocket" class="w-5 h-5"></i> ابدأ الاشتراك لمدرستك
-                        </a>
-                    <?php endif; ?>
+                    <a href="app.html"
+                        class="w-full sm:w-auto px-10 py-5 emerald-gradient text-white rounded-full font-black text-xl shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
+                        <i data-lucide="layout-dashboard" class="w-6 h-6"></i> انتقل إلى لوحة التحكم
+                    </a>
+                    <?php
+else: ?>
+                    <a href="register.html"
+                        class="w-full sm:w-auto px-8 py-4 emerald-gradient text-white rounded-full font-black text-lg shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
+                        <i data-lucide="rocket" class="w-5 h-5"></i> ابدأ الاشتراك لمدرستك
+                    </a>
+                    <?php
+endif; ?>
                     <a href="#features"
                         class="w-full sm:w-auto px-8 py-4 glass-panel text-slate-700 rounded-full font-black text-lg hover:bg-white transition-all flex items-center justify-center gap-3 border border-slate-200 shadow-sm">
                         <i data-lucide="play-circle" class="w-5 h-5"></i> جولة في الميزات
@@ -511,43 +535,51 @@ function esc($str) {
             </div>
         </div>
     </section>
-    
+
     <!-- Deep Section 0: Analytics & Health (Light/White) -->
     <section id="analytics" class="py-24 px-4 bg-white relative z-20">
         <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
             <div class="flex-1 reveal">
-                <span class="text-indigo-500 font-bold tracking-widest text-sm uppercase mb-4 block">الذكاء العملي</span>
+                <span class="text-indigo-500 font-bold tracking-widest text-sm uppercase mb-4 block">الذكاء
+                    العملي</span>
                 <h2 class="text-4xl md:text-5xl font-black text-slate-900 mb-6 leading-tight">
                     تحليلات صحية دقيقة <br> <span class="text-indigo-600">لرعاية رياضية شاملة</span>
                 </h2>
                 <div class="space-y-8">
                     <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 shadow-sm border border-indigo-100 flex-shrink-0">
+                        <div
+                            class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 shadow-sm border border-indigo-100 flex-shrink-0">
                             <i data-lucide="line-chart" class="w-6 h-6"></i>
                         </div>
                         <div>
                             <h4 class="text-xl font-black text-slate-800 mb-2">لوحة التحليلات المتقدمة</h4>
-                            <p class="text-slate-500 font-bold leading-relaxed">رسوم بيانية تفاعلية تعرض تطور أداء المدرسة، خرائط حرارية للحضور (Heatmaps)، ومقارنات ذكية بين الفصول بناءً على الأوزان الرياضية.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 shadow-sm border border-rose-100 flex-shrink-0">
-                            <i data-lucide="heart" class="w-6 h-6"></i>
-                        </div>
-                        <div>
-                            <h4 class="text-xl font-black text-slate-800 mb-2">رصد المؤشرات الحيوية (BMI)</h4>
-                            <p class="text-slate-500 font-bold leading-relaxed">تتبع آلي لمؤشر كتلة الجسم، الطول، والوزن مع تصنيف صحي تلقائي وتنبيهات فورية للمعلمين عن حالات السمنة أو النحافة الزائدة.</p>
+                            <p class="text-slate-500 font-bold leading-relaxed">رسوم بيانية تفاعلية تعرض تطور أداء
+                                المدرسة، خرائط حرارية للحضور (Heatmaps)، ومقارنات ذكية بين الفصول بناءً على الأوزان
+                                الرياضية.</p>
                         </div>
                     </div>
 
                     <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100 flex-shrink-0">
+                        <div
+                            class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 shadow-sm border border-rose-100 flex-shrink-0">
+                            <i data-lucide="heart" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-black text-slate-800 mb-2">رصد المؤشرات الحيوية (BMI)</h4>
+                            <p class="text-slate-500 font-bold leading-relaxed">تتبع آلي لمؤشر كتلة الجسم، الطول، والوزن
+                                مع تصنيف صحي تلقائي وتنبيهات فورية للمعلمين عن حالات السمنة أو النحافة الزائدة.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100 flex-shrink-0">
                             <i data-lucide="alert-triangle" class="w-6 h-6"></i>
                         </div>
                         <div>
                             <h4 class="text-xl font-black text-slate-800 mb-2">نظام التنبيه الصحي المبكر</h4>
-                            <p class="text-slate-500 font-bold leading-relaxed">سجل مدمج للحالات الصحية والأمراض المزمنة يظهر للمعلم أثناء التحضير الميداني لضمان سلامة الطلاب وتجنب الإجهاد الزائد.</p>
+                            <p class="text-slate-500 font-bold leading-relaxed">سجل مدمج للحالات الصحية والأمراض المزمنة
+                                يظهر للمعلم أثناء التحضير الميداني لضمان سلامة الطلاب وتجنب الإجهاد الزائد.</p>
                         </div>
                     </div>
                 </div>
@@ -556,7 +588,9 @@ function esc($str) {
             <div class="flex-1 w-full reveal">
                 <div class="relative group">
                     <!-- Abstract Analytics UI Representation -->
-                    <div class="absolute inset-0 bg-indigo-100 rounded-[3rem] blur-3xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                    <div
+                        class="absolute inset-0 bg-indigo-100 rounded-[3rem] blur-3xl opacity-30 group-hover:opacity-50 transition-opacity">
+                    </div>
                     <div class="relative glass-panel p-8 rounded-[3rem] shadow-2xl border border-white/60">
                         <div class="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
                             <div class="flex items-center gap-2">
@@ -564,9 +598,10 @@ function esc($str) {
                                 <div class="w-3 h-3 rounded-full bg-slate-200"></div>
                                 <div class="w-3 h-3 rounded-full bg-slate-200"></div>
                             </div>
-                            <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Live Analytics Feed</span>
+                            <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Live Analytics
+                                Feed</span>
                         </div>
-                        
+
                         <div class="space-y-6">
                             <!-- Fake Stat Cards -->
                             <div class="grid grid-cols-2 gap-4">
@@ -586,7 +621,7 @@ function esc($str) {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Fake Chart Lines -->
                             <div class="h-32 flex items-end justify-between px-2 pt-4">
                                 <div class="w-6 bg-indigo-100 h-[20%] rounded-t-lg transition-all hover:h-[30%]"></div>
@@ -596,9 +631,11 @@ function esc($str) {
                                 <div class="w-6 bg-indigo-500 h-[40%] rounded-t-lg transition-all hover:h-[50%]"></div>
                                 <div class="w-6 bg-indigo-600 h-[90%] rounded-t-lg transition-all hover:h-[100%]"></div>
                             </div>
-                            
+
                             <div class="text-center">
-                                <span class="inline-flex py-1 px-4 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">Monthly Growth Performance</span>
+                                <span
+                                    class="inline-flex py-1 px-4 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">Monthly
+                                    Growth Performance</span>
                             </div>
                         </div>
                     </div>
@@ -837,41 +874,56 @@ function esc($str) {
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <?php if (empty($recentPosts)): ?>
-                    <div class="col-span-full text-center p-12 bg-slate-50 rounded-[2.5rem] border border-slate-100">
-                        <p class="text-slate-500 font-bold">لا توجد مقالات منشورة حالياً.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($recentPosts as $post): ?>
-                        <div class="hover-lift bg-slate-50 rounded-[2.5rem] overflow-hidden border border-slate-100 flex flex-col group">
-                            <div class="h-48 bg-emerald-100 relative overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
-                                <?php if ($post['image_path']): ?>
-                                    <img src="<?= esc($post['image_path']) ?>" alt="<?= esc($post['title']) ?>" class="w-full h-full object-cover">
-                                <?php else: ?>
-                                    <span class="text-4xl text-emerald-500">📰</span>
-                                <?php endif; ?>
-                                <div class="absolute top-4 right-4 bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
-                                    <?= esc($post['category']) ?>
-                                </div>
-                            </div>
-                            <div class="p-8">
-                                <h3 class="text-xl font-black text-slate-800 mb-3 hover:text-emerald-600 transition-colors cursor-pointer">
-                                    <a href="blog/<?= esc($post['slug']) ?>/"><?= esc($post['title']) ?></a>
-                                </h3>
-                                <p class="text-sm text-slate-500 font-bold mb-6 line-clamp-3">
-                                    <?= esc($post['excerpt']) ?>
-                                </p>
-                                <a href="blog/<?= esc($post['slug']) ?>/" class="text-emerald-600 font-black text-sm flex items-center gap-2 group/link">
-                                    اقرأ المزيد
-                                    <i data-lucide="arrow-left" class="w-4 h-4 transform group-hover/link:-translate-x-1 transition-transform"></i>
-                                </a>
-                            </div>
+                <div class="col-span-full text-center p-12 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+                    <p class="text-slate-500 font-bold">لا توجد مقالات منشورة حالياً.</p>
+                </div>
+                <?php
+else: ?>
+                <?php foreach ($recentPosts as $post): ?>
+                <div
+                    class="hover-lift bg-slate-50 rounded-[2.5rem] overflow-hidden border border-slate-100 flex flex-col group">
+                    <div
+                        class="h-48 bg-emerald-100 relative overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                        <?php if ($post['image_path']): ?>
+                        <img src="<?= esc($post['image_path'])?>" alt="<?= esc($post['title'])?>"
+                            class="w-full h-full object-cover">
+                        <?php
+        else: ?>
+                        <span class="text-4xl text-emerald-500">📰</span>
+                        <?php
+        endif; ?>
+                        <div
+                            class="absolute top-4 right-4 bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
+                            <?= esc($post['category'])?>
                         </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                    </div>
+                    <div class="p-8">
+                        <h3
+                            class="text-xl font-black text-slate-800 mb-3 hover:text-emerald-600 transition-colors cursor-pointer">
+                            <a href="blog/<?= esc($post['slug'])?>/">
+                                <?= esc($post['title'])?>
+                            </a>
+                        </h3>
+                        <p class="text-sm text-slate-500 font-bold mb-6 line-clamp-3">
+                            <?= esc($post['excerpt'])?>
+                        </p>
+                        <a href="blog/<?= esc($post['slug'])?>/"
+                            class="text-emerald-600 font-black text-sm flex items-center gap-2 group/link">
+                            اقرأ المزيد
+                            <i data-lucide="arrow-left"
+                                class="w-4 h-4 transform group-hover/link:-translate-x-1 transition-transform"></i>
+                        </a>
+                    </div>
+                </div>
+                <?php
+    endforeach; ?>
+                <?php
+endif; ?>
             </div>
 
             <div class="mt-12 text-center">
-                <a href="blog/" class="inline-block px-8 py-3 border-2 border-emerald-500 text-emerald-600 font-black rounded-full hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105">
+                <a href="blog/"
+                    class="inline-block px-8 py-3 border-2 border-emerald-500 text-emerald-600 font-black rounded-full hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-105">
                     تصفح جميع المقالات والدروس
                 </a>
             </div>
@@ -882,9 +934,21 @@ function esc($str) {
     <!-- Testimonials Section -->
     <section id="testimonials" class="py-24 px-4 bg-slate-50 relative overflow-hidden">
         <style>
-            .star-filled { fill: #f59e0b; stroke: #d97706; stroke-width: 1.5; }
-            .star-empty { fill: transparent; stroke: #c3d5eaff; stroke-width: 1.5; }
-            [dir="rtl"] [data-lucide="star-half"] { transform: scaleX(-1); }
+            .star-filled {
+                fill: #f59e0b;
+                stroke: #d97706;
+                stroke-width: 1.5;
+            }
+
+            .star-empty {
+                fill: transparent;
+                stroke: #c3d5eaff;
+                stroke-width: 1.5;
+            }
+
+            [dir="rtl"] [data-lucide="star-half"] {
+                transform: scaleX(-1);
+            }
         </style>
         <div class="absolute inset-0 opacity-5 pointer-events-none">
             <div class="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500 rounded-full blur-3xl"></div>
@@ -893,70 +957,95 @@ function esc($str) {
 
         <div class="max-w-7xl mx-auto relative z-10">
             <div class="text-center max-w-3xl mx-auto mb-20 reveal">
-                <span class="px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-600 font-bold text-sm mb-4 inline-block">صوت الميدان</span>
-                <h2 class="text-4xl md:text-5xl font-black text-slate-900 mb-6">ماذا يقول <span class="text-emerald-600">خبراء الرياضة</span> عنا؟</h2>
-                <p class="text-slate-500 text-lg font-bold">نفخر بدعم نخبة من المعلمين والمدارس في رحلتهم نحو التحول الرقمي الرياضي.</p>
+                <span
+                    class="px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-600 font-bold text-sm mb-4 inline-block">صوت
+                    الميدان</span>
+                <h2 class="text-4xl md:text-5xl font-black text-slate-900 mb-6">ماذا يقول <span
+                        class="text-emerald-600">خبراء الرياضة</span> عنا؟</h2>
+                <p class="text-slate-500 text-lg font-bold">نفخر بدعم نخبة من المعلمين والمدارس في رحلتهم نحو التحول
+                    الرقمي الرياضي.</p>
             </div>
 
             <?php if (empty($testimonials)): ?>
-                <!-- Placeholder items for initial setup / if no posts in category -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <?php for($i=1; $i<=6; $i++): ?>
-                        <div class="glass-panel p-8 rounded-[2.5rem] border border-white/40 shadow-xl reveal" style="transition-delay: <?= $i*100 ?>ms;">
-                            <div class="flex gap-1 mb-6 text-amber-400">
-                                <?php for($j=0; $j<5; $j++) echo '<i data-lucide="star" class="w-4 h-4"></i>'; ?>
-                            </div>
-                            <p class="text-slate-700 font-medium mb-8 leading-relaxed italic">"هذا القسم سيظهر فيه آراء العملاء التي ستضيفها في ووردبريس ضمن تصنيف Reviews."</p>
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl emerald-gradient flex items-center justify-center text-white font-bold text-xl">
-                                    <?= chr(64+$i) ?>
-                                </div>
-                                <div class="text-right">
-                                    <h4 class="font-black text-slate-800">اسم العميل قريباً</h4>
-                                    <span class="text-xs text-emerald-600 font-bold">اسم المدرسة</span>
-                                </div>
-                            </div>
+            <!-- Placeholder items for initial setup / if no posts in category -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <?php for ($i = 1; $i <= 6; $i++): ?>
+                <div class="glass-panel p-8 rounded-[2.5rem] border border-white/40 shadow-xl reveal"
+                    style="transition-delay: <?= $i * 100?>ms;">
+                    <div class="flex gap-1 mb-6 text-amber-400">
+                        <?php for ($j = 0; $j < 5; $j++)
+            echo '<i data-lucide="star" class="w-4 h-4"></i>'; ?>
+                    </div>
+                    <p class="text-slate-700 font-medium mb-8 leading-relaxed italic">"هذا القسم سيظهر فيه آراء العملاء
+                        التي ستضيفها في ووردبريس ضمن تصنيف Reviews."</p>
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="w-12 h-12 rounded-2xl emerald-gradient flex items-center justify-center text-white font-bold text-xl">
+                            <?= chr(64 + $i)?>
                         </div>
-                    <?php endfor; ?>
-                </div>
-            <?php else: ?>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <?php foreach ($testimonials as $idx => $t): ?>
-                        <div class="glass-panel p-8 rounded-[2.5rem] border border-white/40 shadow-xl hover:-translate-y-2 transition-all duration-500 reveal" style="transition-delay: <?= ($idx+1)*100 ?>ms;">
-                            <div class="flex gap-1 mb-6">
-                                <?php 
-                                $rating = floatval($t['rating']);
-                                for($j=1; $j<=5; $j++) {
-                                    if ($j <= floor($rating)) {
-                                        echo '<i data-lucide="star" class="w-5 h-5 star-filled"></i>';
-                                    } elseif ($j == ceil($rating) && floor($rating) != $rating) {
-                                        echo '<i data-lucide="star-half" class="w-5 h-5 star-filled"></i>';
-                                    } else {
-                                        echo '<i data-lucide="star" class="w-5 h-5 star-empty"></i>';
-                                    }
-                                }
-                                ?>
-                            </div>
-                            <p class="text-slate-700 font-medium mb-8 leading-relaxed italic">
-                                "<?= esc($t['content']) ?>"
-                            </p>
-                            <div class="flex items-center gap-4 mt-auto">
-                                <?php if (!empty($t['image_path'])): ?>
-                                    <img src="<?= esc($t['image_path']) ?>" class="w-12 h-12 rounded-2xl object-cover shadow-lg border-2 border-white/50" alt="<?= esc($t['name']) ?>">
-                                <?php else: ?>
-                                    <div class="w-12 h-12 rounded-2xl emerald-gradient flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                                        <?= mb_substr($t['name'], 0, 1) ?>
-                                    </div>
-                                <?php endif; ?>
-                                <div class="text-right">
-                                    <h4 class="font-black text-slate-800"><?= esc($t['name']) ?></h4>
-                                    <span class="text-xs text-emerald-600 font-bold"><?= esc($t['school']) ?></span>
-                                </div>
-                            </div>
+                        <div class="text-right">
+                            <h4 class="font-black text-slate-800">اسم العميل قريباً</h4>
+                            <span class="text-xs text-emerald-600 font-bold">اسم المدرسة</span>
                         </div>
-                    <?php endforeach; ?>
+                    </div>
                 </div>
-            <?php endif; ?>
+                <?php
+    endfor; ?>
+            </div>
+            <?php
+else: ?>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <?php foreach ($testimonials as $idx => $t): ?>
+                <div class="glass-panel p-8 rounded-[2.5rem] border border-white/40 shadow-xl hover:-translate-y-2 transition-all duration-500 reveal"
+                    style="transition-delay: <?=($idx + 1) * 100?>ms;">
+                    <div class="flex gap-1 mb-6">
+                        <?php
+        $rating = floatval($t['rating']);
+        for ($j = 1; $j <= 5; $j++) {
+            if ($j <= floor($rating)) {
+                echo '<i data-lucide="star" class="w-5 h-5 star-filled"></i>';
+            }
+            elseif ($j == ceil($rating) && floor($rating) != $rating) {
+                echo '<i data-lucide="star-half" class="w-5 h-5 star-filled"></i>';
+            }
+            else {
+                echo '<i data-lucide="star" class="w-5 h-5 star-empty"></i>';
+            }
+        }
+?>
+                    </div>
+                    <p class="text-slate-700 font-medium mb-8 leading-relaxed italic">
+                        "
+                        <?= esc($t['content'])?>"
+                    </p>
+                    <div class="flex items-center gap-4 mt-auto">
+                        <?php if (!empty($t['image_path'])): ?>
+                        <img src="<?= esc($t['image_path'])?>"
+                            class="w-12 h-12 rounded-2xl object-cover shadow-lg border-2 border-white/50"
+                            alt="<?= esc($t['name'])?>">
+                        <?php
+        else: ?>
+                        <div
+                            class="w-12 h-12 rounded-2xl emerald-gradient flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                            <?= mb_substr($t['name'], 0, 1)?>
+                        </div>
+                        <?php
+        endif; ?>
+                        <div class="text-right">
+                            <h4 class="font-black text-slate-800">
+                                <?= esc($t['name'])?>
+                            </h4>
+                            <span class="text-xs text-emerald-600 font-bold">
+                                <?= esc($t['school'])?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <?php
+    endforeach; ?>
+            </div>
+            <?php
+endif; ?>
         </div>
     </section>
 
@@ -964,88 +1053,136 @@ function esc($str) {
     <section id="faq" class="py-24 px-4 bg-white relative overflow-hidden">
         <div class="max-w-4xl mx-auto relative z-10">
             <div class="text-center mb-16 reveal">
-                <span class="px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-600 font-bold text-sm mb-4 inline-block">دليلك السريع</span>
-                <h2 class="text-4xl lg:text-5xl font-black text-slate-900 mb-6 tracking-tight">الأسئلة <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500">الشائعة</span></h2>
-                <p class="text-slate-500 font-bold max-w-2xl mx-auto text-lg hover:text-slate-700 transition-colors">إجابات وافية لأكثر الأسئلة تداولاً بين المعلمين ومدراء المدارس حول استخدام المنصة.</p>
+                <span
+                    class="px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-600 font-bold text-sm mb-4 inline-block">دليلك
+                    السريع</span>
+                <h2 class="text-4xl lg:text-5xl font-black text-slate-900 mb-6 tracking-tight">الأسئلة <span
+                        class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500">الشائعة</span>
+                </h2>
+                <p class="text-slate-500 font-bold max-w-2xl mx-auto text-lg hover:text-slate-700 transition-colors">
+                    إجابات وافية لأكثر الأسئلة تداولاً بين المعلمين ومدراء المدارس حول استخدام المنصة.</p>
             </div>
 
             <div class="space-y-4 reveal" style="transition-delay: 100ms;">
-                
+
                 <!-- FAQ Item 1 -->
-                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
-                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                <div
+                    class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button
+                        class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
                         <span class="font-black text-lg text-slate-800">1. ما هي منصة PE Smart School؟</span>
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                        <div
+                            class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
                             <i data-lucide="chevron-down" class="w-5 h-5"></i>
                         </div>
                     </button>
-                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
-                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">هي منصة رقمية سحابية متكاملة صُممت خصيصاً لمعلمي التربية البدنية. تهدف إلى تحويل العمل الورقي التقليدي إلى نظام رقمي ذكي يساعد في إدارة الحصص، تقييم الطلاب، تنظيم البطولات المدرسية، وتتبع سجلات اللياقة البدنية بكل سهولة.</p>
+                    <div
+                        class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">هي منصة رقمية سحابية متكاملة صُممت
+                            خصيصاً لمعلمي التربية البدنية. تهدف إلى تحويل العمل الورقي التقليدي إلى نظام رقمي ذكي يساعد
+                            في إدارة الحصص، تقييم الطلاب، تنظيم البطولات المدرسية، وتتبع سجلات اللياقة البدنية بكل
+                            سهولة.</p>
                     </div>
                 </div>
 
                 <!-- FAQ Item 2 -->
-                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
-                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
-                        <span class="font-black text-lg text-slate-800">2. هل المنصة تعمل على الهواتف الذكية أم أجهزة الكمبيوتر فقط؟</span>
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                <div
+                    class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button
+                        class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">2. هل المنصة تعمل على الهواتف الذكية أم أجهزة
+                            الكمبيوتر فقط؟</span>
+                        <div
+                            class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
                             <i data-lucide="chevron-down" class="w-5 h-5"></i>
                         </div>
                     </button>
-                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
-                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">النظام سحابي ويعمل بكفاءة عالية على جميع الأجهزة. يمكنك استخدامه من خلال متصفح الكمبيوتر، أو من خلال الهاتف الآيفون والأندرويد أو الجهاز اللوحي (الآيباد) بكل سلاسة أثناء تواجدك في الصالة أو الملعب الرياضي.</p>
+                    <div
+                        class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">النظام سحابي ويعمل بكفاءة عالية على
+                            جميع الأجهزة. يمكنك استخدامه من خلال متصفح الكمبيوتر، أو من خلال الهاتف الآيفون والأندرويد
+                            أو الجهاز اللوحي (الآيباد) بكل سلاسة أثناء تواجدك في الصالة أو الملعب الرياضي.</p>
                     </div>
                 </div>
 
                 <!-- FAQ Item 3 -->
-                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
-                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
-                        <span class="font-black text-lg text-slate-800">3. كيف تعمل ميزة "محرك البطولات" داخل النظام؟</span>
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                <div
+                    class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button
+                        class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">3. كيف تعمل ميزة "محرك البطولات" داخل
+                            النظام؟</span>
+                        <div
+                            class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
                             <i data-lucide="chevron-down" class="w-5 h-5"></i>
                         </div>
                     </button>
-                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
-                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">يوفر النظام أداة احترافية لإنشاء البطولات المدرسية (مثل نظام الدوري المستمر أو خروج المغلوب). يمكنك تقسيم الطلاب إلى فرق، وسيقوم النظام تلقائياً بإنشاء جدول المباريات، تتبع النتائج، وتحديث الترتيب وإصدار إحصائيات أفضل اللاعبين والهدافين بناءً على خوارزميات رياضية دقيقة.</p>
+                    <div
+                        class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">يوفر النظام أداة احترافية لإنشاء
+                            البطولات المدرسية (مثل نظام الدوري المستمر أو خروج المغلوب). يمكنك تقسيم الطلاب إلى فرق،
+                            وسيقوم النظام تلقائياً بإنشاء جدول المباريات، تتبع النتائج، وتحديث الترتيب وإصدار إحصائيات
+                            أفضل اللاعبين والهدافين بناءً على خوارزميات رياضية دقيقة.</p>
                     </div>
                 </div>
 
                 <!-- FAQ Item 4 -->
-                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
-                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
-                        <span class="font-black text-lg text-slate-800">4. هل يمكنني تخصيص معايير التقييم لتناسب خطتي الدراسية؟</span>
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                <div
+                    class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button
+                        class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">4. هل يمكنني تخصيص معايير التقييم لتناسب خطتي
+                            الدراسية؟</span>
+                        <div
+                            class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
                             <i data-lucide="chevron-down" class="w-5 h-5"></i>
                         </div>
                     </button>
-                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
-                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">بالتأكيد. المنصة مرنة وتسمح لك بضبط وتوزيع درجات التقييم (مثل الحضور، الزي الرياضي، المشاركة، واختبارات اللياقة البدنية) وتحديد الوزن الأكاديمي لكل معيار بما يتوافق بدقة مع القواعد واللوائح المعتمدة في مدرستك أو إدارتك التعليمية.</p>
+                    <div
+                        class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">بالتأكيد. المنصة مرنة وتسمح لك بضبط
+                            وتوزيع درجات التقييم (مثل الحضور، الزي الرياضي، المشاركة، واختبارات اللياقة البدنية) وتحديد
+                            الوزن الأكاديمي لكل معيار بما يتوافق بدقة مع القواعد واللوائح المعتمدة في مدرستك أو إدارتك
+                            التعليمية.</p>
                     </div>
                 </div>
 
                 <!-- FAQ Item 5 -->
-                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
-                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                <div
+                    class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button
+                        class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
                         <span class="font-black text-lg text-slate-800">5. هل بيانات مدرستي وطلابي آمنة؟</span>
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                        <div
+                            class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
                             <i data-lucide="chevron-down" class="w-5 h-5"></i>
                         </div>
                     </button>
-                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
-                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">الأمان هو أولويتنا القصوى. جميع بيانات المدارس، المعلمين، والطلاب يتم تشفيرها وحفظها في خوادم سحابية آمنة ومدرعة، ولا يمكن لأي شخص الاطلاع عليها سوى المصرّح لهم من إدارة مدرستك.</p>
+                    <div
+                        class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">الأمان هو أولويتنا القصوى. جميع
+                            بيانات المدارس، المعلمين، والطلاب يتم تشفيرها وحفظها في خوادم سحابية آمنة ومدرعة، ولا يمكن
+                            لأي شخص الاطلاع عليها سوى المصرّح لهم من إدارة مدرستك.</p>
                     </div>
                 </div>
 
                 <!-- FAQ Item 6 -->
-                <div class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
-                    <button class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
-                        <span class="font-black text-lg text-slate-800">6. هل أحتاج إلى خبرة تقنية سابقة لاستخدام النظام؟</span>
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
+                <div
+                    class="faq-item bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                    <button
+                        class="faq-button w-full text-right px-8 py-6 flex items-center justify-between focus:outline-none">
+                        <span class="font-black text-lg text-slate-800">6. هل أحتاج إلى خبرة تقنية سابقة لاستخدام
+                            النظام؟</span>
+                        <div
+                            class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-500 faq-icon transition-transform duration-300 shadow-inner">
                             <i data-lucide="chevron-down" class="w-5 h-5"></i>
                         </div>
                     </button>
-                    <div class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
-                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">لا على الإطلاق! تم تصميم واجهة المستخدم لتكون بسيطة، واضحة، وباللغة العربية، بحيث يمكن لأي معلم أو مشرف رياضي البدء في استخدامها باحترافية منذ اليوم الأول دون الحاجة لتدريب معقد.</p>
+                    <div
+                        class="faq-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out opacity-0 px-8">
+                        <p class="text-slate-600 font-medium pb-6 leading-relaxed">لا على الإطلاق! تم تصميم واجهة
+                            المستخدم لتكون بسيطة، واضحة، وباللغة العربية، بحيث يمكن لأي معلم أو مشرف رياضي البدء في
+                            استخدامها باحترافية منذ اليوم الأول دون الحاجة لتدريب معقد.</p>
                     </div>
                 </div>
 
@@ -1100,71 +1237,104 @@ function esc($str) {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto items-stretch">
-                <?php 
-                foreach ($plans as $idx => $plan): 
-                    $isDefault = (bool)$plan['is_default'];
-                    $isEnterprise = $plan['slug'] === 'enterprise';
-                    // Parse features_list (one per line)
-                    $displayItems = !empty($plan['features_list']) ? explode("\n", $plan['features_list']) : [];
-                    $displayItems = array_map('trim', $displayItems);
-                    $displayItems = array_filter($displayItems);
-                ?>
-                    <div class="<?= $isDefault ? 'bg-slate-900 text-white border-emerald-500 shadow-2xl shadow-emerald-900/40 transform md:-translate-y-4 ring-4 ring-emerald-500/10' : 'bg-white text-slate-800 border-slate-200 hover:shadow-lg' ?> rounded-[3rem] p-8 border text-right transition-all flex flex-col relative group">
-                        
-                        <?php if ($isDefault): ?>
-                            <div class="absolute top-0 left-0 right-0 transform -translate-y-1/2 flex justify-center">
-                                <span class="bg-emerald-500 text-white font-black text-[10px] tracking-widest uppercase px-6 py-2 rounded-full shadow-xl z-10 border-4 border-slate-900">الباقة الأكثر اختياراً</span>
-                            </div>
-                        <?php endif; ?>
+                <?php
+foreach ($plans as $idx => $plan):
+    $isDefault = (bool)$plan['is_default'];
+    $isEnterprise = $plan['slug'] === 'enterprise';
+    // Parse features_list (one per line)
+    $displayItems = !empty($plan['features_list']) ? explode("\n", $plan['features_list']) : [];
+    $displayItems = array_map('trim', $displayItems);
+    $displayItems = array_filter($displayItems);
+?>
+                <div
+                    class="<?= $isDefault ? 'bg-slate-900 text-white border-emerald-500 shadow-2xl shadow-emerald-900/40 transform md:-translate-y-4 ring-4 ring-emerald-500/10' : 'bg-white text-slate-800 border-slate-200 hover:shadow-lg'?> rounded-[3rem] p-8 border text-right transition-all flex flex-col relative group">
 
-                        <div class="mb-8 text-center">
-                            <span class="<?= $isDefault ? 'text-emerald-400 bg-emerald-900/50' : ($isEnterprise ? 'text-slate-500 bg-slate-100' : 'text-emerald-600 bg-emerald-50') ?> font-black tracking-widest text-xs uppercase px-4 py-1.5 rounded-full inline-block">
-                                <?= esc($plan['name']) ?>
-                            </span>
-                            <div class="mt-6 flex items-baseline gap-2 justify-center">
-                                <?php if ($plan['price_monthly'] > 0): ?>
-                                    <span class="text-5xl font-black <?= $isDefault ? 'text-white' : 'text-slate-900' ?>"><?= number_format($plan['price_monthly'], 0) ?></span>
-                                    <span class="<?= $isDefault ? 'text-emerald-100/70' : 'text-slate-500' ?> font-bold text-sm">ر.س / شهرياً</span>
-                                <?php else: ?>
-                                    <span class="text-5xl font-black <?= $isDefault ? 'text-white' : 'text-slate-900' ?>">مجاناً</span>
-                                    <span class="<?= $isDefault ? 'text-emerald-100/70' : 'text-slate-500' ?> font-bold text-sm">للفترة التجريبية</span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <ul class="space-y-4 mb-8 flex-1">
-                            <li class="flex items-center gap-3 text-sm font-bold <?= $isDefault ? 'text-emerald-50' : 'text-slate-600' ?>">
-                                <i data-lucide="users" class="w-4 h-4 text-emerald-500"></i> 
-                                <?= $plan['max_students'] > 1000 ? 'طلاب غير محدودين' : 'حتى ' . number_format($plan['max_students']) . ' طالب' ?>
-                            </li>
-                            <li class="flex items-center gap-3 text-sm font-bold <?= $isDefault ? 'text-emerald-50' : 'text-slate-600' ?>">
-                                <i data-lucide="user-check" class="w-4 h-4 text-emerald-500"></i> 
-                                <?= $plan['max_teachers'] > 100 ? 'معلمين غير محدودين' : 'حتى ' . number_format($plan['max_teachers']) . ' معلم' ?>
-                            </li>
-
-                            <?php if ($idx > 0): ?>
-                                <li class="pt-4 border-t <?= $isDefault ? 'border-emerald-500/20' : 'border-slate-100' ?> flex flex-col gap-3 text-right">
-                                    <span class="text-xs font-black <?= $isDefault ? 'text-emerald-400' : 'text-emerald-600' ?> uppercase tracking-tight">جميع مميزات باقة <?= esc($plans[$idx-1]['name']) ?>، بالإضافة إلى:</span>
-                                </li>
-                            <?php endif; ?>
-
-                            <?php foreach ($displayItems as $item): ?>
-                                <li class="flex items-start gap-3 text-sm font-bold <?= $isDefault ? 'text-emerald-50' : 'text-slate-600' ?>">
-                                    <i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 <?= $isDefault ? 'text-emerald-400' : 'text-emerald-500' ?>"></i>
-                                    <span><?= $item ?></span>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-
-                        <?php if ($isEnterprise): ?>
-                            <a href="contact.html" class="block text-center w-full py-3 rounded-full font-black text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-800 transition">تواصل معنا</a>
-                        <?php else: ?>
-                            <a href="register.html?plan=<?= esc($plan['slug']) ?>" class="block text-center w-full py-4 rounded-full font-black text-sm <?= $isDefault ? 'emerald-gradient text-white hover:shadow-lg hover:shadow-emerald-500/30' : 'bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700' ?> transition transform hover:scale-[1.02]">
-                                <?= $plan['price_monthly'] > 0 ? 'اشترك الآن' : 'ابدأ مجاناً' ?>
-                            </a>
-                        <?php endif; ?>
+                    <?php if ($isDefault): ?>
+                    <div class="absolute top-0 left-0 right-0 transform -translate-y-1/2 flex justify-center">
+                        <span
+                            class="bg-emerald-500 text-white font-black text-[10px] tracking-widest uppercase px-6 py-2 rounded-full shadow-xl z-10 border-4 border-slate-900">الباقة
+                            الأكثر اختياراً</span>
                     </div>
-                <?php endforeach; ?>
+                    <?php
+    endif; ?>
+
+                    <div class="mb-8 text-center">
+                        <span
+                            class="<?= $isDefault ? 'text-emerald-400 bg-emerald-900/50' : ($isEnterprise ? 'text-slate-500 bg-slate-100' : 'text-emerald-600 bg-emerald-50')?> font-black tracking-widest text-xs uppercase px-4 py-1.5 rounded-full inline-block">
+                            <?= esc($plan['name'])?>
+                        </span>
+                        <div class="mt-6 flex items-baseline gap-2 justify-center">
+                            <?php if ($plan['price_monthly'] > 0): ?>
+                            <span class="text-5xl font-black <?= $isDefault ? 'text-white' : 'text-slate-900'?>">
+                                <?= number_format($plan['price_monthly'], 0)?>
+                            </span>
+                            <span
+                                class="<?= $isDefault ? 'text-emerald-100/70' : 'text-slate-500'?> font-bold text-sm">ر.س
+                                / شهرياً</span>
+                            <?php
+    else: ?>
+                            <span
+                                class="text-5xl font-black <?= $isDefault ? 'text-white' : 'text-slate-900'?>">مجاناً</span>
+                            <span
+                                class="<?= $isDefault ? 'text-emerald-100/70' : 'text-slate-500'?> font-bold text-sm">للفترة
+                                التجريبية</span>
+                            <?php
+    endif; ?>
+                        </div>
+                    </div>
+
+                    <ul class="space-y-4 mb-8 flex-1">
+                        <li
+                            class="flex items-center gap-3 text-sm font-bold <?= $isDefault ? 'text-emerald-50' : 'text-slate-600'?>">
+                            <i data-lucide="users" class="w-4 h-4 text-emerald-500"></i>
+                            <?= $plan['max_students'] > 1000 ? 'طلاب غير محدودين' : 'حتى ' . number_format($plan['max_students']) . ' طالب'?>
+                        </li>
+                        <li
+                            class="flex items-center gap-3 text-sm font-bold <?= $isDefault ? 'text-emerald-50' : 'text-slate-600'?>">
+                            <i data-lucide="user-check" class="w-4 h-4 text-emerald-500"></i>
+                            <?= $plan['max_teachers'] > 100 ? 'معلمين غير محدودين' : 'حتى ' . number_format($plan['max_teachers']) . ' معلم'?>
+                        </li>
+
+                        <?php if ($idx > 0): ?>
+                        <li
+                            class="pt-4 border-t <?= $isDefault ? 'border-emerald-500/20' : 'border-slate-100'?> flex flex-col gap-3 text-right">
+                            <span
+                                class="text-xs font-black <?= $isDefault ? 'text-emerald-400' : 'text-emerald-600'?> uppercase tracking-tight">جميع
+                                مميزات باقة
+                                <?= esc($plans[$idx - 1]['name'])?>، بالإضافة إلى:
+                            </span>
+                        </li>
+                        <?php
+    endif; ?>
+
+                        <?php foreach ($displayItems as $item): ?>
+                        <li
+                            class="flex items-start gap-3 text-sm font-bold <?= $isDefault ? 'text-emerald-50' : 'text-slate-600'?>">
+                            <i data-lucide="check-circle-2"
+                                class="w-4 h-4 mt-0.5 <?= $isDefault ? 'text-emerald-400' : 'text-emerald-500'?>"></i>
+                            <span>
+                                <?= $item?>
+                            </span>
+                        </li>
+                        <?php
+    endforeach; ?>
+                    </ul>
+
+                    <?php if ($isEnterprise): ?>
+                    <a href="contact.html"
+                        class="block text-center w-full py-3 rounded-full font-black text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-800 transition">تواصل
+                        معنا</a>
+                    <?php
+    else: ?>
+                    <a href="register.html?plan=<?= esc($plan['slug'])?>"
+                        class="block text-center w-full py-4 rounded-full font-black text-sm <?= $isDefault ? 'emerald-gradient text-white hover:shadow-lg hover:shadow-emerald-500/30' : 'bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700'?> transition transform hover:scale-[1.02]">
+                        <?= $plan['price_monthly'] > 0 ? 'اشترك الآن' : 'ابدأ مجاناً'?>
+                    </a>
+                    <?php
+    endif; ?>
+                </div>
+                <?php
+endforeach; ?>
             </div>
         </div>
     </section>

@@ -203,12 +203,20 @@ function checkAutoBadges($studentId = null) {
             } 
             else if ($type === 'fitness_pro') {
                 $threshold = $threshold ?: 9.0;
-                $fit = $db->prepare("SELECT AVG(score) as avg_score FROM student_fitness WHERE student_id = ?");
+                // أفضل نتيجة لكل اختبار ثم متوسطها
+                $fit = $db->prepare("
+                    SELECT AVG(best_score) as avg_score FROM (
+                        SELECT test_id, MAX(score) as best_score
+                        FROM student_fitness
+                        WHERE student_id = ?
+                        GROUP BY test_id
+                    ) as bests
+                ");
                 $fit->execute([$sid]);
                 $avg = (float)$fit->fetchColumn();
                 if ($avg >= $threshold) {
                     $shouldAward = true;
-                    $note = "تلقائي: مستوى لياقة متفوق (معدل {$avg})";
+                    $note = "تلقائي: مستوى لياقة متفوق (أفضل معدل {$avg})";
                 }
             }
             else if ($type === 'improvement') {

@@ -70,13 +70,12 @@ function deleteFitnessTest() {
 function getFitnessResults() {
     requireLogin();
     Subscription::requireFeature('fitness_tests');
-    // Fix #1: Retrieve parameters before using them (were undefined before)
-    $classId = (int)getParam('class_id');
-    $testId  = (int)getParam('test_id');
+    $classId  = (int)getParam('class_id');
+    $testId   = (int)getParam('test_id');
+    $testDate = sanitize(getParam('test_date', date('Y-m-d')));
 
     if (!$classId || !$testId) jsonError('يجب تحديد الفصل والاختبار');
     
-    // SaaS Isolation
     requireOwnership('fitness_tests', $testId);
     if (!canAccessClass($classId)) jsonError('لا تملك صلاحية الوصول لهذا الفصل', 403);
 
@@ -86,30 +85,21 @@ function getFitnessResults() {
         "SELECT s.id as student_id, s.name, s.student_number,
                sf.value, sf.score, sf.test_date, sf.id as result_id,
                (SELECT GROUP_CONCAT(sh.condition_name SEPARATOR ', ') FROM student_health sh WHERE sh.student_id = s.id AND sh.is_active = 1) as health_notes
-        FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id AND sf.test_id = ?
-        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name, sf.test_date DESC, sf.id DESC",
+        FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id AND sf.test_id = ? AND sf.test_date = ?
+        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name",
 
         "SELECT s.id as student_id, s.name, s.student_number,
                sf.value, sf.score, sf.test_date, sf.id as result_id,
                NULL as health_notes
-        FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id AND sf.test_id = ?
-        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name, sf.test_date DESC, sf.id DESC"
+        FROM students s LEFT JOIN student_fitness sf ON sf.student_id = s.id AND sf.test_id = ? AND sf.test_date = ?
+        WHERE s.class_id = ? AND s.active = 1 ORDER BY s.name"
     ];
 
     foreach ($queries as $sql) {
         try {
             $stmt = $db->prepare($sql);
-            $stmt->execute([$testId, $classId]);
-            $raw = $stmt->fetchAll();
-            $unique = [];
-            $seen = [];
-            foreach ($raw as $r) {
-                if (!isset($seen[$r['student_id']])) {
-                    $unique[] = $r;
-                    $seen[$r['student_id']] = true;
-                }
-            }
-            jsonSuccess($unique);
+            $stmt->execute([$testId, $testDate, $classId]);
+            jsonSuccess($stmt->fetchAll());
             return;
         } catch (PDOException $e) {
             continue;
@@ -121,10 +111,11 @@ function getFitnessResults() {
 function saveFitnessResults() {
     requireRole(['admin', 'teacher']);
     Subscription::requireFeature('fitness_tests');
-    $data    = getPostData();
-    $testId  = (int)($data['test_id'] ?? 0);
-    $classId = (int)($data['class_id'] ?? 0);
-    $records = $data['records'] ?? [];
+    $data     = getPostData();
+    $testId   = (int)($data['test_id'] ?? 0);
+    $classId  = (int)($data['class_id'] ?? 0);
+    $testDate = sanitize($data['test_date'] ?? date('Y-m-d'));
+    $records  = $data['records'] ?? [];
 
     if (!$testId || empty($records)) jsonError('بيانات غير مكتملة');
     
@@ -133,15 +124,21 @@ function saveFitnessResults() {
     if ($classId && !canAccessClass($classId)) jsonError('لا تملك صلاحية تسجيل نتائج هذا الفصل', 403);
 
     $db   = getDB();
-    $stmt = $db->prepare("INSERT INTO student_fitness (student_id, test_id, value, score, test_date, recorded_by)
-        VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE value=VALUES(value), score=VALUES(score), test_date=VALUES(test_date), recorded_by=VALUES(recorded_by), updated_at=NOW()");
+    $sid  = schoolId();
+    $stmt = $db->prepare("INSERT INTO student_fitness (student_id, test_id, value, score, test_date, recorded_by, school_id)
+        VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE 
+        value=VALUES(value), 
+        score=VALUES(score), 
+        recorded_by=VALUES(recorded_by), 
+        school_id=VALUES(school_id),
+        updated_at=NOW()");
+
+    $delStmt = $db->prepare("DELETE FROM student_fitness WHERE student_id = ? AND test_id = ? AND test_date = ?");
 
     // Get test name for notification
     $tStmt = $db->prepare("SELECT name FROM fitness_tests WHERE id = ?");
     $tStmt->execute([$testId]);
     $testName = $tStmt->fetchColumn();
-
-    $today = date('Y-m-d');
     
     // Performance: Include badges once before loop
     try { include_once __DIR__ . '/badges.php'; } catch (Exception $e) {}
@@ -149,13 +146,26 @@ function saveFitnessResults() {
     $db->beginTransaction();
     try {
         foreach ($records as $r) {
-            if (!isset($r['value']) || $r['value'] === '' || $r['value'] === null) continue;
             $studentId = (int)$r['student_id'];
             
             // Security: verify student belongs to school
             if (!verifyOwnership('students', $studentId)) continue;
+            
+            if (!isset($r['value']) || $r['value'] === '' || $r['value'] === null) {
+                // Delete if empty
+                $delStmt->execute([$studentId, $testId, $testDate]);
+                continue;
+            }
 
-            $stmt->execute([$studentId, $testId, (float)$r['value'], (int)$r['score'], $today, $_SESSION['user_id']]);
+            $stmt->execute([
+                $studentId, 
+                $testId, 
+                (float)$r['value'], 
+                (int)$r['score'], 
+                $testDate, 
+                $_SESSION['user_id'],
+                $sid
+            ]);
 
             // Notify Parents
             $sStmt = $db->prepare("SELECT name FROM students WHERE id = ?");
@@ -189,7 +199,6 @@ function getFitnessView() {
     $db      = getDB();
     $sid     = schoolId();
 
-    // Fitness tests scoped to school
     $testSql = "SELECT * FROM fitness_tests WHERE active = 1";
     if ($sid) $testSql .= " AND school_id = $sid";
     $testSql .= " ORDER BY id";
@@ -198,10 +207,41 @@ function getFitnessView() {
     $stmt    = $db->prepare("SELECT id, name, student_number FROM students WHERE class_id = ? AND active = 1 ORDER BY name");
     $stmt->execute([$classId]);
     $students  = $stmt->fetchAll();
-    $stmt      = $db->prepare("SELECT sf.student_id, sf.test_id, sf.value, sf.score FROM student_fitness sf JOIN students s ON sf.student_id = s.id WHERE s.class_id = ? AND s.active = 1");
-    $stmt->execute([$classId]);
+
+    // جلب أفضل نتيجة لكل طالب في كل اختبار (بدلاً من أي نتيجة)
+    // إذا كان higher_better -> MAX(score)
+    // إذا كان lower_better -> score المرتبط بـ MIN(value)
+    $resultStmt = $db->prepare("
+        SELECT 
+            sf.student_id,
+            sf.test_id,
+            ft.type as test_type,
+            CASE
+                WHEN ft.type = 'lower_better' THEN
+                    (SELECT sf2.score FROM student_fitness sf2 WHERE sf2.student_id = sf.student_id AND sf2.test_id = sf.test_id ORDER BY sf2.value ASC LIMIT 1)
+                ELSE
+                    MAX(sf.score)
+            END as best_score,
+            CASE
+                WHEN ft.type = 'lower_better' THEN MIN(sf.value)
+                ELSE (SELECT sf3.value FROM student_fitness sf3 WHERE sf3.student_id = sf.student_id AND sf3.test_id = sf.test_id ORDER BY sf3.score DESC LIMIT 1)
+            END as best_value,
+            COUNT(sf.id) as sessions_count
+        FROM student_fitness sf
+        JOIN students s ON sf.student_id = s.id
+        JOIN fitness_tests ft ON sf.test_id = ft.id
+        WHERE s.class_id = ? AND s.active = 1
+        GROUP BY sf.student_id, sf.test_id, ft.type
+    ");
+    $resultStmt->execute([$classId]);
     $resultMap = [];
-    foreach ($stmt->fetchAll() as $r) $resultMap[$r['student_id']][$r['test_id']] = $r;
+    foreach ($resultStmt->fetchAll() as $r) {
+        $resultMap[$r['student_id']][$r['test_id']] = [
+            'score'          => $r['best_score'],
+            'value'          => $r['best_value'],
+            'sessions_count' => $r['sessions_count']
+        ];
+    }
     jsonSuccess(['tests' => $tests, 'students' => $students, 'results' => $resultMap]);
 }
 
@@ -254,6 +294,80 @@ function saveFitnessCriteria() {
         $db->rollBack();
         throw $e;
     }
+}
+
+
+// ============================================================
+// SESSION MANAGEMENT (New Functions)
+// ============================================================
+
+// جلب التواريخ التي تم فيها رصد نتائج لاختبار معين وفصل معين
+function getFitnessSessionDates() {
+    requireLogin();
+    Subscription::requireFeature('fitness_tests');
+    $testId  = (int)getParam('test_id');
+    $classId = (int)getParam('class_id');
+
+    if (!$testId || !$classId) jsonError('يجب تحديد الاختبار والفصل');
+    requireOwnership('fitness_tests', $testId);
+    if (!canAccessClass($classId)) jsonError('صلاحية مرفوضة', 403);
+
+    $db = getDB();
+    $stmt = $db->prepare("
+        SELECT DISTINCT sf.test_date,
+               COUNT(sf.id) as student_count
+        FROM student_fitness sf
+        JOIN students s ON sf.student_id = s.id
+        WHERE sf.test_id = ? AND s.class_id = ? AND s.active = 1
+        GROUP BY sf.test_date
+        ORDER BY sf.test_date DESC
+    ");
+    $stmt->execute([$testId, $classId]);
+    jsonSuccess($stmt->fetchAll());
+}
+
+// حذف نتيجة طالب واحد في تاريخ واختبار محددين
+function deleteFitnessResult() {
+    requireRole(['admin', 'teacher']);
+    Subscription::requireFeature('fitness_tests');
+    $data      = getPostData();
+    $studentId = (int)($data['student_id'] ?? 0);
+    $testId    = (int)($data['test_id'] ?? 0);
+    $testDate  = sanitize($data['test_date'] ?? '');
+
+    if (!$studentId || !$testId || !$testDate) jsonError('بيانات غير مكتملة');
+    requireOwnership('fitness_tests', $testId);
+    if (!verifyOwnership('students', $studentId)) jsonError('غير مصرح لك');
+
+    $db = getDB();
+    $stmt = $db->prepare("DELETE FROM student_fitness WHERE student_id = ? AND test_id = ? AND test_date = ?");
+    $stmt->execute([$studentId, $testId, $testDate]);
+    logActivity('delete_fitness_result', 'student_fitness', $testId, "student_id: $studentId, date: $testDate");
+    jsonSuccess(null, 'تم حذف نتيجة الطالب');
+}
+
+// حذف جلسة كاملة (جميع نتائج اختبار معين في تاريخ معين لفصل معين)
+function deleteFitnessSession() {
+    requireRole(['admin', 'teacher']);
+    Subscription::requireFeature('fitness_tests');
+    $data     = getPostData();
+    $testId   = (int)($data['test_id'] ?? 0);
+    $classId  = (int)($data['class_id'] ?? 0);
+    $testDate = sanitize($data['test_date'] ?? '');
+
+    if (!$testId || !$classId || !$testDate) jsonError('بيانات غير مكتملة');
+    requireOwnership('fitness_tests', $testId);
+    if (!canAccessClass($classId)) jsonError('صلاحية مرفوضة', 403);
+
+    $db = getDB();
+    $stmt = $db->prepare("
+        DELETE sf FROM student_fitness sf
+        JOIN students s ON sf.student_id = s.id
+        WHERE sf.test_id = ? AND s.class_id = ? AND sf.test_date = ?
+    ");
+    $stmt->execute([$testId, $classId, $testDate]);
+    logActivity('delete_fitness_session', 'student_fitness', $testId, "class_id: $classId, date: $testDate");
+    jsonSuccess(null, 'تم حذف جلسة الرصد بالكامل');
 }
 
 function updateClassPoints() {
